@@ -112,6 +112,7 @@ export function createGame() {
     tunables: loadTunables(),
     mouse: { x: ARENA_W / 2 + 200, y: ARENA_H / 2 },
     time: 0,
+    onGameOver: null, // (score) => void, set by main.js to offer a highscore submission
   };
 }
 
@@ -351,5 +352,9 @@ function endGame(game, won) {
   if (game.score > game.highScore) {
     game.highScore = game.score;
     setHighScore(game.highScore);
+  }
+
+  if (game.score > 0 && typeof game.onGameOver === "function") {
+    game.onGameOver(game.score);
   }
 }

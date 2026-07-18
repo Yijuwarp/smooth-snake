@@ -83,8 +83,8 @@ export const REACH_CELL = BODY_DIAMETER;
 // spikes/food never spawn near or underneath it. Padded generously — this
 // only gates spawn placement, not runtime movement.
 export const UI_SAFE_ZONES = [
-  { x: 0, y: 0, w: 180, h: 64 }, // score + combo badge (top-left)
-  { x: ARENA_W - 220, y: 0, w: 220, h: 80 }, // high score + dev-mode readout (top-right)
+  { x: 0, y: 0, w: 180, h: 64 }, // combo badge (top-left)
+  { x: ARENA_W - 220, y: 0, w: 220, h: 80 }, // score + dev-mode readout (top-right)
   { x: ARENA_W / 2 - 110, y: 0, w: 220, h: 90 }, // level + hearts + survive countdown (top-center)
   { x: 0, y: ARENA_H - 46, w: 380, h: 46 }, // keybind hints (bottom-left)
   { x: ARENA_W - 240, y: ARENA_H - 80, w: 240, h: 80 }, // boost meter + label (bottom-right)

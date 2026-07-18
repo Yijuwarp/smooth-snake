@@ -7,3 +7,5 @@ Thumbs.db
 # Scratch/candidate audio files — not loaded by the game
 music/candidates/
 sfx/
+
+.env*

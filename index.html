@@ -8,6 +8,25 @@
 </head>
 <body>
   <canvas id="game-canvas"></canvas>
+
+  <div id="leaderboard-container" hidden>
+    <h3>Top Scores</h3>
+    <ol id="leaderboard-list"></ol>
+  </div>
+
+  <div id="highscore-submit-modal" hidden>
+    <div class="modal-card">
+      <h2>New Score: <span id="hs-score-value">0</span></h2>
+      <p>Enter your initials to join the leaderboard</p>
+      <input id="hs-nickname-input" type="text" maxlength="6" autocomplete="off" spellcheck="false" placeholder="ABCDEF" />
+      <p id="hs-error" class="hs-error" hidden></p>
+      <div class="modal-actions">
+        <button id="hs-cancel-btn" type="button">Skip</button>
+        <button id="hs-submit-btn" type="button">Submit</button>
+      </div>
+    </div>
+  </div>
+
   <div id="pause-menu" hidden>
     <h2>Paused</h2>
     <div class="volume-control">
