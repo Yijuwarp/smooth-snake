@@ -161,8 +161,13 @@ html, body {
 
 /* Phone portrait: the panel's vertically-centered right-side position
    collides with the horizontally-and-vertically-centered start/game-over
-   canvas text (title, high score, subtitle, hint). Dock it to the bottom
-   instead so the two never overlap. */
+   canvas text (title, subtitle, hint). Dock it to the bottom instead so
+   the two never overlap. Height is capped in dvh, not vh: vh resolves
+   against the browser's large (address-bar-hidden) viewport, which is
+   taller than what's actually visible when the address bar is showing —
+   that mismatch was making the panel taller on-screen than intended and
+   pushing its top edge into the hint text above it. dvh tracks the real
+   visible viewport instead. */
 @media (max-width: 700px) and (orientation: portrait) {
   #leaderboard-container {
     top: auto;
@@ -171,7 +176,7 @@ html, body {
     left: 50%;
     transform: translateX(-50%);
     width: min(90vw, 320px);
-    max-height: 24vh;
+    max-height: 22dvh;
     padding: 14px 16px;
     font-size: 13px;
   }

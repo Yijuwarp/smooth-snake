@@ -109,11 +109,11 @@ export function render(game, ctx, canvas) {
   }
 
   if (game.state === "menu") {
-    drawOverlay(ctx, "SSNAKE", TOUCH_MODE ? "Tap to Play!" : "Click to Play!", game, { showHighScore: true });
+    drawOverlay(ctx, "SSNAKE", TOUCH_MODE ? "Tap to Play!" : "Click to Play!", game);
   }
   if (game.state === "gameover") {
     const again = TOUCH_MODE ? "Tap to Play Again!" : "Click to Play Again!";
-    drawOverlay(ctx, game.won ? "You Win!" : "Game Over", again, game, { showHighScore: false });
+    drawOverlay(ctx, game.won ? "You Win!" : "Game Over", again, game);
   }
   if (game.state === "paused") {
     // The DOM pause panel floats on top; just dim the frozen arena behind it.
@@ -505,7 +505,7 @@ function drawMixedBoldLine(ctx, segments, centerX, y) {
   ctx.textAlign = prevAlign;
 }
 
-function drawOverlay(ctx, title, subtitle, game, { showHighScore = true } = {}) {
+function drawOverlay(ctx, title, subtitle, game) {
   ctx.fillStyle = "rgba(10, 14, 20, 0.72)";
   ctx.fillRect(0, 0, ARENA_W, ARENA_H);
 
@@ -561,12 +561,7 @@ function drawOverlay(ctx, title, subtitle, game, { showHighScore = true } = {}) 
 
   ctx.font = font(20);
   ctx.fillStyle = "#9fb3c8";
-  if (showHighScore) {
-    ctx.fillText(`High Score: ${game.highScore}`, ARENA_W / 2, y);
-    y += 40 * k;
-  } else {
-    y += 16 * k;
-  }
+  y += 16 * k;
   ctx.fillText(subtitle, ARENA_W / 2, y);
 
   y += 32 * k;

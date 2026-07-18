@@ -33,6 +33,18 @@ async function activate() {
     explicitFullscreenChange = true;
     try {
       await document.documentElement.requestFullscreen();
+      try {
+        // Best-effort: Android Chrome/Firefox lock to landscape here (and
+        // prompt the player to rotate); iOS Safari has no orientation-lock
+        // API at all, so this just no-ops there. Nested try/catch so a
+        // rejection here — unsupported, or another orientation lock already
+        // held — doesn't get mistaken by the outer catch for fullscreen
+        // itself having failed.
+        await screen.orientation?.lock?.("landscape");
+      } catch {
+        // Unsupported or rejected — stay in whatever orientation the player
+        // is already holding the phone.
+      }
       await new Promise(requestAnimationFrame);
     } catch {
       explicitFullscreenChange = false; // denied/unsupported — start windowed
