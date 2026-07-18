@@ -11,8 +11,22 @@ import {
   LEVEL_BANNER_DURATION,
   MAX_HEARTS,
   HIT_FLASH_DURATION,
+  TOUCH_MODE,
+  getTouchButtons,
 } from "./config.js";
-import { isMuted } from "./audio.js";
+// On-screen touch button sprites (assets/btn-{kind}-{state}.png): state 0 is
+// disabled (meter empty), 1 ready, 2 held. Each file is a 360px cell whose
+// button frame is ~310px — SPRITE_FRAME_FRAC scales so the frame (not the
+// glow, which is allowed to overflow) matches the button rect.
+const SPRITE_FRAME_FRAC = 310 / 360;
+function loadButtonSprites(kind) {
+  return [0, 1, 2].map((state) => {
+    const img = new Image();
+    img.src = `assets/btn-${kind}-${state}.png`;
+    return img;
+  });
+}
+const BTN_SPRITES = { boost: loadButtonSprites("boost"), slow: loadButtonSprites("slow") };
 
 const COLOR_BG = "#0f1520";
 const COLOR_BORDER = "#3a4a63";
@@ -72,6 +86,7 @@ export function render(game, ctx, canvas) {
   if (blinking) ctx.restore();
 
   drawHud(ctx, game);
+  if (TOUCH_MODE && (game.state === "playing" || game.state === "paused")) drawTouchButtons(ctx, game);
   if (game.banner) drawLevelBanner(ctx, game);
 
   if (game.hitFlash > 0) {
@@ -82,9 +97,12 @@ export function render(game, ctx, canvas) {
     ctx.restore();
   }
 
-  if (game.state === "menu") drawOverlay(ctx, "SSNAKE", "Click to Play!", game, { showHighScore: true });
+  if (game.state === "menu") {
+    drawOverlay(ctx, "SSNAKE", TOUCH_MODE ? "Tap to Play!" : "Click to Play!", game, { showHighScore: true });
+  }
   if (game.state === "gameover") {
-    drawOverlay(ctx, game.won ? "You Win!" : "Game Over", "Click to Play Again!", game, { showHighScore: false });
+    const again = TOUCH_MODE ? "Tap to Play Again!" : "Click to Play Again!";
+    drawOverlay(ctx, game.won ? "You Win!" : "Game Over", again, game, { showHighScore: false });
   }
   if (game.state === "paused") {
     // The DOM pause panel floats on top; just dim the frozen arena behind it.
@@ -277,10 +295,10 @@ function drawHud(ctx, game) {
     ctx.fillRect(barX, 48, barW * frac, 8);
   }
 
-  // Shared boost/precision meter, bottom-right — pill bar with glow.
+  // Shared boost/precision meter, bottom-center — pill bar with glow.
   // Golden at rest (matches the power-up pickup), cyan while boosting,
   // purple while in precision/slow mode.
-  const bw = 200, bh = 14, bx = ARENA_W - 16 - bw, by = ARENA_H - 38;
+  const bw = 200, bh = 14, bx = (ARENA_W - bw) / 2, by = ARENA_H - 24;
   const br = bh / 2; // fully rounded pill caps
 
   let boostColor = "#ffd257"; // golden default — matches power-up
@@ -331,11 +349,6 @@ function drawHud(ctx, game) {
     ctx.fillText(`Pellets: ${game.eaten}`, ARENA_W - 16, 82);
   }
 
-  ctx.textAlign = "left";
-  ctx.font = "14px sans-serif";
-  ctx.fillStyle = "#9fb3c8";
-  ctx.fillText(`M · sound ${isMuted() ? "off" : "on"}   Esc · pause   F · fullscreen`, 16, ARENA_H - 28);
-
   ctx.textAlign = "center";
   ctx.font = "bold 18px sans-serif";
   ctx.fillStyle = "#9fb3c8";
@@ -350,6 +363,19 @@ function drawHud(ctx, game) {
     ctx.font = "bold 20px sans-serif";
     ctx.fillStyle = "#ff6b4a";
     ctx.fillText(`Survive! ${Math.ceil(game.survivalTimer)}`, ARENA_W / 2, 66);
+  }
+}
+
+function drawTouchButtons(ctx, game) {
+  const buttons = getTouchButtons();
+  for (const kind of ["boost", "slow"]) {
+    const b = buttons[kind];
+    const pressed = kind === "boost" ? game.boosting : game.slowing;
+    const state = game.boost <= 0 ? 0 : pressed ? 2 : 1;
+    const img = BTN_SPRITES[kind][state];
+    if (!img.complete || !img.naturalWidth) continue; // still loading
+    const size = b.w / SPRITE_FRAME_FRAC;
+    ctx.drawImage(img, b.x + b.w / 2 - size / 2, b.y + b.h / 2 - size / 2, size, size);
   }
 }
 
@@ -424,18 +450,25 @@ function drawOverlay(ctx, title, subtitle, game, { showHighScore = true } = {}) 
   ctx.fillStyle = "rgba(10, 14, 20, 0.72)";
   ctx.fillRect(0, 0, ARENA_W, ARENA_H);
 
+  // The arena reshapes to the screen's aspect ratio (see setArenaSize), so a
+  // phone-portrait arena is much narrower than the 900px these layouts were
+  // tuned for. Scale fonts and line spacing down with the arena so nothing
+  // overflows; k tops out at 1 so desktop is untouched.
+  const k = Math.min(1, ARENA_W / 720, ARENA_H / 560);
+  const font = (px, style = "") => `${style}${Math.round(px * k)}px sans-serif`;
+
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
   const b = game.finalBreakdown;
 
-  let y = ARENA_H / 2 - (b ? 110 : 60);
+  let y = ARENA_H / 2 - (b ? 110 : 60) * k;
   ctx.fillStyle = "#e8f0f8";
-  ctx.font = "bold 48px sans-serif";
+  ctx.font = font(48, "bold ");
   ctx.fillText(title, ARENA_W / 2, y);
-  y += 56;
+  y += 56 * k;
 
   if (b) {
-    ctx.font = "22px sans-serif";
+    ctx.font = font(22);
     ctx.fillStyle = "#e8f0f8";
     ctx.fillText(`Score: ${Math.round(b.base)}`, ARENA_W / 2, y);
 
@@ -445,39 +478,42 @@ function drawOverlay(ctx, title, subtitle, game, { showHighScore = true } = {}) 
     if (b.speedBonusPct > 0) bonusLines.push(`Speed Bonus x${b.speedBonusCount} +${Math.round(b.speedBonusPct * 100)}%`);
 
     if (bonusLines.length > 0) {
-      y += 28;
-      ctx.font = "italic 14px sans-serif";
+      y += 28 * k;
+      ctx.font = font(14, "italic ");
       ctx.fillStyle = "#9fb3c8";
       ctx.fillText("bonuses", ARENA_W / 2, y);
 
-      ctx.font = "16px sans-serif";
+      ctx.font = font(16);
       ctx.fillStyle = "#ffd257";
       for (const line of bonusLines) {
-        y += 22;
+        y += 22 * k;
         ctx.fillText(line, ARENA_W / 2, y);
       }
 
-      y += 34;
-      ctx.font = "bold 22px sans-serif";
+      y += 34 * k;
+      ctx.font = font(22, "bold ");
       ctx.fillStyle = "#e8f0f8";
       ctx.fillText(`Final Score: ${Math.round(b.total)}`, ARENA_W / 2, y);
     }
-    y += 34;
+    y += 34 * k;
   } else {
-    y += 10;
+    y += 10 * k;
   }
 
-  ctx.font = "20px sans-serif";
+  ctx.font = font(20);
   ctx.fillStyle = "#9fb3c8";
   if (showHighScore) {
     ctx.fillText(`High Score: ${game.highScore}`, ARENA_W / 2, y);
-    y += 40;
+    y += 40 * k;
   } else {
-    y += 16;
+    y += 16 * k;
   }
   ctx.fillText(subtitle, ARENA_W / 2, y);
 
-  y += 32;
-  ctx.font = "16px sans-serif";
-  ctx.fillText("Steer with the mouse · Esc pauses · M mutes · F fullscreen", ARENA_W / 2, y);
+  y += 32 * k;
+  ctx.font = font(16);
+  const hint = TOUCH_MODE
+    ? "Drag to steer · hold the corner buttons to boost or slow"
+    : "Steer with the mouse · Esc pauses · M mutes · F fullscreen";
+  ctx.fillText(hint, ARENA_W / 2, y);
 }

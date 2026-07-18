@@ -13,6 +13,7 @@ import {
   SURVIVAL_TIME,
   LEVEL_BANNER_DURATION,
   TUTORIAL_BANNER_DURATION,
+  TOUCH_MODE,
   LEVEL_TIME_SCALE,
   FOOD_VALUE_LEVEL2,
   FOOD_VALUE_LEVEL3,
@@ -56,19 +57,29 @@ function bannerSubtitle(level) {
   }
 }
 
-const POWER_UP_TUTORIAL = {
-  title: "Power Up!",
-  subtitle: [
-    [
-      { text: "Hold left-click to " },
-      { text: "boost", bold: true },
-      { text: ", right-click to " },
-      { text: "slow down", bold: true },
-    ],
-    "Lightning bolts refill your power bar",
-  ],
-  duration: TUTORIAL_BANNER_DURATION,
-};
+// Built per-collect (not a constant) so the copy matches the active control
+// scheme — TOUCH_MODE is set at startup, before the first pickup.
+function powerUpTutorial() {
+  const controls = TOUCH_MODE
+    ? [
+        { text: "Hold " },
+        { text: "≫", bold: true },
+        { text: " to boost, " },
+        { text: "🕐", bold: true },
+        { text: " to slow down" },
+      ]
+    : [
+        { text: "Hold left-click to " },
+        { text: "boost", bold: true },
+        { text: ", right-click to " },
+        { text: "slow down", bold: true },
+      ];
+  return {
+    title: "Power Up!",
+    subtitle: [controls],
+    duration: TUTORIAL_BANNER_DURATION,
+  };
+}
 
 function loadTunables() {
   const saved = getSettings().tunables || {};
@@ -275,7 +286,7 @@ export function update(game, dt) {
     playPowerUp();
     if (!game.hasSeenPowerTutorial) {
       game.hasSeenPowerTutorial = true;
-      if (!game.banner) game.banner = { t: 0, ...POWER_UP_TUTORIAL };
+      if (!game.banner) game.banner = { t: 0, ...powerUpTutorial() };
     }
   }
 

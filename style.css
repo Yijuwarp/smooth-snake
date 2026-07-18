@@ -12,6 +12,9 @@ html, body {
   width: 100vw;
   height: 100vh;
   cursor: crosshair;
+  /* Touch drags steer the snake — never scroll/zoom the page. */
+  touch-action: none;
+  -webkit-tap-highlight-color: transparent;
 }
 
 #pause-menu {
