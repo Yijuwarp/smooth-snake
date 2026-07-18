@@ -6,6 +6,7 @@ import {
   FOOD_RADIUS,
   STAR_RADIUS,
   SPIKE_RADIUS,
+  POWER_UP_RADIUS,
   COMBO_WINDOW,
   LEVEL_BANNER_DURATION,
   MAX_HEARTS,
@@ -21,6 +22,7 @@ const COLOR_SPIKE_TIP = "#ff8c4a";
 const COLOR_SNAKE_BODY = "#4fd1e8";
 const COLOR_SNAKE_HEAD = "#7fe8ff";
 const COLOR_EYE = "#0f1520";
+const COLOR_POWER_UP = "#fff44d";
 
 // Computes the scale/offset that letterboxes the logical arena, centered,
 // inside the current canvas backing-store size.
@@ -54,8 +56,11 @@ export function render(game, ctx, canvas) {
   ctx.scale(scale, scale);
 
   drawArena(ctx);
-  if (game.food.isStar) drawStar(ctx, game.food, game.time);
-  else drawFood(ctx, game.food, game.time);
+  if (game.food) {
+    if (game.food.isStar) drawStar(ctx, game.food, game.time);
+    else drawFood(ctx, game.food, game.time);
+  }
+  if (game.powerUp) drawPowerUp(ctx, game.powerUp, game.time);
   drawSpikes(ctx, game.spikes, game.time);
 
   const blinking = game.invulnTimer > 0;
@@ -161,6 +166,28 @@ function drawStar(ctx, star, time) {
   ctx.restore();
 }
 
+function drawPowerUp(ctx, powerUp, time) {
+  const pulse = 1 + Math.sin(time * 6) * 0.12;
+  const s = POWER_UP_RADIUS / 10; // hand-tuned bolt path assumes a 10-unit scale
+
+  ctx.save();
+  ctx.translate(powerUp.x, powerUp.y);
+  ctx.scale(pulse, pulse);
+  ctx.fillStyle = COLOR_POWER_UP;
+  ctx.shadowColor = COLOR_POWER_UP;
+  ctx.shadowBlur = 12;
+  ctx.beginPath();
+  ctx.moveTo(2 * s, -10 * s);
+  ctx.lineTo(-6 * s, 1 * s);
+  ctx.lineTo(-1 * s, 1 * s);
+  ctx.lineTo(-3 * s, 10 * s);
+  ctx.lineTo(6 * s, -2 * s);
+  ctx.lineTo(1 * s, -2 * s);
+  ctx.closePath();
+  ctx.fill();
+  ctx.restore();
+}
+
 function drawSpikes(ctx, spikes, time) {
   const spikeCount = 8;
   for (const s of spikes) {
@@ -251,7 +278,7 @@ function drawHud(ctx, game) {
   }
 
   // Shared boost/precision meter, bottom-right.
-  const bw = 190, bh = 16, bx = ARENA_W - 16 - bw, by = ARENA_H - 40;
+  const bw = 190, bh = 10, bx = ARENA_W - 16 - bw, by = ARENA_H - 34;
   ctx.fillStyle = "#9fb3c8";
   ctx.font = "13px sans-serif";
   ctx.textAlign = "right";
@@ -269,10 +296,18 @@ function drawHud(ctx, game) {
   ctx.textAlign = "right";
   ctx.fillText(`High Score: ${game.highScore}`, ARENA_W - 16, 14);
 
+  if (game.devMode) {
+    ctx.font = "13px monospace";
+    ctx.fillStyle = "#9fb3c8";
+    ctx.textAlign = "right";
+    ctx.fillText(`Speed: ${game.currentSpeed.toFixed(0)} px/s`, ARENA_W - 16, 40);
+    ctx.fillText(`Pellets: ${game.eaten}`, ARENA_W - 16, 58);
+  }
+
   ctx.textAlign = "left";
   ctx.font = "14px sans-serif";
   ctx.fillStyle = "#9fb3c8";
-  ctx.fillText(`M · sound ${isMuted() ? "off" : "on"}   Esc · pause   B · next track`, 16, ARENA_H - 28);
+  ctx.fillText(`M · sound ${isMuted() ? "off" : "on"}   Esc · pause   B · next track   F · fullscreen`, 16, ARENA_H - 28);
 
   ctx.textAlign = "center";
   ctx.font = "bold 18px sans-serif";
@@ -280,6 +315,15 @@ function drawHud(ctx, game) {
   ctx.fillText(`Level ${game.level}`, ARENA_W / 2, 14);
 
   drawHearts(ctx, game);
+
+  // Final level: counts down the seconds the player must survive before the
+  // star appears. Only shown once the FINAL LEVEL banner has cleared.
+  if (game.starPending && !game.banner) {
+    ctx.textAlign = "center";
+    ctx.font = "bold 20px sans-serif";
+    ctx.fillStyle = "#ff6b4a";
+    ctx.fillText(`Survive! ${Math.ceil(game.survivalTimer)}`, ARENA_W / 2, 66);
+  }
 }
 
 function drawHearts(ctx, game) {
@@ -296,16 +340,18 @@ function drawHearts(ctx, game) {
 }
 
 function drawLevelBanner(ctx, game) {
-  const { t, title, subtitle } = game.banner;
+  const { t, title, subtitle, duration } = game.banner;
+  const dur = duration || LEVEL_BANNER_DURATION;
   // Quick fade in, hold, fade out over the banner duration.
   const fadeIn = Math.min(1, t / 0.25);
-  const fadeOut = Math.min(1, (LEVEL_BANNER_DURATION - t) / 0.4);
+  const fadeOut = Math.min(1, (dur - t) / 0.4);
   const alpha = Math.max(0, Math.min(fadeIn, fadeOut));
+  const lines = subtitle ? (Array.isArray(subtitle) ? subtitle : [subtitle]) : [];
 
   ctx.save();
   ctx.globalAlpha = alpha * 0.6;
   ctx.fillStyle = "#0a0e14";
-  ctx.fillRect(0, ARENA_H / 2 - 70, ARENA_W, 140);
+  ctx.fillRect(0, ARENA_H / 2 - 80, ARENA_W, 170);
 
   ctx.globalAlpha = alpha;
   ctx.textAlign = "center";
@@ -314,11 +360,11 @@ function drawLevelBanner(ctx, game) {
   ctx.font = "bold 54px sans-serif";
   ctx.fillText(title, ARENA_W / 2, ARENA_H / 2 - 16);
 
-  if (subtitle) {
-    ctx.fillStyle = "#e8f0f8";
-    ctx.font = "20px sans-serif";
-    ctx.fillText(subtitle, ARENA_W / 2, ARENA_H / 2 + 34);
-  }
+  ctx.fillStyle = "#e8f0f8";
+  ctx.font = "20px sans-serif";
+  lines.forEach((line, i) => {
+    ctx.fillText(line, ARENA_W / 2, ARENA_H / 2 + 34 + i * 26);
+  });
   ctx.restore();
 }
 
@@ -327,32 +373,55 @@ function drawOverlay(ctx, title, subtitle, game) {
   ctx.fillRect(0, 0, ARENA_W, ARENA_H);
 
   ctx.textAlign = "center";
-  ctx.fillStyle = "#e8f0f8";
-
-  ctx.font = "bold 48px sans-serif";
   ctx.textBaseline = "middle";
-  ctx.fillText(title, ARENA_W / 2, ARENA_H / 2 - 74);
-
-  ctx.font = "24px sans-serif";
-  ctx.fillText(`Score: ${game.score}`, ARENA_W / 2, ARENA_H / 2 - 24);
-  ctx.fillText(`High Score: ${game.highScore}`, ARENA_W / 2, ARENA_H / 2 + 8);
-
-  let y = ARENA_H / 2 + 8;
   const b = game.finalBreakdown;
-  if (b && (b.lifeBonus > 0 || b.speedBonus > 0)) {
-    y += 30;
-    ctx.font = "15px sans-serif";
-    ctx.fillStyle = "#ffd257";
-    const parts = [`Base ${b.base}`];
-    if (b.lifeBonus) parts.push(`Life Bonus +${b.lifeBonus}`);
-    if (b.speedBonus) parts.push(`Speed Bonus +${b.speedBonus}`);
-    ctx.fillText(parts.join("   ·   "), ARENA_W / 2, y);
+
+  let y = ARENA_H / 2 - (b ? 110 : 60);
+  ctx.fillStyle = "#e8f0f8";
+  ctx.font = "bold 48px sans-serif";
+  ctx.fillText(title, ARENA_W / 2, y);
+  y += 56;
+
+  if (b) {
+    ctx.font = "22px sans-serif";
+    ctx.fillStyle = "#e8f0f8";
+    ctx.fillText(`Score: ${Math.round(b.base)}`, ARENA_W / 2, y);
+
+    const bonusLines = [];
+    if (b.starBonusPct > 0) bonusLines.push(`Star Collected +${Math.round(b.starBonusPct * 100)}%`);
+    if (b.lifeBonusPct > 0) bonusLines.push(`Life Bonus x${b.heartsRemaining} +${Math.round(b.lifeBonusPct * 100)}%`);
+    if (b.speedBonusPct > 0) bonusLines.push(`Speed Bonus x${b.speedBonusCount} +${Math.round(b.speedBonusPct * 100)}%`);
+
+    if (bonusLines.length > 0) {
+      y += 28;
+      ctx.font = "italic 14px sans-serif";
+      ctx.fillStyle = "#9fb3c8";
+      ctx.fillText("bonuses", ARENA_W / 2, y);
+
+      ctx.font = "16px sans-serif";
+      ctx.fillStyle = "#ffd257";
+      for (const line of bonusLines) {
+        y += 22;
+        ctx.fillText(line, ARENA_W / 2, y);
+      }
+
+      y += 34;
+      ctx.font = "bold 22px sans-serif";
+      ctx.fillStyle = "#e8f0f8";
+      ctx.fillText(`Final Score: ${Math.round(b.total)}`, ARENA_W / 2, y);
+    }
+    y += 34;
+  } else {
+    y += 10;
   }
 
   ctx.font = "20px sans-serif";
   ctx.fillStyle = "#9fb3c8";
-  ctx.fillText(subtitle, ARENA_W / 2, y + 46);
+  ctx.fillText(`High Score: ${game.highScore}`, ARENA_W / 2, y);
+  y += 40;
+  ctx.fillText(subtitle, ARENA_W / 2, y);
 
+  y += 32;
   ctx.font = "16px sans-serif";
-  ctx.fillText("Steer with the mouse · Esc pauses · M mutes · B swaps music", ARENA_W / 2, y + 78);
+  ctx.fillText("Steer with the mouse · Esc pauses · M mutes · B swaps music · F fullscreen", ARENA_W / 2, y);
 }

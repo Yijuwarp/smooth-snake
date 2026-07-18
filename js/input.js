@@ -4,8 +4,10 @@ import { nextTrack, setMusicMuted } from "./music.js";
 
 // Wires mouse/keyboard input. `onActivate` fires on click or Enter (start or
 // restart from menu/gameover), `onPause` on Escape, `onTrackChange` after B
-// swaps the music track (so open UI can refresh the track name).
-export function setupInput(game, canvas, { onActivate, onPause, onTrackChange }) {
+// swaps the music track (so open UI can refresh the track name),
+// `onToggleFullscreen` on F (kept in main.js so it can share state with its
+// fullscreenchange listener).
+export function setupInput(game, canvas, { onActivate, onPause, onTrackChange, onToggleFullscreen }) {
   canvas.addEventListener("mousemove", (e) => {
     const rect = canvas.getBoundingClientRect();
     const dpr = window.devicePixelRatio || 1;
@@ -45,6 +47,7 @@ export function setupInput(game, canvas, { onActivate, onPause, onTrackChange })
       nextTrack();
       onTrackChange();
     }
+    if (e.key === "f" || e.key === "F") onToggleFullscreen();
   });
 }
 

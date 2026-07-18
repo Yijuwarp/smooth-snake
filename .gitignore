@@ -3,3 +3,7 @@ Thumbs.db
 .vercel/
 
 .vercel
+
+# Scratch/candidate audio files — not loaded by the game
+music/candidates/
+sfx/

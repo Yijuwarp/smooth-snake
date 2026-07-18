@@ -21,11 +21,13 @@ export const TURN_RATE = 4.0;
 
 export const COMBO_WINDOW = 5; // seconds to reach the next food before the multiplier resets
 
-export const LEVEL_THRESHOLDS = [50, 150, 250]; // score needed for level 2, 3, 4
-export const LEVEL_TRANSITION_TIME = 30; // seconds per level before a forced transition, even without hitting score
+export const LEVEL_PELLETS_REQUIRED = 10; // pellets eaten since the last level-up forces a transition
+export const LEVEL_TIME_REQUIRED = 20; // seconds since the last level-up forces a transition, whichever comes first
 export const FINAL_LEVEL = 4;
+export const SURVIVAL_TIME = 5; // seconds to survive at the final level, after its banner clears, before the star appears
 export const LEVEL_BANNER_DURATION = 2.2; // seconds of slow-motion banner
-export const LEVEL_TIME_SCALE = 0.05; // gameplay speed during the banner
+export const TUTORIAL_BANNER_DURATION = 4.5; // longer banner for the one-time power-up explainer
+export const LEVEL_TIME_SCALE = 0.05; // gameplay speed during a banner
 export const FOOD_VALUE_LEVEL2 = 3; // points per pickup (before multiplier) from level 2 on
 export const FOOD_VALUE_LEVEL3 = 5; // points per pickup (before multiplier) from level 3 on
 
@@ -51,14 +53,20 @@ export const INVULN_TIME = 1.2; // seconds of no further heart loss after a boun
 export const HIT_FLASH_DURATION = 0.35; // seconds the red screen-flash takes to fade
 export const BOUNCE_CLEARANCE = 4; // extra px pushed clear of a hazard after a bounce
 
-// End-of-run bonuses.
-export const LIFE_BONUS = 50; // awarded if no heart was ever lost
-export const SPEED_BONUS = 50; // awarded per level transition reached via score (not the 30s timer)
+// End-of-run bonuses, each a percentage of the base score, summed additively
+// at game end (see endGame in game.js).
+export const STAR_BONUS_PCT = 0.3; // +30% for winning (collecting the star)
+export const LIFE_BONUS_PCT = 0.1; // +10% per heart remaining at game end
+export const SPEED_BONUS_PCT = 0.1; // +10% per level transition reached via pellet count (not the 20s timer)
 
-export const BOOST_SPEED_MULT = 1.6;
-export const SLOW_SPEED_MULT = 0.5; // right-click "precision" power: half speed, same turn rate -> tighter turning radius
+export const BOOST_SPEED_MULT = 2.0;
+export const SLOW_SPEED_MULT = 0.25; // right-click "precision" power: quarter speed, same turn rate -> tighter turning radius
 export const BOOST_DRAIN_PER_SEC = 1 / 3; // full meter lasts 3s of continuous use (50% longer than the original 2s)
-export const BOOST_RECHARGE_PER_FOOD = 0.33;
+
+// Pellets no longer recharge the power meter — only the lightning power-up
+// does, and it refills it completely.
+export const POWER_UP_SPAWN_INTERVAL = 5; // seconds of cooldown before another power-up can spawn, starting once the current one is collected
+export const POWER_UP_RADIUS = 9;
 
 export const FOOD_RADIUS = 8;
 export const STAR_RADIUS = FOOD_RADIUS * 1.6;
@@ -76,8 +84,8 @@ export const REACH_CELL = BODY_DIAMETER;
 // only gates spawn placement, not runtime movement.
 export const UI_SAFE_ZONES = [
   { x: 0, y: 0, w: 180, h: 64 }, // score + combo badge (top-left)
-  { x: ARENA_W - 220, y: 0, w: 220, h: 44 }, // high score (top-right)
-  { x: ARENA_W / 2 - 80, y: 0, w: 160, h: 50 }, // level + hearts (top-center)
+  { x: ARENA_W - 220, y: 0, w: 220, h: 80 }, // high score + dev-mode readout (top-right)
+  { x: ARENA_W / 2 - 110, y: 0, w: 220, h: 90 }, // level + hearts + survive countdown (top-center)
   { x: 0, y: ARENA_H - 46, w: 380, h: 46 }, // keybind hints (bottom-left)
   { x: ARENA_W - 240, y: ARENA_H - 80, w: 240, h: 80 }, // boost meter + label (bottom-right)
 ];
