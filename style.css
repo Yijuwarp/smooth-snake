@@ -159,6 +159,24 @@ html, body {
   display: none;
 }
 
+/* Phone portrait: the panel's vertically-centered right-side position
+   collides with the horizontally-and-vertically-centered start/game-over
+   canvas text (title, high score, subtitle, hint). Dock it to the bottom
+   instead so the two never overlap. */
+@media (max-width: 700px) and (orientation: portrait) {
+  #leaderboard-container {
+    top: auto;
+    right: auto;
+    bottom: max(14px, env(safe-area-inset-bottom) + 10px);
+    left: 50%;
+    transform: translateX(-50%);
+    width: min(90vw, 320px);
+    max-height: 24vh;
+    padding: 14px 16px;
+    font-size: 13px;
+  }
+}
+
 #leaderboard-container h3 {
   margin: 0 0 10px;
   font-size: 15px;
