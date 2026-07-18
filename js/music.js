@@ -1,22 +1,21 @@
 import { getSettings, saveSettings } from "./storage.js";
 
 // All CC0, see music/CREDITS.txt.
-const TRACKS = [
-  { name: "Chill Lofi (loop edit)", file: "music/chill-lofi-loop.ogg" },
-  { name: "Lofi Hip Hop Loop", file: "music/lofi-loop.ogg" },
-  { name: "Lofi Hip Hop", file: "music/lofi-hip-hop.ogg" },
-];
+const TRACKS = {
+  level1: { name: "Stage 1 - Chiptune Adventures (Juhani Junkala)", file: "music/stage1.ogg", loop: true },
+  level2: { name: "Stage 2 - Chiptune Adventures (Juhani Junkala)", file: "music/stage2.ogg", loop: true },
+  level3: { name: "Stage 3 - Boss Fight (Juhani Junkala)", file: "music/stage3.ogg", loop: true },
+  level4: { name: "Final Stage - As Fast As You Can (Centurion of War)", file: "music/stage4.ogg", loop: true },
+  victory: { name: "Victory Fanfare (congusbongus)", file: "music/victory.ogg", loop: false }
+};
 
+let currentKey = "level1";
 let el = null;
-let index = 0;
 let volume = 0.6;
 let enabled = true;
 let started = false;
 
 const settings = getSettings();
-if (Number.isInteger(settings.track) && settings.track >= 0 && settings.track < TRACKS.length) {
-  index = settings.track;
-}
 if (typeof settings.musicVolume === "number") {
   volume = Math.min(1, Math.max(0, settings.musicVolume));
 }
@@ -24,31 +23,49 @@ if (typeof settings.musicEnabled === "boolean") {
   enabled = settings.musicEnabled;
 }
 
-// First call must come from a user-gesture handler so autoplay is allowed.
-export function startMusic() {
+export function playTrack(key) {
+  currentKey = key;
+  const track = TRACKS[key];
+  if (!track) return;
+
   if (!el) {
-    el = new Audio(TRACKS[index].file);
-    el.loop = true;
-    el.volume = volume;
-    el.muted = !enabled;
+    el = new Audio();
   }
-  started = true;
-  el.play().catch(() => {});
+
+  const relativeFile = track.file;
+  if (!el.src.endsWith(relativeFile)) {
+    el.src = relativeFile;
+  }
+  el.loop = track.loop;
+  el.volume = volume;
+  el.muted = !enabled;
+
+  if (started) {
+    el.play().catch(() => {});
+  }
 }
 
-export function nextTrack() {
-  index = (index + 1) % TRACKS.length;
-  saveSettings({ track: index });
+export function updateMusicForLevel(level) {
+  if (level === 1) playTrack("level1");
+  else if (level === 2) playTrack("level2");
+  else if (level === 3) playTrack("level3");
+  else if (level === 4) playTrack("level4");
+}
+
+export function stopMusic() {
   if (el) {
-    el.src = TRACKS[index].file;
-    el.volume = volume;
-    if (started) el.play().catch(() => {});
+    el.pause();
   }
-  return TRACKS[index].name;
+}
+
+// First call must come from a user-gesture handler so autoplay is allowed.
+export function startMusic(level = 1) {
+  started = true;
+  updateMusicForLevel(level);
 }
 
 export function currentTrackName() {
-  return TRACKS[index].name;
+  return TRACKS[currentKey] ? TRACKS[currentKey].name : "";
 }
 
 export function setMusicVolume(v) {

@@ -1,13 +1,12 @@
 import { computeViewport } from "./render.js";
 import { toggleMute, isMuted } from "./audio.js";
-import { nextTrack, setMusicMuted } from "./music.js";
+import { setMusicMuted } from "./music.js";
 
 // Wires mouse/keyboard input. `onActivate` fires on click or Enter (start or
-// restart from menu/gameover), `onPause` on Escape, `onTrackChange` after B
-// swaps the music track (so open UI can refresh the track name),
+// restart from menu/gameover), `onPause` on Escape,
 // `onToggleFullscreen` on F (kept in main.js so it can share state with its
 // fullscreenchange listener).
-export function setupInput(game, canvas, { onActivate, onPause, onTrackChange, onToggleFullscreen }) {
+export function setupInput(game, canvas, { onActivate, onPause, onToggleFullscreen }) {
   canvas.addEventListener("mousemove", (e) => {
     const rect = canvas.getBoundingClientRect();
     const dpr = window.devicePixelRatio || 1;
@@ -42,10 +41,6 @@ export function setupInput(game, canvas, { onActivate, onPause, onTrackChange, o
     if (e.key === "m" || e.key === "M") {
       const m = toggleMute();
       setMusicMuted(m);
-    }
-    if (e.key === "b" || e.key === "B") {
-      nextTrack();
-      onTrackChange();
     }
     if (e.key === "f" || e.key === "F") onToggleFullscreen();
   });

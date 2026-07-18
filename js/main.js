@@ -14,7 +14,7 @@ function activate() {
   if (game.state !== "playing" && game.state !== "paused") {
     resetGame(game);
     playStart();
-    startMusic();
+    startMusic(game.level);
   }
 }
 
@@ -150,7 +150,7 @@ devModeToggle.addEventListener("change", () => setDevMode(game, devModeToggle.ch
 devImmortalToggle.addEventListener("change", () => setTunable(game, "immortal", devImmortalToggle.checked));
 document.getElementById("resume-btn").addEventListener("click", togglePause);
 
-setupInput(game, canvas, { onActivate: activate, onPause: onEscapeKey, onTrackChange: showTrackName, onToggleFullscreen: toggleFullscreen });
+setupInput(game, canvas, { onActivate: activate, onPause: onEscapeKey, onToggleFullscreen: toggleFullscreen });
 
 let last = performance.now();
 

@@ -450,5 +450,5 @@ function drawOverlay(ctx, title, subtitle, game) {
 
   y += 32;
   ctx.font = "16px sans-serif";
-  ctx.fillText("Steer with the mouse · Esc pauses · M mutes · B swaps music · F fullscreen", ARENA_W / 2, y);
+  ctx.fillText("Steer with the mouse · Esc pauses · M mutes · F fullscreen", ARENA_W / 2, y);
 }
