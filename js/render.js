@@ -82,9 +82,9 @@ export function render(game, ctx, canvas) {
     ctx.restore();
   }
 
-  if (game.state === "menu") drawOverlay(ctx, "Smooth Snake", "Click or press Enter to play", game);
+  if (game.state === "menu") drawOverlay(ctx, "SSNAKE", "Click to Play!", game, { showHighScore: true });
   if (game.state === "gameover") {
-    drawOverlay(ctx, game.won ? "You Win!" : "Game Over", "Click or press Enter to play again", game);
+    drawOverlay(ctx, game.won ? "You Win!" : "Game Over", "Click to Play Again!", game, { showHighScore: false });
   }
   if (game.state === "paused") {
     // The DOM pause panel floats on top; just dim the frozen arena behind it.
@@ -263,16 +263,18 @@ function drawHud(ctx, game) {
   ctx.textBaseline = "top";
 
   // Combo multiplier + countdown bar, only while a chain is running.
-  ctx.textAlign = "left";
+  // Right-aligned under the score, mirroring the old left-side layout.
   if (game.comboTimer > 0) {
+    ctx.textAlign = "right";
     ctx.fillStyle = "#ffd257";
     ctx.font = "bold 20px sans-serif";
-    ctx.fillText(`×${game.multiplier}`, 16, 42);
+    ctx.fillText(`×${game.multiplier}`, ARENA_W - 16, 42);
     const frac = game.comboTimer / COMBO_WINDOW;
+    const barW = 90, barX = ARENA_W - 150;
     ctx.fillStyle = "rgba(255, 210, 87, 0.25)";
-    ctx.fillRect(60, 48, 90, 8);
+    ctx.fillRect(barX, 48, barW, 8);
     ctx.fillStyle = "#ffd257";
-    ctx.fillRect(60, 48, 90 * frac, 8);
+    ctx.fillRect(barX, 48, barW * frac, 8);
   }
 
   // Shared boost/precision meter, bottom-right — pill bar with glow.
@@ -325,8 +327,8 @@ function drawHud(ctx, game) {
     ctx.font = "13px monospace";
     ctx.fillStyle = "#9fb3c8";
     ctx.textAlign = "right";
-    ctx.fillText(`Speed: ${game.currentSpeed.toFixed(0)} px/s`, ARENA_W - 16, 40);
-    ctx.fillText(`Pellets: ${game.eaten}`, ARENA_W - 16, 58);
+    ctx.fillText(`Speed: ${game.currentSpeed.toFixed(0)} px/s`, ARENA_W - 16, 64);
+    ctx.fillText(`Pellets: ${game.eaten}`, ARENA_W - 16, 82);
   }
 
   ctx.textAlign = "left";
@@ -388,12 +390,37 @@ function drawLevelBanner(ctx, game) {
   ctx.fillStyle = "#e8f0f8";
   ctx.font = "20px sans-serif";
   lines.forEach((line, i) => {
-    ctx.fillText(line, ARENA_W / 2, ARENA_H / 2 + 34 + i * 26);
+    const lineY = ARENA_H / 2 + 34 + i * 26;
+    if (Array.isArray(line)) drawMixedBoldLine(ctx, line, ARENA_W / 2, lineY);
+    else ctx.fillText(line, ARENA_W / 2, lineY);
   });
   ctx.restore();
 }
 
-function drawOverlay(ctx, title, subtitle, game) {
+// Renders a line built from { text, bold } segments, centered as a whole —
+// canvas fillText has no inline bold, so segment widths are measured first
+// to find the combined line's left edge, then each piece is drawn in turn.
+function drawMixedBoldLine(ctx, segments, centerX, y) {
+  const NORMAL_FONT = "20px sans-serif";
+  const BOLD_FONT = "bold 20px sans-serif";
+  let totalWidth = 0;
+  for (const seg of segments) {
+    ctx.font = seg.bold ? BOLD_FONT : NORMAL_FONT;
+    totalWidth += ctx.measureText(seg.text).width;
+  }
+
+  const prevAlign = ctx.textAlign;
+  ctx.textAlign = "left";
+  let x = centerX - totalWidth / 2;
+  for (const seg of segments) {
+    ctx.font = seg.bold ? BOLD_FONT : NORMAL_FONT;
+    ctx.fillText(seg.text, x, y);
+    x += ctx.measureText(seg.text).width;
+  }
+  ctx.textAlign = prevAlign;
+}
+
+function drawOverlay(ctx, title, subtitle, game, { showHighScore = true } = {}) {
   ctx.fillStyle = "rgba(10, 14, 20, 0.72)";
   ctx.fillRect(0, 0, ARENA_W, ARENA_H);
 
@@ -442,8 +469,12 @@ function drawOverlay(ctx, title, subtitle, game) {
 
   ctx.font = "20px sans-serif";
   ctx.fillStyle = "#9fb3c8";
-  ctx.fillText(`High Score: ${game.highScore}`, ARENA_W / 2, y);
-  y += 40;
+  if (showHighScore) {
+    ctx.fillText(`High Score: ${game.highScore}`, ARENA_W / 2, y);
+    y += 40;
+  } else {
+    y += 16;
+  }
   ctx.fillText(subtitle, ARENA_W / 2, y);
 
   y += 32;
