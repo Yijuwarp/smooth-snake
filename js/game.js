@@ -21,6 +21,7 @@ import {
   MAX_HEARTS,
   INVULN_TIME,
   HIT_FLASH_DURATION,
+  EAT_FLASH_DURATION,
   STAR_BONUS_PCT,
   LIFE_BONUS_PCT,
   SPEED_BONUS_PCT,
@@ -119,6 +120,7 @@ export function createGame() {
     hearts: MAX_HEARTS,
     invulnTimer: 0,
     hitFlash: 0,
+    eatFlash: 0,
     levelTimer: 0,
     speedBonusCount: 0,
     won: false,
@@ -153,6 +155,7 @@ export function resetGame(game) {
   game.hearts = MAX_HEARTS;
   game.invulnTimer = 0;
   game.hitFlash = 0;
+  game.eatFlash = 0;
   game.levelTimer = 0;
   game.speedBonusCount = 0;
   game.won = false;
@@ -209,6 +212,7 @@ export function update(game, dt) {
 
   if (game.invulnTimer > 0) game.invulnTimer = Math.max(0, game.invulnTimer - dt);
   if (game.hitFlash > 0) game.hitFlash = Math.max(0, game.hitFlash - dt);
+  if (game.eatFlash > 0) game.eatFlash = Math.max(0, game.eatFlash - dt);
 
   if (game.comboTimer > 0) {
     game.comboTimer -= dt;
@@ -300,6 +304,10 @@ export function update(game, dt) {
     game.multiplier = game.comboTimer > 0 ? game.multiplier + 1 : 1;
     game.score += game.multiplier * foodValueForLevel(game.level);
     game.comboTimer = COMBO_WINDOW;
+    // Sqrt scaling: sublinear ("slow") growth, and lands almost exactly on
+    // "10x multiplier -> 3x longer happy" (sqrt(10) ~= 3.16) with no extra
+    // tuning constant needed.
+    game.eatFlash = EAT_FLASH_DURATION * Math.sqrt(game.multiplier);
     updateGrowthAndSpeed(snake, game.eaten, maxSpeed);
 
     playEat(game.multiplier);

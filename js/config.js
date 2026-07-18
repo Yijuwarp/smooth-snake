@@ -86,6 +86,7 @@ export const GROW_SPIN_SPEED = 6; // radians/sec of visual spin while active
 export const MAX_HEARTS = 3;
 export const INVULN_TIME = 1.2; // seconds of no further heart loss after a bounce
 export const HIT_FLASH_DURATION = 0.35; // seconds the red screen-flash takes to fade
+export const EAT_FLASH_DURATION = 0.4; // seconds the "happy" eyes show after eating
 export const BOUNCE_CLEARANCE = 4; // extra px pushed clear of a hazard after a bounce
 
 // End-of-run bonuses, each a percentage of the base score, summed additively
