@@ -9,6 +9,8 @@ import {
   TURN_RATE,
   ARENA_W,
   ARENA_H,
+  SPIKE_RADIUS,
+  BOUNCE_CLEARANCE,
 } from "./config.js";
 
 export function createSnake() {
@@ -105,6 +107,33 @@ function placeSegments(snake) {
   }
 
   snake.segments = segments;
+}
+
+// Reflects heading off whichever wall(s) were crossed and clamps the head
+// back inside, so the same wall doesn't re-trigger the collision next frame.
+export function bounceOffWall(snake) {
+  let vx = Math.cos(snake.theta);
+  let vy = Math.sin(snake.theta);
+  if (snake.x - SNAKE_RADIUS < 0 || snake.x + SNAKE_RADIUS > ARENA_W) vx = -vx;
+  if (snake.y - SNAKE_RADIUS < 0 || snake.y + SNAKE_RADIUS > ARENA_H) vy = -vy;
+  snake.theta = Math.atan2(vy, vx);
+  snake.x = clamp(snake.x, SNAKE_RADIUS + BOUNCE_CLEARANCE, ARENA_W - SNAKE_RADIUS - BOUNCE_CLEARANCE);
+  snake.y = clamp(snake.y, SNAKE_RADIUS + BOUNCE_CLEARANCE, ARENA_H - SNAKE_RADIUS - BOUNCE_CLEARANCE);
+}
+
+// Reflects heading off the spike's surface normal (standard circle-bounce:
+// v' = v - 2(v·n)n) and pushes the head just clear of the spike.
+export function bounceOffSpike(snake, spike) {
+  const dx = snake.x - spike.x;
+  const dy = snake.y - spike.y;
+  const d = Math.hypot(dx, dy) || 1;
+  const nx = dx / d, ny = dy / d;
+  const vx = Math.cos(snake.theta), vy = Math.sin(snake.theta);
+  const dot = vx * nx + vy * ny;
+  snake.theta = Math.atan2(vy - 2 * dot * ny, vx - 2 * dot * nx);
+  const pushDist = SNAKE_RADIUS + SPIKE_RADIUS * (spike.sizeMult || 1) + BOUNCE_CLEARANCE;
+  snake.x = spike.x + nx * pushDist;
+  snake.y = spike.y + ny * pushDist;
 }
 
 export function updateGrowthAndSpeed(snake, eaten) {

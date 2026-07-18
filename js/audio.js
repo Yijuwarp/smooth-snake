@@ -83,3 +83,15 @@ export function playDeath() {
   note(220, { dur: 0.5, type: "sawtooth", gain: 0.22, slideTo: 55 });
   note(233, { dur: 0.5, type: "sawtooth", gain: 0.16, slideTo: 58 });
 }
+
+// A single low thud — a bounce off a wall/spike that costs a heart but isn't
+// fatal, so it needs to read as distinctly less severe than playDeath().
+export function playHit() {
+  note(180, { dur: 0.16, type: "square", gain: 0.24, slideTo: 90 });
+}
+
+export function playWin() {
+  [523, 659, 784, 1047].forEach((f, i) =>
+    note(f, { at: i * 0.12, dur: 0.24, type: "triangle", gain: 0.24 })
+  );
+}

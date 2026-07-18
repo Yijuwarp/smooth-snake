@@ -1,4 +1,16 @@
-import { ARENA_W, ARENA_H, SNAKE_RADIUS, BODY_DIAMETER, FOOD_RADIUS, SPIKE_RADIUS, COMBO_WINDOW, LEVEL_BANNER_DURATION } from "./config.js";
+import {
+  ARENA_W,
+  ARENA_H,
+  SNAKE_RADIUS,
+  BODY_DIAMETER,
+  FOOD_RADIUS,
+  STAR_RADIUS,
+  SPIKE_RADIUS,
+  COMBO_WINDOW,
+  LEVEL_BANNER_DURATION,
+  MAX_HEARTS,
+  HIT_FLASH_DURATION,
+} from "./config.js";
 import { isMuted } from "./audio.js";
 
 const COLOR_BG = "#0f1520";
@@ -42,14 +54,33 @@ export function render(game, ctx, canvas) {
   ctx.scale(scale, scale);
 
   drawArena(ctx);
-  drawFood(ctx, game.food, game.time);
+  if (game.food.isStar) drawStar(ctx, game.food, game.time);
+  else drawFood(ctx, game.food, game.time);
   drawSpikes(ctx, game.spikes, game.time);
+
+  const blinking = game.invulnTimer > 0;
+  if (blinking) {
+    ctx.save();
+    ctx.globalAlpha = 0.4 + 0.5 * Math.abs(Math.sin(game.time * 18));
+  }
   drawSnake(ctx, game.snake);
+  if (blinking) ctx.restore();
+
   drawHud(ctx, game);
-  if (game.levelTransition) drawLevelBanner(ctx, game);
+  if (game.banner) drawLevelBanner(ctx, game);
+
+  if (game.hitFlash > 0) {
+    ctx.save();
+    ctx.globalAlpha = (game.hitFlash / HIT_FLASH_DURATION) * 0.35;
+    ctx.fillStyle = "#ff3050";
+    ctx.fillRect(0, 0, ARENA_W, ARENA_H);
+    ctx.restore();
+  }
 
   if (game.state === "menu") drawOverlay(ctx, "Smooth Snake", "Click or press Enter to play", game);
-  if (game.state === "gameover") drawOverlay(ctx, "Game Over", "Click or press Enter to play again", game);
+  if (game.state === "gameover") {
+    drawOverlay(ctx, game.won ? "You Win!" : "Game Over", "Click or press Enter to play again", game);
+  }
   if (game.state === "paused") {
     // The DOM pause panel floats on top; just dim the frozen arena behind it.
     ctx.fillStyle = "rgba(10, 14, 20, 0.55)";
@@ -104,6 +135,32 @@ function drawFood(ctx, food, time) {
   ctx.fill();
 }
 
+function drawStar(ctx, star, time) {
+  const points = 5;
+  const outer = STAR_RADIUS;
+  const inner = STAR_RADIUS * 0.45;
+  const pulse = 1 + Math.sin(time * 5) * 0.08;
+
+  ctx.save();
+  ctx.translate(star.x, star.y);
+  ctx.rotate(time * 1.2);
+  ctx.scale(pulse, pulse);
+  ctx.fillStyle = "#ffd257";
+  ctx.shadowColor = "#ffd257";
+  ctx.shadowBlur = 14;
+  ctx.beginPath();
+  for (let i = 0; i < points * 2; i++) {
+    const r = i % 2 === 0 ? outer : inner;
+    const a = (i / (points * 2)) * Math.PI * 2 - Math.PI / 2;
+    const x = Math.cos(a) * r, y = Math.sin(a) * r;
+    if (i === 0) ctx.moveTo(x, y);
+    else ctx.lineTo(x, y);
+  }
+  ctx.closePath();
+  ctx.fill();
+  ctx.restore();
+}
+
 function drawSpikes(ctx, spikes, time) {
   const spikeCount = 8;
   for (const s of spikes) {
@@ -116,21 +173,26 @@ function drawSpikes(ctx, spikes, time) {
     }
     const sx = s.x + dx, sy = s.y + dy;
     const moving = s.phase === "move";
+    // Level 3: swelling spikes spin and scale up to GROW_MAX_MULT, then back.
+    const sizeMult = s.sizeMult || 1;
+    const growing = sizeMult > 1.02;
+    const rotation = s.rotation || 0;
+    const r = SPIKE_RADIUS * sizeMult;
 
     ctx.fillStyle = COLOR_SPIKE_BASE;
     ctx.beginPath();
-    ctx.arc(sx, sy, SPIKE_RADIUS * 0.6, 0, Math.PI * 2);
+    ctx.arc(sx, sy, r * 0.6, 0, Math.PI * 2);
     ctx.fill();
 
-    ctx.fillStyle = moving ? "#ffb066" : COLOR_SPIKE_TIP;
+    ctx.fillStyle = moving || growing ? "#ffb066" : COLOR_SPIKE_TIP;
     for (let i = 0; i < spikeCount; i++) {
-      const angle = (i / spikeCount) * Math.PI * 2;
+      const angle = (i / spikeCount) * Math.PI * 2 + rotation;
       const baseAngle1 = angle - Math.PI / spikeCount;
       const baseAngle2 = angle + Math.PI / spikeCount;
       ctx.beginPath();
-      ctx.moveTo(sx + Math.cos(angle) * SPIKE_RADIUS, sy + Math.sin(angle) * SPIKE_RADIUS);
-      ctx.lineTo(sx + Math.cos(baseAngle1) * SPIKE_RADIUS * 0.5, sy + Math.sin(baseAngle1) * SPIKE_RADIUS * 0.5);
-      ctx.lineTo(sx + Math.cos(baseAngle2) * SPIKE_RADIUS * 0.5, sy + Math.sin(baseAngle2) * SPIKE_RADIUS * 0.5);
+      ctx.moveTo(sx + Math.cos(angle) * r, sy + Math.sin(angle) * r);
+      ctx.lineTo(sx + Math.cos(baseAngle1) * r * 0.5, sy + Math.sin(baseAngle1) * r * 0.5);
+      ctx.lineTo(sx + Math.cos(baseAngle2) * r * 0.5, sy + Math.sin(baseAngle2) * r * 0.5);
       ctx.closePath();
       ctx.fill();
     }
@@ -188,15 +250,18 @@ function drawHud(ctx, game) {
     ctx.fillRect(60, 48, 90 * frac, 8);
   }
 
-  // Boost meter, bottom-right.
-  const bw = 120, bh = 10, bx = ARENA_W - 16 - bw, by = ARENA_H - 34;
+  // Shared boost/precision meter, bottom-right.
+  const bw = 190, bh = 16, bx = ARENA_W - 16 - bw, by = ARENA_H - 40;
   ctx.fillStyle = "#9fb3c8";
-  ctx.font = "14px sans-serif";
+  ctx.font = "13px sans-serif";
   ctx.textAlign = "right";
-  ctx.fillText("hold click · boost", bx - 10, by - 2);
+  ctx.fillText("L-click boost · R-click precision", bx + bw, by - 6);
   ctx.fillStyle = "rgba(79, 209, 232, 0.2)";
   ctx.fillRect(bx, by, bw, bh);
-  ctx.fillStyle = game.boosting && game.boost > 0 ? "#7fe8ff" : "#4fd1e8";
+  let boostColor = "#4fd1e8";
+  if (game.boosting && game.boost > 0) boostColor = "#7fe8ff";
+  else if (game.slowing && game.boost > 0) boostColor = "#c792ff";
+  ctx.fillStyle = boostColor;
   ctx.fillRect(bx, by, bw * game.boost, bh);
 
   ctx.fillStyle = "#e8f0f8";
@@ -213,10 +278,25 @@ function drawHud(ctx, game) {
   ctx.font = "bold 18px sans-serif";
   ctx.fillStyle = "#9fb3c8";
   ctx.fillText(`Level ${game.level}`, ARENA_W / 2, 14);
+
+  drawHearts(ctx, game);
+}
+
+function drawHearts(ctx, game) {
+  const size = 20;
+  const startX = ARENA_W / 2 - ((MAX_HEARTS - 1) * size) / 2;
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+  ctx.font = "16px sans-serif";
+  for (let i = 0; i < MAX_HEARTS; i++) {
+    ctx.fillStyle = i < game.hearts ? "#ff5c72" : "rgba(255, 255, 255, 0.18)";
+    ctx.fillText("♥", startX + i * size, 40);
+  }
+  ctx.textBaseline = "top";
 }
 
 function drawLevelBanner(ctx, game) {
-  const t = game.levelTransition.t;
+  const { t, title, subtitle } = game.banner;
   // Quick fade in, hold, fade out over the banner duration.
   const fadeIn = Math.min(1, t / 0.25);
   const fadeOut = Math.min(1, (LEVEL_BANNER_DURATION - t) / 0.4);
@@ -232,12 +312,12 @@ function drawLevelBanner(ctx, game) {
   ctx.textBaseline = "middle";
   ctx.fillStyle = "#ffd257";
   ctx.font = "bold 54px sans-serif";
-  ctx.fillText(`LEVEL ${game.level}`, ARENA_W / 2, ARENA_H / 2 - 16);
+  ctx.fillText(title, ARENA_W / 2, ARENA_H / 2 - 16);
 
-  if (game.level === 2) {
+  if (subtitle) {
     ctx.fillStyle = "#e8f0f8";
     ctx.font = "20px sans-serif";
-    ctx.fillText("The spikes are waking up · pickups now worth ×3", ARENA_W / 2, ARENA_H / 2 + 34);
+    ctx.fillText(subtitle, ARENA_W / 2, ARENA_H / 2 + 34);
   }
   ctx.restore();
 }
@@ -251,16 +331,28 @@ function drawOverlay(ctx, title, subtitle, game) {
 
   ctx.font = "bold 48px sans-serif";
   ctx.textBaseline = "middle";
-  ctx.fillText(title, ARENA_W / 2, ARENA_H / 2 - 60);
+  ctx.fillText(title, ARENA_W / 2, ARENA_H / 2 - 74);
 
   ctx.font = "24px sans-serif";
-  ctx.fillText(`Score: ${game.score}`, ARENA_W / 2, ARENA_H / 2 - 10);
-  ctx.fillText(`High Score: ${game.highScore}`, ARENA_W / 2, ARENA_H / 2 + 24);
+  ctx.fillText(`Score: ${game.score}`, ARENA_W / 2, ARENA_H / 2 - 24);
+  ctx.fillText(`High Score: ${game.highScore}`, ARENA_W / 2, ARENA_H / 2 + 8);
+
+  let y = ARENA_H / 2 + 8;
+  const b = game.finalBreakdown;
+  if (b && (b.lifeBonus > 0 || b.speedBonus > 0)) {
+    y += 30;
+    ctx.font = "15px sans-serif";
+    ctx.fillStyle = "#ffd257";
+    const parts = [`Base ${b.base}`];
+    if (b.lifeBonus) parts.push(`Life Bonus +${b.lifeBonus}`);
+    if (b.speedBonus) parts.push(`Speed Bonus +${b.speedBonus}`);
+    ctx.fillText(parts.join("   ·   "), ARENA_W / 2, y);
+  }
 
   ctx.font = "20px sans-serif";
   ctx.fillStyle = "#9fb3c8";
-  ctx.fillText(subtitle, ARENA_W / 2, ARENA_H / 2 + 70);
+  ctx.fillText(subtitle, ARENA_W / 2, y + 46);
 
   ctx.font = "16px sans-serif";
-  ctx.fillText("Steer with the mouse · Esc pauses · M mutes · B swaps music", ARENA_W / 2, ARENA_H / 2 + 102);
+  ctx.fillText("Steer with the mouse · Esc pauses · M mutes · B swaps music", ARENA_W / 2, y + 78);
 }

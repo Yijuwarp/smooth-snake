@@ -22,12 +22,17 @@ export function setupInput(game, canvas, { onActivate, onPause, onTrackChange })
 
   canvas.addEventListener("click", () => onActivate());
 
-  canvas.addEventListener("mousedown", () => {
-    game.boosting = true;
+  // Left click: boost. Right click: the "precision" slow. Both share the
+  // boost meter, so button-aware handling is needed on the way down and up.
+  canvas.addEventListener("mousedown", (e) => {
+    if (e.button === 0) game.boosting = true;
+    if (e.button === 2) game.slowing = true;
   });
-  window.addEventListener("mouseup", () => {
-    game.boosting = false;
+  window.addEventListener("mouseup", (e) => {
+    if (e.button === 0) game.boosting = false;
+    if (e.button === 2) game.slowing = false;
   });
+  canvas.addEventListener("contextmenu", (e) => e.preventDefault());
 
   window.addEventListener("keydown", (e) => {
     if (e.key === "Enter") onActivate();

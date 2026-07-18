@@ -21,23 +21,47 @@ export const TURN_RATE = 4.0;
 
 export const COMBO_WINDOW = 5; // seconds to reach the next food before the multiplier resets
 
-export const LEVEL_THRESHOLDS = [50, 200, 500]; // score needed for level 2, 3, 4
+export const LEVEL_THRESHOLDS = [50, 150, 250]; // score needed for level 2, 3, 4
+export const LEVEL_TRANSITION_TIME = 30; // seconds per level before a forced transition, even without hitting score
+export const FINAL_LEVEL = 4;
 export const LEVEL_BANNER_DURATION = 2.2; // seconds of slow-motion banner
 export const LEVEL_TIME_SCALE = 0.05; // gameplay speed during the banner
 export const FOOD_VALUE_LEVEL2 = 3; // points per pickup (before multiplier) from level 2 on
+export const FOOD_VALUE_LEVEL3 = 5; // points per pickup (before multiplier) from level 3 on
 
-// Level 2: wandering spikes.
-export const MAX_MOVING_SPIKES = 2;
+// Wandering spikes (level 2, and every spike at the final level): how many
+// can be awake (shaking or moving) at once.
+export const MAX_MOVING_SPIKES_LEVEL2 = 2;
 export const SPIKE_SELECT_INTERVAL = 1; // seconds between attempts to wake a spike
 export const SPIKE_SHAKE_TIME = 0.8; // warning shake before moving
 export const SPIKE_MOVE_SPEED = 70; // px/sec while gliding
-export const SPIKE_MOVE_TIME = 2.5; // seconds of gliding before settling
+export const SPIKE_MOVE_TIME = 2.5; // seconds of gliding before settling (or re-randomizing, at the final level)
+
+// Growing spikes (level 3, replaces the wandering cap-increase): 2 random
+// spikes spin and swell up to 300% of their radius, then shrink back over
+// one cycle; a different pair is picked for the next cycle.
+export const GROW_SPIKE_COUNT = 2;
+export const GROW_CYCLE_TIME = 2; // seconds for one full grow-then-shrink cycle
+export const GROW_MAX_MULT = 4; // peak radius = 4x normal (a 300% increase)
+export const GROW_SPIN_SPEED = 6; // radians/sec of visual spin while active
+
+// Hearts & bounce.
+export const MAX_HEARTS = 3;
+export const INVULN_TIME = 1.2; // seconds of no further heart loss after a bounce
+export const HIT_FLASH_DURATION = 0.35; // seconds the red screen-flash takes to fade
+export const BOUNCE_CLEARANCE = 4; // extra px pushed clear of a hazard after a bounce
+
+// End-of-run bonuses.
+export const LIFE_BONUS = 50; // awarded if no heart was ever lost
+export const SPEED_BONUS = 50; // awarded per level transition reached via score (not the 30s timer)
 
 export const BOOST_SPEED_MULT = 1.6;
-export const BOOST_DRAIN_PER_SEC = 0.5; // full meter lasts 2s of continuous boost
+export const SLOW_SPEED_MULT = 0.5; // right-click "precision" power: half speed, same turn rate -> tighter turning radius
+export const BOOST_DRAIN_PER_SEC = 1 / 3; // full meter lasts 3s of continuous use (50% longer than the original 2s)
 export const BOOST_RECHARGE_PER_FOOD = 0.33;
 
 export const FOOD_RADIUS = 8;
+export const STAR_RADIUS = FOOD_RADIUS * 1.6;
 export const SPIKE_COUNT = 14;
 export const SPIKE_RADIUS = 12;
 
@@ -46,3 +70,14 @@ export const MIN_SPIKE_GAP = 2 * SPIKE_RADIUS + CORRIDOR_WIDTH;
 export const SPAWN_CLEAR = 90;
 export const MAX_PLACE_ATTEMPTS = 2000;
 export const REACH_CELL = BODY_DIAMETER;
+
+// Rectangles (logical arena coords) reserved for on-canvas HUD text, so
+// spikes/food never spawn near or underneath it. Padded generously — this
+// only gates spawn placement, not runtime movement.
+export const UI_SAFE_ZONES = [
+  { x: 0, y: 0, w: 180, h: 64 }, // score + combo badge (top-left)
+  { x: ARENA_W - 220, y: 0, w: 220, h: 44 }, // high score (top-right)
+  { x: ARENA_W / 2 - 80, y: 0, w: 160, h: 50 }, // level + hearts (top-center)
+  { x: 0, y: ARENA_H - 46, w: 380, h: 46 }, // keybind hints (bottom-left)
+  { x: ARENA_W - 240, y: ARENA_H - 80, w: 240, h: 80 }, // boost meter + label (bottom-right)
+];
