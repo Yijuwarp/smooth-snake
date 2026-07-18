@@ -11,12 +11,147 @@ const ctx = canvas.getContext("2d");
 const game = createGame();
 
 function activate() {
+  if (!highscoreModal.hidden) return;
   if (game.state !== "playing" && game.state !== "paused") {
     resetGame(game);
     playStart();
     startMusic(game.level);
   }
 }
+
+// --- Highscore leaderboard ---------------------------------------------
+
+const leaderboardContainer = document.getElementById("leaderboard-container");
+const leaderboardList = document.getElementById("leaderboard-list");
+const highscoreModal = document.getElementById("highscore-submit-modal");
+const hsScoreValue = document.getElementById("hs-score-value");
+const hsNicknameInput = document.getElementById("hs-nickname-input");
+const hsError = document.getElementById("hs-error");
+const hsSubmitBtn = document.getElementById("hs-submit-btn");
+const hsCancelBtn = document.getElementById("hs-cancel-btn");
+
+let pendingScore = 0;
+
+// Last known top-10 snapshot, used both to render the panel and to decide
+// whether a finished run is even worth prompting a submission for.
+let leaderboardScores = [];
+let leaderboardAvailable = false; // false until a fetch/submit actually succeeds
+
+function renderLeaderboard(scores, unavailable) {
+  leaderboardList.innerHTML = "";
+  if (!scores || scores.length === 0) {
+    const message = unavailable ? "Leaderboard unavailable" : "No scores yet";
+    leaderboardList.innerHTML = `<p class="lb-empty">${message}</p>`;
+    return;
+  }
+  for (const { nickname, score } of scores) {
+    const li = document.createElement("li");
+    const name = document.createElement("span");
+    name.className = "lb-name";
+    name.textContent = nickname;
+    const points = document.createElement("span");
+    points.className = "lb-score";
+    points.textContent = score;
+    li.append(name, points);
+    leaderboardList.appendChild(li);
+  }
+}
+
+function setLeaderboard(scores) {
+  leaderboardScores = scores || [];
+  leaderboardAvailable = true;
+  renderLeaderboard(leaderboardScores, false);
+}
+
+function setLeaderboardUnavailable() {
+  leaderboardAvailable = false;
+  renderLeaderboard([], true);
+}
+
+async function fetchLeaderboard() {
+  try {
+    const res = await fetch("/api/highscore");
+    if (!res.ok) {
+      setLeaderboardUnavailable();
+      return;
+    }
+    const data = await res.json();
+    setLeaderboard(data.scores);
+  } catch {
+    // offline or the KV backend isn't configured yet
+    setLeaderboardUnavailable();
+  }
+}
+
+// A run only earns a submission prompt if it would actually crack the top
+// 10 against the last known leaderboard snapshot. If the leaderboard is
+// unreachable we can't judge rank (and a POST would likely fail anyway), so
+// no prompt. A tie with the current #10 doesn't bump it — must beat it.
+function qualifiesForLeaderboard(score) {
+  if (!leaderboardAvailable) return false;
+  if (leaderboardScores.length < 10) return true;
+  return score > leaderboardScores[9].score;
+}
+
+function syncLeaderboardVisibility() {
+  leaderboardContainer.hidden = !(game.state === "menu" || game.state === "gameover");
+}
+
+function showHighscoreModal(score) {
+  pendingScore = score;
+  hsScoreValue.textContent = score;
+  hsNicknameInput.value = "";
+  hsError.hidden = true;
+  highscoreModal.hidden = false;
+  hsNicknameInput.focus();
+}
+
+function closeHighscoreModal() {
+  highscoreModal.hidden = true;
+}
+
+async function submitHighscore() {
+  const nickname = hsNicknameInput.value.trim().toUpperCase();
+  if (!/^[A-Z0-9]{1,6}$/.test(nickname)) {
+    hsError.textContent = "Enter up to 6 letters or numbers";
+    hsError.hidden = false;
+    return;
+  }
+
+  hsSubmitBtn.disabled = true;
+  hsSubmitBtn.textContent = "Saving…";
+  try {
+    const res = await fetch("/api/highscore", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ nickname, score: pendingScore }),
+    });
+    if (!res.ok) throw new Error("request failed");
+    const data = await res.json();
+    setLeaderboard(data.scores);
+    closeHighscoreModal();
+  } catch {
+    hsError.textContent = "Couldn't save score — try again";
+    hsError.hidden = false;
+  } finally {
+    hsSubmitBtn.disabled = false;
+    hsSubmitBtn.textContent = "Submit";
+  }
+}
+
+hsSubmitBtn.addEventListener("click", submitHighscore);
+hsCancelBtn.addEventListener("click", closeHighscoreModal);
+hsNicknameInput.addEventListener("keydown", (e) => {
+  if (e.key === "Enter") {
+    e.preventDefault();
+    submitHighscore();
+  }
+});
+
+game.onGameOver = (score) => {
+  if (qualifiesForLeaderboard(score)) showHighscoreModal(score);
+};
+fetchLeaderboard();
 
 const menu = document.getElementById("pause-menu");
 const musicSlider = document.getElementById("music-vol");
@@ -161,6 +296,7 @@ function frame(now) {
   resizeCanvas(canvas);
   update(game, dt);
   render(game, ctx, canvas);
+  syncLeaderboardVisibility();
 
   requestAnimationFrame(frame);
 }

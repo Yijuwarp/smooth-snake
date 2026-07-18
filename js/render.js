@@ -262,10 +262,8 @@ function drawHud(ctx, game) {
   ctx.font = "bold 22px sans-serif";
   ctx.textBaseline = "top";
 
-  ctx.textAlign = "left";
-  ctx.fillText(`Score: ${game.score}`, 16, 14);
-
   // Combo multiplier + countdown bar, only while a chain is running.
+  ctx.textAlign = "left";
   if (game.comboTimer > 0) {
     ctx.fillStyle = "#ffd257";
     ctx.font = "bold 20px sans-serif";
@@ -321,7 +319,7 @@ function drawHud(ctx, game) {
   ctx.fillStyle = "#e8f0f8";
   ctx.font = "bold 22px sans-serif";
   ctx.textAlign = "right";
-  ctx.fillText(`High Score: ${game.highScore}`, ARENA_W - 16, 14);
+  ctx.fillText(`Score: ${game.score}`, ARENA_W - 16, 14);
 
   if (game.devMode) {
     ctx.font = "13px monospace";

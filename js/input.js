@@ -36,6 +36,10 @@ export function setupInput(game, canvas, { onActivate, onPause, onToggleFullscre
   canvas.addEventListener("contextmenu", (e) => e.preventDefault());
 
   window.addEventListener("keydown", (e) => {
+    // Typing a nickname into the highscore text input shouldn't also
+    // restart the game, mute audio, or toggle fullscreen.
+    if (e.target.tagName === "INPUT" && e.target.type === "text") return;
+
     if (e.key === "Enter") onActivate();
     if (e.key === "Escape") onPause();
     if (e.key === "m" || e.key === "M") {
