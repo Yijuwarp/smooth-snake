@@ -32,7 +32,7 @@ import { spawnPowerUp } from "./powerup.js";
 import { hitsFood, hitsPowerUp, findHitSpike, hitsWall, hitsSelf } from "./collision.js";
 import { getHighScore, setHighScore, getSettings, saveSettings } from "./storage.js";
 import { playEat, playDeath, playLevelUp, playHit, playWin, playPowerUp } from "./audio.js";
-import { updateMusicForLevel, stopMusic, playTrack } from "./music.js";
+import { updateMusicForLevel, playTrack } from "./music.js";
 
 function foodValueForLevel(level) {
   if (level >= 3) return FOOD_VALUE_LEVEL3;
@@ -365,7 +365,7 @@ function endGame(game, won) {
     playTrack("victory");
   } else {
     playDeath();
-    stopMusic();
+    playTrack("gameover");
   }
 
   if (game.score > game.highScore) {

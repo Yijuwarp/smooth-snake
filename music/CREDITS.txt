@@ -7,3 +7,7 @@ lofi-loop.ogg        "Lofi Hip Hop Loop" by omfgdude
                      https://opengameart.org/content/lofi-hip-hop-loop
 lofi-hip-hop.ogg     "lofi hip hop" by omfgdude
                      https://opengameart.org/content/lofi-hip-hop
+gameover.ogg         "Retro_No hope" (retro mix of "Game Over Theme") by Cleyton Kauffman
+                     https://opengameart.org/content/game-over-theme
+                     One-shot chiptune game-over jingle, ~14s — matches victory.ogg's
+                     role/format (one-shot, not looping) and the retro/8-bit theme.
