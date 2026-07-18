@@ -1,4 +1,4 @@
-import { SNAKE_RADIUS, FOOD_RADIUS, STAR_RADIUS, SPIKE_RADIUS, BODY_DIAMETER, NECK_GRACE_SEGMENTS, ARENA_W, ARENA_H } from "./config.js";
+import { SNAKE_RADIUS, FOOD_RADIUS, STAR_RADIUS, SPIKE_RADIUS, POWER_UP_RADIUS, BODY_DIAMETER, NECK_GRACE_SEGMENTS, ARENA_W, ARENA_H } from "./config.js";
 
 function dist(x1, y1, x2, y2) {
   return Math.hypot(x1 - x2, y1 - y2);
@@ -7,6 +7,11 @@ function dist(x1, y1, x2, y2) {
 export function hitsFood(snake, food) {
   const r = food.isStar ? STAR_RADIUS : FOOD_RADIUS;
   return dist(snake.x, snake.y, food.x, food.y) < SNAKE_RADIUS + r;
+}
+
+export function hitsPowerUp(snake, powerUp) {
+  if (!powerUp) return false;
+  return dist(snake.x, snake.y, powerUp.x, powerUp.y) < SNAKE_RADIUS + POWER_UP_RADIUS;
 }
 
 // Returns the specific spike touching the head (or null), so the caller can

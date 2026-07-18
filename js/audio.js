@@ -4,12 +4,15 @@
 import { getSettings, saveSettings } from "./storage.js";
 
 let ctx = null;
-let muted = false;
+let sfxEnabled = true;
 let sfxVolume = 0.8;
 
 const settings = getSettings();
 if (typeof settings.sfxVolume === "number") {
   sfxVolume = Math.min(1, Math.max(0, settings.sfxVolume));
+}
+if (typeof settings.sfxEnabled === "boolean") {
+  sfxEnabled = settings.sfxEnabled;
 }
 
 export function setSfxVolume(v) {
@@ -21,13 +24,23 @@ export function getSfxVolume() {
   return sfxVolume;
 }
 
+export function setSfxEnabled(enabled) {
+  sfxEnabled = enabled;
+  saveSettings({ sfxEnabled });
+}
+
+export function getSfxEnabled() {
+  return sfxEnabled;
+}
+
+// Back-compat wrappers used by the M-key hotkey and its HUD hint.
 export function toggleMute() {
-  muted = !muted;
-  return muted;
+  setSfxEnabled(!sfxEnabled);
+  return !sfxEnabled;
 }
 
 export function isMuted() {
-  return muted;
+  return !sfxEnabled;
 }
 
 function ensureCtx() {
@@ -42,7 +55,7 @@ function ensureCtx() {
 
 // One enveloped oscillator note, scheduled `at` seconds from now.
 function note(freq, { at = 0, dur = 0.12, type = "sine", gain = 0.18, slideTo = 0 } = {}) {
-  if (muted || sfxVolume <= 0) return;
+  if (!sfxEnabled || sfxVolume <= 0) return;
   const ac = ensureCtx();
   if (!ac) return;
   const t = ac.currentTime + at;
@@ -88,6 +101,12 @@ export function playDeath() {
 // fatal, so it needs to read as distinctly less severe than playDeath().
 export function playHit() {
   note(180, { dur: 0.16, type: "square", gain: 0.24, slideTo: 90 });
+}
+
+// A rising electric zap — the lightning power-up refilling the boost meter.
+export function playPowerUp() {
+  note(200, { dur: 0.18, type: "sawtooth", gain: 0.2, slideTo: 900 });
+  note(900, { at: 0.05, dur: 0.12, type: "square", gain: 0.14 });
 }
 
 export function playWin() {

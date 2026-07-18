@@ -22,7 +22,9 @@ html, body {
   display: flex;
   flex-direction: column;
   gap: 14px;
-  min-width: 260px;
+  min-width: 280px;
+  max-height: 90vh;
+  overflow-y: auto;
   padding: 28px 32px;
   background: rgba(15, 21, 32, 0.94);
   border: 1px solid #3a4a63;
@@ -54,6 +56,33 @@ html, body {
   accent-color: #4fd1e8;
 }
 
+#pause-menu label.checkbox-row {
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+}
+
+.volume-control {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  text-align: left;
+  color: #9fb3c8;
+}
+
+.volume-title {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+#pause-menu input[type="checkbox"] {
+  accent-color: #4fd1e8;
+  width: 16px;
+  height: 16px;
+}
+
 #pause-menu button {
   margin-top: 4px;
   padding: 10px 0;
@@ -79,4 +108,28 @@ html, body {
   margin: 0;
   font-size: 13px;
   color: #4fd1e8;
+}
+
+#dev-section {
+  margin-top: 4px;
+  padding-top: 12px;
+  border-top: 1px solid #3a4a63;
+  text-align: left;
+}
+
+#dev-section summary {
+  cursor: pointer;
+  color: #9fb3c8;
+  font-size: 14px;
+  font-weight: bold;
+  user-select: none;
+}
+
+#dev-section label {
+  margin-top: 12px;
+}
+
+.dev-val {
+  color: #4fd1e8;
+  font-weight: normal;
 }

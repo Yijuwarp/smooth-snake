@@ -40,10 +40,10 @@ function clamp(v, lo, hi) {
   return Math.max(lo, Math.min(hi, v));
 }
 
-export function steer(snake, targetX, targetY, dt) {
+export function steer(snake, targetX, targetY, dt, turnRate = TURN_RATE) {
   const target = Math.atan2(targetY - snake.y, targetX - snake.x);
   const d = Math.atan2(Math.sin(target - snake.theta), Math.cos(target - snake.theta));
-  snake.theta += clamp(d, -TURN_RATE * dt, TURN_RATE * dt);
+  snake.theta += clamp(d, -turnRate * dt, turnRate * dt);
 }
 
 export function moveSnake(snake, dt, speedMult = 1) {
@@ -136,9 +136,9 @@ export function bounceOffSpike(snake, spike) {
   snake.y = spike.y + ny * pushDist;
 }
 
-export function updateGrowthAndSpeed(snake, eaten) {
+export function updateGrowthAndSpeed(snake, eaten, maxSpeed = MAX_SPEED) {
   snake.segmentCount = BASE_SEGMENTS + eaten * SEGMENTS_PER_FOOD;
-  snake.speed = Math.min(BASE_SPEED + eaten * SPEED_PER_FOOD, MAX_SPEED);
+  snake.speed = Math.min(BASE_SPEED + eaten * SPEED_PER_FOOD, maxSpeed);
 }
 
 export { SNAKE_RADIUS };

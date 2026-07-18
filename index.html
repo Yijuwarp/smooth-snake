@@ -10,15 +10,51 @@
   <canvas id="game-canvas"></canvas>
   <div id="pause-menu" hidden>
     <h2>Paused</h2>
-    <label>Music
+    <div class="volume-control">
+      <div class="volume-title">
+        <span>Music</span>
+        <input id="music-toggle" type="checkbox" title="Toggle music" />
+      </div>
       <input id="music-vol" type="range" min="0" max="100" step="1" />
-    </label>
-    <label>Sounds
+    </div>
+    <div class="volume-control">
+      <div class="volume-title">
+        <span>Sounds</span>
+        <input id="sfx-toggle" type="checkbox" title="Toggle sounds" />
+      </div>
       <input id="sfx-vol" type="range" min="0" max="100" step="1" />
+    </div>
+    <label class="checkbox-row">
+      <input id="fullscreen-toggle" type="checkbox" />
+      Fullscreen
     </label>
     <button id="resume-btn" type="button">Resume</button>
-    <p class="pause-hint">Esc resumes &middot; B swaps track</p>
+    <p class="pause-hint">Esc resumes &middot; B swaps track &middot; F fullscreen</p>
     <p id="track-name"></p>
+
+    <details id="dev-section" hidden>
+      <summary>Dev Mode</summary>
+      <label class="checkbox-row">
+        <input id="dev-mode-toggle" type="checkbox" />
+        Enable (shows speed &amp; pellet count, unlocks tuning below)
+      </label>
+      <label class="checkbox-row">
+        <input id="dev-immortal" type="checkbox" />
+        Immortality (no death, hearts unaffected)
+      </label>
+      <label>Max speed <span id="dev-maxspeed-val" class="dev-val"></span>
+        <input id="dev-maxspeed" type="range" min="100" max="800" step="10" />
+      </label>
+      <label>Turning speed <span id="dev-turnrate-val" class="dev-val"></span>
+        <input id="dev-turnrate" type="range" min="1" max="10" step="0.1" />
+      </label>
+      <label>Boost speed <span id="dev-boost-val" class="dev-val"></span>
+        <input id="dev-boost" type="range" min="100" max="300" step="5" />
+      </label>
+      <label>Slowdown speed <span id="dev-slow-val" class="dev-val"></span>
+        <input id="dev-slow" type="range" min="10" max="100" step="5" />
+      </label>
+    </details>
   </div>
   <script type="module" src="js/main.js"></script>
 </body>
