@@ -1,4 +1,4 @@
-import { ARENA_W, ARENA_H, WALL_MARGIN, FOOD_RADIUS, STAR_RADIUS, SPIKE_RADIUS, SNAKE_RADIUS, UI_SAFE_ZONES } from "./config.js";
+import { ARENA_W, ARENA_H, WALL_MARGIN, FOOD_RADIUS, STAR_RADIUS, SPIKE_RADIUS, SNAKE_RADIUS, getUiSafeZones } from "./config.js";
 import { clearOfUiZones } from "./collision.js";
 
 function dist(x1, y1, x2, y2) {
@@ -17,7 +17,7 @@ export function spawnFood(spikes, segments, rng = Math.random) {
     const x = WALL_MARGIN + rng() * (ARENA_W - 2 * WALL_MARGIN);
     const y = WALL_MARGIN + rng() * (ARENA_H - 2 * WALL_MARGIN);
 
-    if (!clearOfUiZones(x, y, STAR_RADIUS, UI_SAFE_ZONES)) continue;
+    if (!clearOfUiZones(x, y, STAR_RADIUS, getUiSafeZones())) continue;
 
     let clear = true;
     for (const s of spikes) {

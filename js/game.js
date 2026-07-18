@@ -59,8 +59,13 @@ function bannerSubtitle(level) {
 const POWER_UP_TUTORIAL = {
   title: "Power Up!",
   subtitle: [
-    "Lightning bolts refill your power bar.",
-    "Hold left-click to boost, right-click to slow down and turn tighter.",
+    [
+      { text: "Hold left-click to " },
+      { text: "boost", bold: true },
+      { text: ", right-click to " },
+      { text: "slow down", bold: true },
+    ],
+    "Lightning bolts refill your power bar",
   ],
   duration: TUTORIAL_BANNER_DURATION,
 };
@@ -236,7 +241,10 @@ export function update(game, dt) {
   const invincible = game.devMode && game.tunables.immortal;
 
   // Self-collision is still an instant kill — only wall/spike hits bounce.
+  // Zero the hearts first so the life bonus at game end reflects the death,
+  // even if hearts were still remaining when the snake ran into itself.
   if (hitsSelf(snake) && !invincible) {
+    game.hearts = 0;
     endGame(game, false);
     return;
   }

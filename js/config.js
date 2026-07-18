@@ -1,8 +1,21 @@
 // All tunable constants for the game. Pure data — no DOM access, safe to
 // import from Node for testing.
 
-export const ARENA_W = 900;
-export const ARENA_H = 600;
+export let ARENA_W = 900;
+export let ARENA_H = 600;
+const ARENA_AREA = ARENA_W * ARENA_H; // captured once, before any resize
+const ARENA_RATIO_MIN = 0.6;
+const ARENA_RATIO_MAX = 2.2;
+
+// Reshapes the arena to the given pixel dimensions' aspect ratio while
+// preserving total area, so spike density/margins/entity sizes stay valid
+// without retuning.
+export function setArenaSize(canvasWidth, canvasHeight) {
+  const r = Math.min(ARENA_RATIO_MAX, Math.max(ARENA_RATIO_MIN, canvasWidth / canvasHeight));
+  ARENA_H = Math.round(Math.sqrt(ARENA_AREA / r));
+  ARENA_W = Math.round(r * ARENA_H);
+}
+
 export const WALL_MARGIN = 30;
 export const MAX_DT = 1 / 30;
 
@@ -22,9 +35,9 @@ export const TURN_RATE = 4.0;
 export const COMBO_WINDOW = 5; // seconds to reach the next food before the multiplier resets
 
 export const LEVEL_PELLETS_REQUIRED = 10; // pellets eaten since the last level-up forces a transition
-export const LEVEL_TIME_REQUIRED = 20; // seconds since the last level-up forces a transition, whichever comes first
+export const LEVEL_TIME_REQUIRED = 30; // seconds since the last level-up forces a transition, whichever comes first
 export const FINAL_LEVEL = 4;
-export const SURVIVAL_TIME = 5; // seconds to survive at the final level, after its banner clears, before the star appears
+export const SURVIVAL_TIME = 10; // seconds to survive at the final level, after its banner clears, before the star appears
 export const LEVEL_BANNER_DURATION = 2.2; // seconds of slow-motion banner
 export const TUTORIAL_BANNER_DURATION = 4.5; // longer banner for the one-time power-up explainer
 export const LEVEL_TIME_SCALE = 0.05; // gameplay speed during a banner
@@ -82,10 +95,11 @@ export const REACH_CELL = BODY_DIAMETER;
 // Rectangles (logical arena coords) reserved for on-canvas HUD text, so
 // spikes/food never spawn near or underneath it. Padded generously — this
 // only gates spawn placement, not runtime movement.
-export const UI_SAFE_ZONES = [
-  { x: 0, y: 0, w: 180, h: 64 }, // combo badge (top-left)
-  { x: ARENA_W - 220, y: 0, w: 220, h: 80 }, // score + dev-mode readout (top-right)
-  { x: ARENA_W / 2 - 110, y: 0, w: 220, h: 90 }, // level + hearts + survive countdown (top-center)
-  { x: 0, y: ARENA_H - 46, w: 380, h: 46 }, // keybind hints (bottom-left)
-  { x: ARENA_W - 240, y: ARENA_H - 80, w: 240, h: 80 }, // boost meter + label (bottom-right)
-];
+export function getUiSafeZones() {
+  return [
+    { x: ARENA_W - 220, y: 0, w: 220, h: 80 }, // score + dev-mode readout (top-right)
+    { x: ARENA_W / 2 - 110, y: 0, w: 220, h: 90 }, // level + hearts + survive countdown (top-center)
+    { x: 0, y: ARENA_H - 46, w: 380, h: 46 }, // keybind hints (bottom-left)
+    { x: ARENA_W - 240, y: ARENA_H - 80, w: 240, h: 80 }, // boost meter + label (bottom-right)
+  ];
+}

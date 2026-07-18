@@ -1,4 +1,4 @@
-import { MAX_DT } from "./config.js";
+import { MAX_DT, setArenaSize } from "./config.js";
 import { createGame, resetGame, update, setDevMode, setTunable } from "./game.js";
 import { render, resizeCanvas } from "./render.js";
 import { setupInput } from "./input.js";
@@ -8,11 +8,18 @@ import { startMusic, getMusicVolume, setMusicVolume, getMusicEnabled, setMusicEn
 const canvas = document.getElementById("game-canvas");
 const ctx = canvas.getContext("2d");
 
+resizeCanvas(canvas);
+setArenaSize(canvas.width, canvas.height);
 const game = createGame();
 
 function activate() {
   if (!highscoreModal.hidden) return;
   if (game.state !== "playing" && game.state !== "paused") {
+    // Don't trust canvas.width/height as of the last rAF tick — resize
+    // explicitly first so a fullscreen toggle that happened since is picked
+    // up immediately, not whenever the loop next happens to run.
+    resizeCanvas(canvas);
+    setArenaSize(canvas.width, canvas.height);
     resetGame(game);
     playStart();
     startMusic(game.level);

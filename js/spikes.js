@@ -19,7 +19,7 @@ import {
   GROW_CYCLE_TIME,
   GROW_MAX_MULT,
   GROW_SPIN_SPEED,
-  UI_SAFE_ZONES,
+  getUiSafeZones,
 } from "./config.js";
 import { clearOfUiZones } from "./collision.js";
 
@@ -51,7 +51,7 @@ function placeSpikes(spawn, food, rng) {
     if (dist(x, y, food.x, food.y) < SPAWN_CLEAR) continue;
     // Level 3 can grow this spike up to GROW_MAX_MULT, so clear enough room
     // now that it never ends up spawning under/behind the HUD once enlarged.
-    if (!clearOfUiZones(x, y, SPIKE_RADIUS * GROW_MAX_MULT, UI_SAFE_ZONES)) continue;
+    if (!clearOfUiZones(x, y, SPIKE_RADIUS * GROW_MAX_MULT, getUiSafeZones())) continue;
 
     let ok = true;
     for (const s of spikes) {
