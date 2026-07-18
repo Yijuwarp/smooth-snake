@@ -1,0 +1,333 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Smooth Snake — Architecture Plan</title>
+<style>
+  :root {
+    --ss-bg: #fafaf8;
+    --ss-surface: #ffffff;
+    --ss-ink: #1a1d21;
+    --ss-muted: #5c6470;
+    --ss-line: #e4e2dc;
+    --ss-accent: #2f7d5a;
+    --ss-accent-soft: #e7f2ec;
+    --ss-warn: #b3541e;
+    --ss-warn-soft: #faeee4;
+    --ss-code-bg: #f1f0ec;
+    --ss-radius: 10px;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --ss-bg: #15171a;
+      --ss-surface: #1e2126;
+      --ss-ink: #e8e6e1;
+      --ss-muted: #9aa3ad;
+      --ss-line: #32363c;
+      --ss-accent: #5cb98d;
+      --ss-accent-soft: #223229;
+      --ss-warn: #e08a4e;
+      --ss-warn-soft: #33261c;
+      --ss-code-bg: #26292f;
+    }
+  }
+  body {
+    margin: 0;
+    background: var(--ss-bg);
+    color: var(--ss-ink);
+    font: 16px/1.6 "Segoe UI", system-ui, sans-serif;
+  }
+  .ss-page { max-width: 880px; margin: 0 auto; padding: 40px 24px 80px; }
+  .ss-page h1 { font-size: 30px; margin: 0 0 4px; }
+  .ss-page h2 { font-size: 21px; margin: 44px 0 12px; padding-top: 18px; border-top: 1px solid var(--ss-line); }
+  .ss-page h3 { font-size: 16px; margin: 20px 0 8px; }
+  .ss-kicker { color: var(--ss-muted); margin: 0 0 24px; }
+  .ss-goal {
+    background: var(--ss-accent-soft);
+    border-left: 4px solid var(--ss-accent);
+    border-radius: var(--ss-radius);
+    padding: 14px 18px;
+    margin: 18px 0;
+  }
+  .ss-card-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin: 16px 0; }
+  @media (max-width: 700px) { .ss-card-grid { grid-template-columns: 1fr; } }
+  .ss-card {
+    background: var(--ss-surface);
+    border: 1px solid var(--ss-line);
+    border-radius: var(--ss-radius);
+    padding: 14px 16px;
+  }
+  .ss-card h3 { margin-top: 0; }
+  .ss-card p:last-child { margin-bottom: 0; }
+  code, pre {
+    font-family: Consolas, "Cascadia Code", monospace;
+    font-size: 13.5px;
+    background: var(--ss-code-bg);
+    border-radius: 5px;
+  }
+  code { padding: 1px 5px; }
+  pre { padding: 12px 14px; overflow-x: auto; line-height: 1.5; }
+  pre code { padding: 0; background: none; }
+  table.ss-table { border-collapse: collapse; width: 100%; margin: 12px 0; font-size: 14.5px; }
+  .ss-table th, .ss-table td { text-align: left; padding: 7px 12px; border-bottom: 1px solid var(--ss-line); }
+  .ss-table th { color: var(--ss-muted); font-weight: 600; }
+  .ss-table td code { white-space: nowrap; }
+  ol.ss-milestones { padding-left: 0; list-style: none; counter-reset: ms; }
+  ol.ss-milestones li {
+    counter-increment: ms;
+    background: var(--ss-surface);
+    border: 1px solid var(--ss-line);
+    border-radius: var(--ss-radius);
+    padding: 10px 14px 10px 52px;
+    margin: 8px 0;
+    position: relative;
+  }
+  ol.ss-milestones li::before {
+    content: "M" counter(ms);
+    position: absolute;
+    left: 12px; top: 11px;
+    font: 600 12px/22px Consolas, monospace;
+    background: var(--ss-accent-soft);
+    color: var(--ss-accent);
+    border-radius: 5px;
+    padding: 0 6px;
+  }
+  .ss-testable { color: var(--ss-muted); font-size: 14px; }
+  .ss-decision {
+    background: var(--ss-surface);
+    border: 1px solid var(--ss-line);
+    border-radius: var(--ss-radius);
+    padding: 16px 18px;
+    margin: 14px 0;
+  }
+  .ss-decision h3 { margin-top: 0; }
+  .ss-decision label {
+    display: block;
+    padding: 8px 12px;
+    margin: 6px 0;
+    border: 1px solid var(--ss-line);
+    border-radius: 8px;
+    cursor: pointer;
+  }
+  .ss-decision label:has(input:checked) {
+    border-color: var(--ss-accent);
+    background: var(--ss-accent-soft);
+  }
+  .ss-decision .ss-opt-note { display: block; color: var(--ss-muted); font-size: 13.5px; margin-left: 22px; }
+  .ss-decision button {
+    margin-top: 10px;
+    background: var(--ss-accent);
+    color: #fff;
+    border: none;
+    border-radius: 7px;
+    padding: 8px 16px;
+    font: 600 14px "Segoe UI", system-ui, sans-serif;
+    cursor: pointer;
+  }
+  .ss-decision .ss-queued {
+    display: none;
+    margin-left: 12px;
+    color: var(--ss-accent);
+    font-size: 14px;
+    font-weight: 600;
+  }
+  .ss-decision.ss-is-queued .ss-queued { display: inline; }
+  .ss-rec {
+    font-size: 11.5px;
+    font-weight: 700;
+    letter-spacing: 0.4px;
+    text-transform: uppercase;
+    color: var(--ss-accent);
+    margin-left: 6px;
+  }
+  .ss-risk {
+    background: var(--ss-warn-soft);
+    border-left: 4px solid var(--ss-warn);
+    border-radius: var(--ss-radius);
+    padding: 12px 16px;
+    margin: 10px 0;
+  }
+  .ss-risk strong { color: var(--ss-warn); }
+  .ss-diagram { background: var(--ss-surface); border: 1px solid var(--ss-line); border-radius: var(--ss-radius); padding: 16px; margin: 16px 0; text-align: center; }
+  .ss-footnote { color: var(--ss-muted); font-size: 14px; }
+</style>
+</head>
+<body>
+<div class="ss-page">
+
+  <h1>Smooth Snake — Architecture Plan</h1>
+  <p class="ss-kicker">A frontend-only browser game · vanilla JS + Canvas · zero dependencies · ~400–700 lines</p>
+
+  <div class="ss-goal">
+    <strong>Goal.</strong> A snake game with <em>smooth, continuous movement</em>: the snake steers toward the
+    mouse cursor, gets longer <em>and faster</em> with every pickup, and dies on spike hazards scattered
+    randomly across the arena — placed so that every part of the arena always stays reachable.
+    Nothing exists yet; this plan is the blueprint for a fresh <code>smooth-snake/</code> folder.
+  </div>
+
+  <h2>1 · Module structure &amp; data flow</h2>
+  <p>
+    Pure static files, ES modules, no build step. No event bus and no class hierarchies — a single plain
+    <code>game</code> state object is created in <code>main.js</code> and passed by reference into
+    <code>update(game, dt)</code> and <code>render(game, ctx)</code> functions exported by focused modules.
+  </p>
+
+  <div class="ss-diagram">
+    <pre class="mermaid">
+flowchart TD
+  input["input.js\nmouse position (DPR-aware)"] --> main["main.js\nRAF loop + state machine"]
+  config["config.js\nall tuning constants"] --> main
+  main --> game["game.js\nupdate() / reset()"]
+  game --> snake["snake.js\nsteering · trail · growth"]
+  game --> spikes["spikes.js\nplacement + reachability"]
+  game --> food["food.js\nspawn / respawn"]
+  snake --> collision["collision.js\ncircle-circle helpers"]
+  main --> renderjs["render.js\nsnake · spikes · food · HUD"]
+  game --> storage["storage.js\nlocalStorage high score"]
+    </pre>
+  </div>
+
+  <div class="ss-card-grid">
+    <div class="ss-card">
+      <h3>File layout</h3>
+      <pre><code>smooth-snake/
+  index.html    style.css
+  js/
+    main.js     config.js   game.js
+    snake.js    spikes.js   food.js
+    collision.js render.js
+    input.js    storage.js</code></pre>
+      <p class="ss-footnote">10 modules, each 30–90 lines.</p>
+    </div>
+    <div class="ss-card">
+      <h3>Game loop &amp; states</h3>
+      <p><code>requestAnimationFrame</code> with <strong>delta-time</strong>, clamped to
+      <code>MAX_DT = 1/30 s</code> so a backgrounded tab can't teleport the head across the arena.
+      No fixed timestep — nothing here needs determinism.</p>
+      <p>State is one string: <code>'menu' → 'playing' → 'gameover'</code> (click/Enter to start or
+      restart). <code>update()</code> early-returns unless playing; <code>render()</code> always draws
+      the arena and overlays the current screen.</p>
+    </div>
+  </div>
+
+  <h2>2 · The four algorithms that matter</h2>
+
+  <div class="ss-card-grid">
+    <div class="ss-card">
+      <h3>Mouse steering — clamped angle turn</h3>
+      <p>The head has position and heading <code>θ</code>. Each frame: compute the angle to the cursor,
+      wrap the difference to <code>[−π, π]</code>, then clamp the turn to <code>TURN_RATE · dt</code>.
+      The clamp <em>is</em> the handling model — the snake can't turn on a dime.</p>
+      <pre><code>d = atan2(sin(t−θ), cos(t−θ))
+θ += clamp(d, −TURN_RATE·dt, +TURN_RATE·dt)
+x += cos(θ)·speed·dt
+y += sin(θ)·speed·dt</code></pre>
+    </div>
+    <div class="ss-card">
+      <h3>Smooth body — arc-length trail</h3>
+      <p>Record the head's path densely every frame. Place body segments along it at fixed
+      <strong>arc-length spacing</strong> (interpolating between recorded points), so segments stay evenly
+      spaced at any speed. Growth is just <code>segmentCount += SEGMENTS_PER_FOOD</code> — the tail
+      extends naturally as the path trim length grows. Trim the path past
+      <code>segmentCount · SEGMENT_SPACING + margin</code>.</p>
+    </div>
+    <div class="ss-card">
+      <h3>Speed ramp — linear with cap</h3>
+      <pre><code>speed = min(BASE_SPEED
+    + eaten · SPEED_PER_FOOD,
+      MAX_SPEED)</code></pre>
+      <p>Past the cap, difficulty keeps escalating anyway: your own length crowds the arena.
+      Optional tuning hook (off by default): reduce <code>TURN_RATE</code> slightly as speed rises.</p>
+    </div>
+    <div class="ss-card">
+      <h3>Spike placement — spacing + flood-fill</h3>
+      <p><strong>Layer 1 — dart throwing:</strong> accept a random spike only if it's at least
+      <code>2·spikeR + CORRIDOR_WIDTH</code> from every other spike (corridor ≈ 1.6× body width), and
+      clear of walls, spawn, and food. The spacing rule directly guarantees threadable gaps.</p>
+      <p><strong>Layer 2 — validation:</strong> overlay a coarse grid, mark cells near spikes blocked,
+      BFS from spawn. Any unreachable free cell → regenerate the whole layout. Layer 1 makes this
+      almost always pass; layer 2 makes it a guarantee, in ~25 lines.</p>
+    </div>
+  </div>
+
+  <h3>Collision &amp; death rules</h3>
+  <p>
+    Everything is circle-vs-circle against the head — cheap, and tunneling-safe because dt is clamped.
+    Head vs food → eat, grow, speed up, respawn food clear of hazards. Head vs spike or wall → death.
+    Head vs own body → death, but the first <code>NECK_GRACE_SEGMENTS</code> (~4) behind the head are
+    skipped so the neck can't self-kill.
+  </p>
+
+  <h2>3 · Rendering</h2>
+  <p>
+    Fixed logical arena (<code>900 × 600</code>) scaled and centered to the window, so spike math never
+    depends on screen size. Canvas backing store is sized at <code>devicePixelRatio</code> with one
+    <code>ctx.scale(dpr, dpr)</code> per resize. Draw order: background → food (pulsing circle) →
+    spikes (radial spike shapes, warm color) → snake (round-capped stroked path through segment centers,
+    distinct head with eyes oriented by heading) → HUD (<code>fillText</code> score / high score) →
+    menu or game-over overlay. High score persists in <code>localStorage</code>.
+  </p>
+
+  <h2>4 · Implementation order</h2>
+  <p>Eight milestones, each independently runnable:</p>
+  <ol class="ss-milestones">
+    <li>Skeleton: canvas, DPR/arena scaling, delta-time RAF loop, moving test dot. <span class="ss-testable">Testable: dot animates.</span></li>
+    <li>Steering: mouse tracking, clamped-turn head movement, walls kill. <span class="ss-testable">Testable: drive the head.</span></li>
+    <li>Body trail: path recording + arc-length sampling, stroked-path render. <span class="ss-testable">Testable: smooth trailing snake.</span></li>
+    <li>Food + growth + speed ramp + HUD score. <span class="ss-testable">Testable: the core loop — eat, grow, speed up.</span></li>
+    <li>Spikes: dart-throwing placement, flood-fill validation, spike death. <span class="ss-testable">Testable: hazards kill, no unreachable pockets.</span></li>
+    <li>Self-collision with neck grace; head/eyes; respawn clearance; visuals.</li>
+    <li>State machine, menu &amp; game-over overlays, localStorage high score.</li>
+    <li>Tuning pass on <code>config.js</code>; optional body taper.</li>
+  </ol>
+
+  <h2>5 · Tuning constants (all in <code>js/config.js</code>)</h2>
+  <table class="ss-table">
+    <tr><th>Constant</th><th>Value</th><th>Meaning</th></tr>
+    <tr><td><code>ARENA_W × ARENA_H</code></td><td>900 × 600</td><td>logical arena, resolution-independent</td></tr>
+    <tr><td><code>MAX_DT</code></td><td>1/30 s</td><td>dt clamp (anti-teleport / anti-tunnel)</td></tr>
+    <tr><td><code>SNAKE_RADIUS</code> / <code>BODY_DIAMETER</code></td><td>10 / 18</td><td>head collision radius / body stroke width</td></tr>
+    <tr><td><code>SEGMENT_SPACING</code></td><td>12</td><td>arc-length between body segments</td></tr>
+    <tr><td><code>BASE_SEGMENTS</code> + <code>SEGMENTS_PER_FOOD</code></td><td>6 + 3</td><td>start length, growth per pickup</td></tr>
+    <tr><td><code>NECK_GRACE_SEGMENTS</code></td><td>4</td><td>segments exempt from self-collision</td></tr>
+    <tr><td><code>BASE_SPEED</code> + <code>SPEED_PER_FOOD</code>, cap</td><td>140 + 12, 340 px/s</td><td>the speed ramp</td></tr>
+    <tr><td><code>TURN_RATE</code></td><td>4.0 rad/s</td><td>max angular velocity (agility knob)</td></tr>
+    <tr><td><code>SPIKE_COUNT</code> / <code>SPIKE_RADIUS</code></td><td>14 / 12</td><td>hazard density and size</td></tr>
+    <tr><td><code>CORRIDOR_WIDTH</code></td><td>BODY_DIAMETER × 1.6</td><td>guaranteed gap between spikes</td></tr>
+    <tr><td><code>SPAWN_CLEAR</code> / <code>WALL_MARGIN</code></td><td>90 / 30</td><td>keep-out zones for spikes</td></tr>
+  </table>
+
+  <h2>6 · Risks &amp; failure modes</h2>
+  <div class="ss-risk"><strong>Tunneling at max speed.</strong> At 340 px/s and 30 fps the head moves ~11 px/frame, below the smallest collision sum (head 10 + spike 12 = 22 px), so the dt clamp alone prevents pass-through. If constants are ever tuned hotter, add head-movement sub-stepping.</div>
+  <div class="ss-risk"><strong>Over-packed spike config.</strong> Dart throwing has an attempt budget (2000); if tuning ever makes <code>SPIKE_COUNT</code> unsatisfiable, generation degrades gracefully to fewer spikes rather than looping forever.</div>
+  <div class="ss-risk"><strong>Mouse outside the canvas.</strong> The head keeps steering toward the last known cursor position — no special case needed, but worth feeling out during the tuning pass.</div>
+
+  <h2>7 · Decisions — resolved</h2>
+  <p class="ss-footnote">All three open questions were answered on 2026-07-04 and are baked into the plan above.</p>
+
+  <div class="ss-decision">
+    <h3>Wall behavior → walls kill ✓</h3>
+    <p>Consistent with the spike-hazard theme; steering skill matters near edges. Wrap-around remains a possible future config swap.</p>
+  </div>
+
+  <div class="ss-decision">
+    <h3>How the game is run → static server + ES modules ✓</h3>
+    <p>Run with <code>python -m http.server</code> (or any static server) from <code>smooth-snake/</code>; the clean 10-module split stays. Chrome blocks module imports on <code>file://</code>, so double-clicking <code>index.html</code> is not supported.</p>
+  </div>
+
+  <div class="ss-decision">
+    <h3>Arena sizing → fixed logical arena, scaled to fit ✓</h3>
+    <p>All game math runs in a resolution-independent 900 × 600 arena, scaled and centered to the window; spike layout stays valid on any screen or resize.</p>
+  </div>
+
+</div>
+<script type="module">
+  import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+  mermaid.initialize({
+    startOnLoad: true,
+    theme: window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'neutral'
+  });
+</script>
+</body>
+</html>

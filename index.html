@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Smooth Snake</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <canvas id="game-canvas"></canvas>
+  <div id="pause-menu" hidden>
+    <h2>Paused</h2>
+    <label>Music
+      <input id="music-vol" type="range" min="0" max="100" step="1" />
+    </label>
+    <label>Sounds
+      <input id="sfx-vol" type="range" min="0" max="100" step="1" />
+    </label>
+    <button id="resume-btn" type="button">Resume</button>
+    <p class="pause-hint">Esc resumes &middot; B swaps track</p>
+    <p id="track-name"></p>
+  </div>
+  <script type="module" src="js/main.js"></script>
+</body>
+</html>

@@ -1,0 +1,82 @@
+html, body {
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  height: 100%;
+  background: #05070b;
+  overflow: hidden;
+}
+
+#game-canvas {
+  display: block;
+  width: 100vw;
+  height: 100vh;
+  cursor: crosshair;
+}
+
+#pause-menu {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  min-width: 260px;
+  padding: 28px 32px;
+  background: rgba(15, 21, 32, 0.94);
+  border: 1px solid #3a4a63;
+  border-radius: 12px;
+  color: #e8f0f8;
+  font: 16px/1.4 sans-serif;
+  text-align: center;
+}
+
+#pause-menu[hidden] {
+  display: none;
+}
+
+#pause-menu h2 {
+  margin: 0 0 6px;
+  font-size: 28px;
+}
+
+#pause-menu label {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  text-align: left;
+  color: #9fb3c8;
+}
+
+#pause-menu input[type="range"] {
+  width: 100%;
+  accent-color: #4fd1e8;
+}
+
+#pause-menu button {
+  margin-top: 4px;
+  padding: 10px 0;
+  background: #4fd1e8;
+  color: #0f1520;
+  border: none;
+  border-radius: 8px;
+  font: bold 16px sans-serif;
+  cursor: pointer;
+}
+
+#pause-menu button:hover {
+  background: #7fe8ff;
+}
+
+.pause-hint {
+  margin: 2px 0 0;
+  font-size: 13px;
+  color: #9fb3c8;
+}
+
+#track-name {
+  margin: 0;
+  font-size: 13px;
+  color: #4fd1e8;
+}
