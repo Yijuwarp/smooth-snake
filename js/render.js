@@ -277,19 +277,46 @@ function drawHud(ctx, game) {
     ctx.fillRect(60, 48, 90 * frac, 8);
   }
 
-  // Shared boost/precision meter, bottom-right.
-  const bw = 190, bh = 10, bx = ARENA_W - 16 - bw, by = ARENA_H - 34;
-  ctx.fillStyle = "#9fb3c8";
-  ctx.font = "13px sans-serif";
-  ctx.textAlign = "right";
-  ctx.fillText("L-click boost · R-click precision", bx + bw, by - 6);
-  ctx.fillStyle = "rgba(79, 209, 232, 0.2)";
-  ctx.fillRect(bx, by, bw, bh);
-  let boostColor = "#4fd1e8";
-  if (game.boosting && game.boost > 0) boostColor = "#7fe8ff";
-  else if (game.slowing && game.boost > 0) boostColor = "#c792ff";
-  ctx.fillStyle = boostColor;
-  ctx.fillRect(bx, by, bw * game.boost, bh);
+  // Shared boost/precision meter, bottom-right — pill bar with glow.
+  // Golden at rest (matches the power-up pickup), cyan while boosting,
+  // purple while in precision/slow mode.
+  const bw = 200, bh = 14, bx = ARENA_W - 16 - bw, by = ARENA_H - 38;
+  const br = bh / 2; // fully rounded pill caps
+
+  let boostColor = "#ffd257"; // golden default — matches power-up
+  if (game.boosting && game.boost > 0) boostColor = "#7fe8ff";       // bright cyan
+  else if (game.slowing && game.boost > 0) boostColor = "#c792ff";   // purple precision
+
+  // Track pill
+  ctx.fillStyle = "rgba(255,255,255,0.06)";
+  ctx.beginPath();
+  ctx.roundRect(bx, by, bw, bh, br);
+  ctx.fill();
+
+  // Filled portion: clip to fill width so the pill shape stays clean at any level.
+  // The clip rect overshoots vertically so the shadow glow isn't hard-cut.
+  if (game.boost > 0) {
+    ctx.save();
+    ctx.beginPath();
+    ctx.rect(bx, by - 4, bw * game.boost, bh + 8);
+    ctx.clip();
+
+    ctx.shadowColor = boostColor;
+    ctx.shadowBlur = 14;
+    ctx.fillStyle = boostColor;
+    ctx.beginPath();
+    ctx.roundRect(bx, by, bw, bh, br);
+    ctx.fill();
+
+    // Inner glass highlight along the top third of the fill
+    ctx.shadowBlur = 0;
+    ctx.fillStyle = "rgba(255,255,255,0.2)";
+    ctx.beginPath();
+    ctx.roundRect(bx + 3, by + 2, bw - 6, Math.floor(bh / 2) - 2, br - 1);
+    ctx.fill();
+
+    ctx.restore();
+  }
 
   ctx.fillStyle = "#e8f0f8";
   ctx.font = "bold 22px sans-serif";
