@@ -1,4 +1,4 @@
-import { MAX_DT, setArenaSize } from "./config.js";
+import { MAX_DT, setArenaSize, setTouchMode } from "./config.js";
 import { createGame, resetGame, update, setDevMode, setTunable } from "./game.js";
 import { render, resizeCanvas } from "./render.js";
 import { setupInput } from "./input.js";
@@ -8,22 +8,46 @@ import { startMusic, getMusicVolume, setMusicVolume, getMusicEnabled, setMusicEn
 const canvas = document.getElementById("game-canvas");
 const ctx = canvas.getContext("2d");
 
+// "Primary pointer is coarse" = phones/tablets, but not mouse-first laptops
+// that happen to have a touchscreen. Drives the on-screen buttons, spawn
+// safe zones, and touch-flavored copy.
+setTouchMode(window.matchMedia("(pointer: coarse)").matches);
+
 resizeCanvas(canvas);
 setArenaSize(canvas.width, canvas.height);
 const game = createGame();
 
-function activate() {
+let activating = false; // guards double-activation while fullscreen entry is pending
+
+async function activate() {
   if (!highscoreModal.hidden) return;
-  if (game.state !== "playing" && game.state !== "paused") {
-    // Don't trust canvas.width/height as of the last rAF tick — resize
-    // explicitly first so a fullscreen toggle that happened since is picked
-    // up immediately, not whenever the loop next happens to run.
-    resizeCanvas(canvas);
-    setArenaSize(canvas.width, canvas.height);
-    resetGame(game);
-    playStart();
-    startMusic(game.level);
+  if (activating || game.state === "playing" || game.state === "paused") return;
+  activating = true;
+
+  // Auto-enter fullscreen on start. Browsers only allow requestFullscreen
+  // inside a user gesture, so page load is too early — the activation
+  // click/Enter is the first chance we get. Wait for it (plus one frame of
+  // layout) so the arena is sized for the fullscreen canvas, not the
+  // windowed one it's about to leave.
+  if (!document.fullscreenElement) {
+    explicitFullscreenChange = true;
+    try {
+      await document.documentElement.requestFullscreen();
+      await new Promise(requestAnimationFrame);
+    } catch {
+      explicitFullscreenChange = false; // denied/unsupported — start windowed
+    }
   }
+
+  // Don't trust canvas.width/height as of the last rAF tick — resize
+  // explicitly first so a fullscreen toggle that happened since is picked
+  // up immediately, not whenever the loop next happens to run.
+  resizeCanvas(canvas);
+  setArenaSize(canvas.width, canvas.height);
+  resetGame(game);
+  playStart();
+  startMusic(game.level);
+  activating = false;
 }
 
 // --- Highscore leaderboard ---------------------------------------------

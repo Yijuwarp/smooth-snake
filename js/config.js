@@ -19,6 +19,28 @@ export function setArenaSize(canvasWidth, canvasHeight) {
 export const WALL_MARGIN = 30;
 export const MAX_DT = 1 / 30;
 
+// Touch mode: set once at startup by main.js (primary pointer is coarse).
+// Lives here so DOM-free modules (game/render/input) can read it without
+// touching window/matchMedia themselves.
+export let TOUCH_MODE = false;
+export function setTouchMode(on) {
+  TOUCH_MODE = !!on;
+}
+
+// On-screen boost/slow buttons for touch play (arena coords): boost sits
+// bottom-left, slow bottom-right. Sized for a comfortable thumb target once
+// the arena is scaled down to a phone screen.
+export const TOUCH_BUTTON_SIZE = 92;
+export const TOUCH_BUTTON_MARGIN = 18;
+
+export function getTouchButtons() {
+  const s = TOUCH_BUTTON_SIZE, m = TOUCH_BUTTON_MARGIN;
+  return {
+    boost: { x: m, y: ARENA_H - m - s, w: s, h: s },
+    slow: { x: ARENA_W - m - s, y: ARENA_H - m - s, w: s, h: s },
+  };
+}
+
 export const SNAKE_RADIUS = 10;
 export const BODY_DIAMETER = 18;
 export const SEGMENT_SPACING = 12;
@@ -39,7 +61,7 @@ export const LEVEL_TIME_REQUIRED = 30; // seconds since the last level-up forces
 export const FINAL_LEVEL = 4;
 export const SURVIVAL_TIME = 10; // seconds to survive at the final level, after its banner clears, before the star appears
 export const LEVEL_BANNER_DURATION = 2.2; // seconds of slow-motion banner
-export const TUTORIAL_BANNER_DURATION = 4.5; // longer banner for the one-time power-up explainer
+export const TUTORIAL_BANNER_DURATION = 3; // longer banner for the one-time power-up explainer
 export const LEVEL_TIME_SCALE = 0.05; // gameplay speed during a banner
 export const FOOD_VALUE_LEVEL2 = 3; // points per pickup (before multiplier) from level 2 on
 export const FOOD_VALUE_LEVEL3 = 5; // points per pickup (before multiplier) from level 3 on
@@ -96,10 +118,16 @@ export const REACH_CELL = BODY_DIAMETER;
 // spikes/food never spawn near or underneath it. Padded generously — this
 // only gates spawn placement, not runtime movement.
 export function getUiSafeZones() {
-  return [
+  const zones = [
     { x: ARENA_W - 220, y: 0, w: 220, h: 80 }, // score + dev-mode readout (top-right)
     { x: ARENA_W / 2 - 110, y: 0, w: 220, h: 90 }, // level + hearts + survive countdown (top-center)
-    { x: 0, y: ARENA_H - 46, w: 380, h: 46 }, // keybind hints (bottom-left)
-    { x: ARENA_W - 240, y: ARENA_H - 80, w: 240, h: 80 }, // boost meter + label (bottom-right)
+    { x: ARENA_W / 2 - 130, y: ARENA_H - 80, w: 260, h: 80 }, // boost meter (bottom-center)
   ];
+  if (TOUCH_MODE) {
+    const pad = 14; // matches the hit-test forgiveness around the button frame
+    for (const b of Object.values(getTouchButtons())) {
+      zones.push({ x: b.x - pad, y: b.y - pad, w: b.w + 2 * pad, h: b.h + 2 * pad });
+    }
+  }
+  return zones;
 }
