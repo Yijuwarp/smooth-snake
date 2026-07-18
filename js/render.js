@@ -77,12 +77,23 @@ export function render(game, ctx, canvas) {
   if (game.powerUp) drawPowerUp(ctx, game.powerUp, game.time);
   drawSpikes(ctx, game.spikes, game.time);
 
+  // A fresh bite always shows through even mid-boost/slow — it's the shorter,
+  // more special pulse, while serious/constipated are the sustained "what
+  // the player is currently doing" state underneath it.
+  const expression =
+    game.state === "gameover" ? "dead"
+    : game.hitFlash > 0 ? "ouch"
+    : game.eatFlash > 0 ? "happy"
+    : game.boosting && game.boost > 0 ? "serious"
+    : game.slowing && game.boost > 0 ? "constipated"
+    : "default";
+
   const blinking = game.invulnTimer > 0;
   if (blinking) {
     ctx.save();
     ctx.globalAlpha = 0.4 + 0.5 * Math.abs(Math.sin(game.time * 18));
   }
-  drawSnake(ctx, game.snake);
+  drawSnake(ctx, game.snake, expression);
   if (blinking) ctx.restore();
 
   drawHud(ctx, game);
@@ -244,7 +255,7 @@ function drawSpikes(ctx, spikes, time) {
   }
 }
 
-function drawSnake(ctx, snake) {
+function drawSnake(ctx, snake, expression) {
   ctx.strokeStyle = COLOR_SNAKE_BODY;
   ctx.lineWidth = BODY_DIAMETER;
   ctx.lineCap = "round";
@@ -268,9 +279,57 @@ function drawSnake(ctx, snake) {
   for (const sign of [-1, 1]) {
     const ex = snake.x + Math.cos(snake.theta) * eyeForward + Math.cos(perp) * eyeOffset * sign;
     const ey = snake.y + Math.sin(snake.theta) * eyeForward + Math.sin(perp) * eyeOffset * sign;
-    ctx.fillStyle = COLOR_EYE;
+    drawEye(ctx, ex, ey, 2.2, expression, sign);
+  }
+}
+
+// Screen-aligned (not rotated with snake.theta) — a wince, dome, or X reads
+// fine at any heading, and staying unrotated keeps this simple. `sign`
+// (-1/+1, same value used to place this eye) only matters for expressions
+// that mirror left vs. right, like the angled "serious" slits.
+function drawEye(ctx, x, y, r, expression, sign) {
+  ctx.fillStyle = COLOR_EYE;
+  ctx.strokeStyle = COLOR_EYE;
+  ctx.lineWidth = 1.6;
+  ctx.lineCap = "round";
+
+  if (expression === "dead") {
     ctx.beginPath();
-    ctx.arc(ex, ey, 2.2, 0, Math.PI * 2);
+    ctx.moveTo(x - r, y - r);
+    ctx.lineTo(x + r, y + r);
+    ctx.moveTo(x + r, y - r);
+    ctx.lineTo(x - r, y + r);
+    ctx.stroke();
+  } else if (expression === "ouch") {
+    ctx.beginPath();
+    ctx.moveTo(x - r, y);
+    ctx.lineTo(x + r, y);
+    ctx.stroke();
+  } else if (expression === "happy") {
+    // Small dome arc — cartoon "^" closed content eye.
+    ctx.beginPath();
+    ctx.arc(x, y + r * 0.4, r, Math.PI, Math.PI * 2);
+    ctx.stroke();
+  } else if (expression === "serious") {
+    // Angled slit, mirrored by `sign` so the pair reads as a determined
+    // "V" brow — inner ends (toward the other eye) tilt down.
+    const len = r * 1.3, amp = r * 0.6 * sign;
+    ctx.beginPath();
+    ctx.moveTo(x - len, y - amp);
+    ctx.lineTo(x + len, y + amp);
+    ctx.stroke();
+  } else if (expression === "constipated") {
+    // Tight zigzag — a scrunched, strained squint.
+    const w = r * 1.1, h = r * 0.75;
+    ctx.beginPath();
+    ctx.moveTo(x - w, y);
+    ctx.lineTo(x - w * 0.33, y - h);
+    ctx.lineTo(x + w * 0.33, y + h);
+    ctx.lineTo(x + w, y - h);
+    ctx.stroke();
+  } else {
+    ctx.beginPath();
+    ctx.arc(x, y, r, 0, Math.PI * 2);
     ctx.fill();
   }
 }
