@@ -334,7 +334,7 @@ function drawHud(ctx, game) {
   ctx.textAlign = "left";
   ctx.font = "14px sans-serif";
   ctx.fillStyle = "#9fb3c8";
-  ctx.fillText(`M · sound ${isMuted() ? "off" : "on"}   Esc · pause   B · next track   F · fullscreen`, 16, ARENA_H - 28);
+  ctx.fillText(`M · sound ${isMuted() ? "off" : "on"}   Esc · pause   F · fullscreen`, 16, ARENA_H - 28);
 
   ctx.textAlign = "center";
   ctx.font = "bold 18px sans-serif";
