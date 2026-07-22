@@ -30,6 +30,7 @@ import { createSnake, steer, moveSnake, updateGrowthAndSpeed, bounceOffWall, bou
 import { generateSpikes, updateSpikes } from "./spikes.js";
 import { spawnFood } from "./food.js";
 import { spawnPowerUp } from "./powerup.js";
+import { spawnParticles, updateParticles } from "./particles.js";
 import { hitsFood, hitsPowerUp, findHitSpike, hitsWall, hitsSelf } from "./collision.js";
 import { getHighScore, setHighScore, getSettings, saveSettings } from "./storage.js";
 import { playEat, playDeath, playLevelUp, playHit, playWin, playPowerUp } from "./audio.js";
@@ -131,6 +132,8 @@ export function createGame() {
     mouse: { x: ARENA_W / 2 + 200, y: ARENA_H / 2 },
     time: 0,
     onGameOver: null, // (score) => void, set by main.js to offer a highscore submission
+    particles: [],
+    screenShake: 0,
   };
 }
 
@@ -160,6 +163,8 @@ export function resetGame(game) {
   game.speedBonusCount = 0;
   game.won = false;
   game.finalBreakdown = null;
+  game.particles = [];
+  game.screenShake = 0;
   updateGrowthAndSpeed(game.snake, 0, game.devMode ? game.tunables.maxSpeed : MAX_SPEED);
   game.food = spawnFood([], game.snake.segments);
   game.spikes = generateSpikes({ x: game.snake.x, y: game.snake.y }, game.food);
@@ -201,6 +206,10 @@ export function update(game, dt) {
   game.time += dt;
   if (game.state !== "playing") return;
 
+  if (game.screenShake > 0) {
+    game.screenShake = Math.max(0, game.screenShake - dt);
+  }
+
   // Level-up / game-start / tutorial banner: the banner itself runs on real
   // time, gameplay below runs at a crawl until it finishes.
   if (game.banner) {
@@ -209,6 +218,8 @@ export function update(game, dt) {
     if (game.banner.t >= duration) game.banner = null;
     dt *= LEVEL_TIME_SCALE;
   }
+
+  updateParticles(game, dt);
 
   if (game.invulnTimer > 0) game.invulnTimer = Math.max(0, game.invulnTimer - dt);
   if (game.hitFlash > 0) game.hitFlash = Math.max(0, game.hitFlash - dt);
@@ -246,6 +257,39 @@ export function update(game, dt) {
   game.currentSpeed = snake.speed * speedMult;
   updateSpikes(game, dt);
 
+  // Emit trail particles from the tail
+  if (snake.segments && snake.segments.length > 0) {
+    const tail = snake.segments[snake.segments.length - 1];
+    let spawnChance = 0.15;
+    let particleOptions = {
+      colors: ["rgba(79, 209, 232, 0.4)", "rgba(127, 232, 255, 0.2)"],
+      speed: 15,
+      size: 2.0,
+      decay: 1.2,
+      angle: snake.theta + Math.PI,
+      angleSpread: 0.6,
+      speedVar: 0.8,
+    };
+
+    if (game.boosting && game.boost > 0) {
+      spawnChance = 0.8;
+      particleOptions.colors = ["#7fe8ff", "#4fd1e8", "#ffffff"];
+      particleOptions.speed = 60;
+      particleOptions.size = 3.5;
+      particleOptions.decay = 2.0;
+    } else if (game.slowing && game.boost > 0) {
+      spawnChance = 0.4;
+      particleOptions.colors = ["#c792ff", "#b075ff", "rgba(199, 146, 255, 0.3)"];
+      particleOptions.speed = 8;
+      particleOptions.size = 2.2;
+      particleOptions.decay = 1.0;
+    }
+
+    if (Math.random() < spawnChance) {
+      spawnParticles(game, tail.x, tail.y, 1, particleOptions);
+    }
+  }
+
   // The power-up only spawns once the cooldown (started when the previous
   // one was collected) has elapsed, and only if none is currently out.
   if (game.powerUpCooldown > 0) game.powerUpCooldown -= dt;
@@ -260,6 +304,13 @@ export function update(game, dt) {
   // even if hearts were still remaining when the snake ran into itself.
   if (hitsSelf(snake) && !invincible) {
     game.hearts = 0;
+    // Spawn large disintegration explosion
+    spawnParticles(game, snake.x, snake.y, 45, {
+      colors: ["#7fe8ff", "#4fd1e8", "#ffffff"],
+      speed: 150,
+      size: 4.5,
+      decay: 1.2,
+    });
     endGame(game, false);
     return;
   }
@@ -274,8 +325,26 @@ export function update(game, dt) {
       game.hearts--;
       game.invulnTimer = INVULN_TIME;
       game.hitFlash = HIT_FLASH_DURATION;
+      game.screenShake = 0.35; // Trigger screen shake!
+
+      // Spawn impact particles
+      const hitX = wallHit ? snake.x : (hitSpike.x + snake.x) / 2;
+      const hitY = wallHit ? snake.y : (hitSpike.y + snake.y) / 2;
+      spawnParticles(game, hitX, hitY, 18, {
+        colors: ["#ff3050", "#ff7a4a", "#ffffff"],
+        speed: 110,
+        size: 3.5,
+        decay: 1.8,
+      });
 
       if (game.hearts <= 0) {
+        // Spawn death disintegration explosion
+        spawnParticles(game, snake.x, snake.y, 45, {
+          colors: ["#7fe8ff", "#4fd1e8", "#ffffff"],
+          speed: 150,
+          size: 4.5,
+          decay: 1.2,
+        });
         endGame(game, false);
         return;
       }
@@ -284,6 +353,14 @@ export function update(game, dt) {
   }
 
   if (hitsPowerUp(snake, game.powerUp)) {
+    // Spawn electrical shockwave burst
+    spawnParticles(game, game.powerUp.x, game.powerUp.y, 25, {
+      colors: ["#fff44d", "#ffea82", "#ffffff"],
+      speed: 120,
+      size: 4.0,
+      decay: 2.0,
+    });
+
     game.boost = 1;
     game.powerUp = null;
     game.powerUpCooldown = POWER_UP_SPAWN_INTERVAL;
@@ -296,9 +373,24 @@ export function update(game, dt) {
 
   if (game.food && hitsFood(snake, game.food)) {
     if (game.food.isStar) {
+      // Spawn huge victory burst!
+      spawnParticles(game, game.food.x, game.food.y, 60, {
+        colors: ["#ffd257", "#ffffff", "#ff8c4a"],
+        speed: 180,
+        size: 5.0,
+        decay: 1.0,
+      });
       endGame(game, true);
       return;
     }
+
+    // Spawn green eating explosion
+    spawnParticles(game, game.food.x, game.food.y, 16, {
+      colors: ["#4ee08a", "#a2ffd0", "#ffffff"],
+      speed: 85,
+      size: 3.5,
+      decay: 1.6,
+    });
 
     game.eaten++;
     game.multiplier = game.comboTimer > 0 ? game.multiplier + 1 : 1;
