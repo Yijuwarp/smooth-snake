@@ -164,6 +164,13 @@ function clearOfOthers(s, spikes) {
   return true;
 }
 
+function targetSnakeDirection(s, snake) {
+  const angle = Math.atan2(snake.y - s.y, snake.x - s.x);
+  const speed = 240; // Hunter speed is 240 px/s
+  s.vx = Math.cos(angle) * speed;
+  s.vy = Math.sin(angle) * speed;
+}
+
 function maxMovingSpikesForLevel(level) {
   if (level >= FINAL_LEVEL) return Infinity;
   if (level >= 2) return MAX_MOVING_SPIKES_LEVEL2;
@@ -238,29 +245,134 @@ export function updateSpikes(game, dt, rng = Math.random) {
 
   const final = game.level >= FINAL_LEVEL;
 
-  if (final) {
-    // Wake everything at once; idempotent once all spikes are awake.
-    for (const s of game.spikes) {
-      if (!isAwake(s)) {
-        s.phase = "shake";
-        s.t = 0;
+  if (game.level === 4) {
+    // Find or initialize the drone
+    let drone = game.spikes.find((s) => s.isDrone);
+    if (!drone && game.spikes.length > 0) {
+      drone = game.spikes[Math.floor(rng() * game.spikes.length)];
+      drone.isDrone = true;
+      drone.phase = "move";
+      drone.t = 0;
+      drone.vx = 0;
+      drone.vy = 0;
+      drone.bounceTimer = 0;
+      drone.speedTimer = 0;
+      drone.stopTimer = 0;
+    }
+
+    if (drone) {
+      if (drone.bounceTimer === undefined) drone.bounceTimer = 0;
+      if (drone.speedTimer === undefined) drone.speedTimer = 0;
+      if (drone.stopTimer === undefined) drone.stopTimer = 0;
+      if (drone.hitPlayerTimer === undefined) drone.hitPlayerTimer = 0;
+
+      // Drone speed scales from 180 to 300 px/s over 10.0 seconds
+      // Resets to 0 (180 px/s) on hitting player or other spikes
+      if (drone.stopTimer <= 0) {
+        drone.speedTimer = Math.min(10.0, drone.speedTimer + dt);
+      }
+      const speed = 180 + (drone.speedTimer / 10.0) * 120;
+
+      // Decrement hit-player flash timer
+      if (drone.hitPlayerTimer > 0) drone.hitPlayerTimer -= dt;
+
+      if (drone.stopTimer > 0) {
+        drone.stopTimer -= dt;
+        drone.vx = 0;
+        drone.vy = 0;
+      } else {
+        drone.bounceTimer -= dt;
+        // Track target (snake head) if not in bounce cooldown
+        if (drone.bounceTimer <= 0) {
+          const angle = Math.atan2(game.snake.y - drone.y, game.snake.x - drone.x);
+          drone.vx = Math.cos(angle) * speed;
+          drone.vy = Math.sin(angle) * speed;
+        }
+      }
+
+      // Move drone
+      drone.x += drone.vx * dt;
+      drone.y += drone.vy * dt;
+
+      // Wall boundaries for drone
+      if (drone.x - SPIKE_RADIUS < WALL_MARGIN || drone.x + SPIKE_RADIUS > ARENA_W - WALL_MARGIN) {
+        drone.vx = -drone.vx;
+        drone.x = clamp(drone.x, WALL_MARGIN + SPIKE_RADIUS, ARENA_W - WALL_MARGIN - SPIKE_RADIUS);
+      }
+      if (drone.y - SPIKE_RADIUS < WALL_MARGIN || drone.y + SPIKE_RADIUS > ARENA_H - WALL_MARGIN) {
+        drone.vy = -drone.vy;
+        drone.y = clamp(drone.y, WALL_MARGIN + SPIKE_RADIUS, ARENA_H - WALL_MARGIN - SPIKE_RADIUS);
+      }
+
+      // Seeker drone collision vs other spikes -> Bounce! Also resets speed.
+      for (const other of game.spikes) {
+        if (other !== drone) {
+          const dx = drone.x - other.x;
+          const dy = drone.y - other.y;
+          const distSq = dx * dx + dy * dy;
+          const minColDist = SPIKE_RADIUS * 2;
+          if (distSq < minColDist * minColDist) {
+            const d = Math.sqrt(distSq) || 1;
+            const angle = Math.atan2(dy, dx);
+            const overlap = minColDist - d;
+            
+            // Resolve overlap
+            drone.x += Math.cos(angle) * overlap;
+            drone.y += Math.sin(angle) * overlap;
+
+            // Bounce directly away (only if not currently stopped/stunned)
+            if (drone.stopTimer <= 0) {
+              // Reset speed to minimum on spike collision
+              drone.speedTimer = 0;
+              const resetSpeed = 180;
+              drone.vx = Math.cos(angle) * resetSpeed;
+              drone.vy = Math.sin(angle) * resetSpeed;
+              drone.bounceTimer = 0.8;
+            }
+          }
+        }
       }
     }
-  } else {
+
+    // Select up to 4 wandering spikes (similar to level 2)
     game.spikeTimer -= dt;
     if (game.spikeTimer <= 0) {
       game.spikeTimer = SPIKE_SELECT_INTERVAL;
-      const idle = game.spikes.filter((s) => !isAwake(s));
-      const awakeCount = game.spikes.length - idle.length;
-      if (awakeCount < maxMovingSpikesForLevel(game.level) && idle.length > 0) {
+      const idle = game.spikes.filter((s) => !isAwake(s) && !s.isDrone);
+      const awakeCount = game.spikes.filter((s) => isAwake(s) && !s.isDrone).length;
+      if (awakeCount < 4 && idle.length > 0) {
         const s = idle[Math.floor(rng() * idle.length)];
         s.phase = "shake";
         s.t = 0;
       }
     }
+  } else {
+    if (final) {
+      // Wake everything at once; idempotent once all spikes are awake.
+      for (const s of game.spikes) {
+        if (!isAwake(s)) {
+          s.phase = "shake";
+          s.t = 0;
+        }
+      }
+    } else {
+      game.spikeTimer -= dt;
+      if (game.spikeTimer <= 0) {
+        game.spikeTimer = SPIKE_SELECT_INTERVAL;
+        const idle = game.spikes.filter((s) => !isAwake(s));
+        const awakeCount = game.spikes.length - idle.length;
+        if (awakeCount < maxMovingSpikesForLevel(game.level) && idle.length > 0) {
+          const s = idle[Math.floor(rng() * idle.length)];
+          s.phase = "shake";
+          s.t = 0;
+        }
+      }
+    }
   }
 
   for (const s of game.spikes) {
+    if (s.isDrone) continue; // Drone updated self-contained above
+
     if (s.phase === "shake") {
       s.t += dt;
       if (s.t >= SPIKE_SHAKE_TIME) {

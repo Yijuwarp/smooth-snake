@@ -69,7 +69,7 @@ export function render(game, ctx, canvas) {
   ctx.clearRect(0, 0, canvas.width, canvas.height);
 
   let shakeX = 0, shakeY = 0;
-  if (game.screenShake > 0) {
+  if (game.screenShake > 0 && game.state !== "gameover") {
     const power = game.screenShake * 12;
     shakeX = (Math.random() - 0.5) * power;
     shakeY = (Math.random() - 0.5) * power;
@@ -86,7 +86,7 @@ export function render(game, ctx, canvas) {
     else drawFood(ctx, game.food, game.time);
   }
   if (game.powerUp) drawPowerUp(ctx, game.powerUp, game.time);
-  drawSpikes(ctx, game.spikes, game.time);
+  drawSpikes(ctx, game.spikes, game.time, game.level);
 
   // A fresh bite always shows through even mid-boost/slow — it's the shorter,
   // more special pulse, while serious/constipated are the sustained "what
@@ -272,7 +272,7 @@ function drawPowerUp(ctx, powerUp, time) {
   ctx.restore();
 }
 
-function drawSpikes(ctx, spikes, time) {
+function drawSpikes(ctx, spikes, time, level) {
   const spikeCount = 8;
   for (const s of spikes) {
     // Shaking spikes jitter in place as a warning (visual only — the kill
@@ -291,7 +291,7 @@ function drawSpikes(ctx, spikes, time) {
     const r = SPIKE_RADIUS * sizeMult;
 
     // Draw warning threat ring around shaking spikes
-    if (s.phase === "shake") {
+    if (s.phase === "shake" && level < 3) {
       ctx.save();
       ctx.strokeStyle = "rgba(255, 48, 80, 0.65)";
       ctx.lineWidth = 2.0;
@@ -305,16 +305,40 @@ function drawSpikes(ctx, spikes, time) {
       ctx.restore();
     }
 
+    // Visual distinction for drone
+    if (s.isDrone) {
+      ctx.save();
+      const isCooldown = s.bounceTimer > 0 || s.hitPlayerTimer > 0;
+      ctx.shadowBlur = isCooldown ? 10 : 20;
+      ctx.shadowColor = isCooldown ? "#38bdf8" : "#ff3050";
+      ctx.strokeStyle = isCooldown ? "rgba(56, 189, 248, 0.6)" : "rgba(255, 48, 80, 0.8)";
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.arc(sx, sy, r * 1.3, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.restore();
+    }
+
     // Central core with radial gradient
     const spikeGrad = ctx.createRadialGradient(sx, sy, r * 0.1, sx, sy, r * 0.6);
-    spikeGrad.addColorStop(0, moving || growing ? "#ffa257" : "#ff5030");
-    spikeGrad.addColorStop(1, COLOR_SPIKE_BASE);
+    if (s.isDrone) {
+      const isCooldown = s.bounceTimer > 0 || s.hitPlayerTimer > 0;
+      spikeGrad.addColorStop(0, isCooldown ? "#38bdf8" : "#ff3050");
+      spikeGrad.addColorStop(1, "#180a0d");
+    } else {
+      spikeGrad.addColorStop(0, moving || growing ? "#ffa257" : "#ff5030");
+      spikeGrad.addColorStop(1, COLOR_SPIKE_BASE);
+    }
     ctx.fillStyle = spikeGrad;
     ctx.beginPath();
     ctx.arc(sx, sy, r * 0.6, 0, Math.PI * 2);
     ctx.fill();
 
-    ctx.fillStyle = moving || growing ? "#ffb066" : COLOR_SPIKE_TIP;
+    if (s.isDrone) {
+      ctx.fillStyle = (s.bounceTimer > 0 || s.hitPlayerTimer > 0) ? "#7dd3fc" : "#ff6b8b";
+    } else {
+      ctx.fillStyle = moving || growing ? "#ffb066" : COLOR_SPIKE_TIP;
+    }
     for (let i = 0; i < spikeCount; i++) {
       const angle = (i / spikeCount) * Math.PI * 2 + rotation;
       const baseAngle1 = angle - Math.PI / spikeCount;
@@ -575,11 +599,12 @@ function drawTouchButtons(ctx, game) {
 
 function drawHearts(ctx, game) {
   const size = 20;
-  const startX = ARENA_W / 2 - ((MAX_HEARTS - 1) * size) / 2;
+  const maxHearts = game.maxHearts || MAX_HEARTS;
+  const startX = ARENA_W / 2 - ((maxHearts - 1) * size) / 2;
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
   ctx.font = "16px 'Outfit', sans-serif";
-  for (let i = 0; i < MAX_HEARTS; i++) {
+  for (let i = 0; i < maxHearts; i++) {
     ctx.fillStyle = i < game.hearts ? "#ff5c72" : "rgba(255, 255, 255, 0.18)";
     ctx.fillText("♥", startX + i * size, 40);
   }

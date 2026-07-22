@@ -1,0 +1,653 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Hunter-Seeker Spikes Demo</title>
+  <style>
+    :root {
+      --bg-color: #0d1117;
+      --panel-bg: rgba(22, 27, 34, 0.85);
+      --border-color: #30363d;
+      --text-color: #c9d1d9;
+      --accent-color: #58a6ff;
+      --accent-hover: #1f6feb;
+      --danger-color: #ff7b72;
+      --success-color: #56d364;
+    }
+
+    body {
+      margin: 0;
+      padding: 0;
+      background-color: var(--bg-color);
+      color: var(--text-color);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      overflow: hidden;
+    }
+
+    .container {
+      display: flex;
+      flex-direction: row;
+      gap: 20px;
+      padding: 20px;
+      max-width: 1200px;
+      width: 95%;
+      box-sizing: border-box;
+    }
+
+    @media (max-width: 900px) {
+      .container {
+        flex-direction: column;
+        align-items: center;
+      }
+    }
+
+    .canvas-container {
+      position: relative;
+      background: radial-gradient(circle at center, #161b22 0%, #0d1117 100%);
+      border: 2px solid var(--border-color);
+      border-radius: 12px;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+      overflow: hidden;
+    }
+
+    canvas {
+      display: block;
+      cursor: crosshair;
+    }
+
+    .control-panel {
+      background-color: var(--panel-bg);
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      padding: 20px;
+      width: 320px;
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+      backdrop-filter: blur(10px);
+      display: flex;
+      flex-direction: column;
+      gap: 15px;
+    }
+
+    h1 {
+      font-size: 1.5rem;
+      margin: 0 0 10px 0;
+      color: #ffffff;
+      border-bottom: 1px solid var(--border-color);
+      padding-bottom: 10px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    p {
+      font-size: 0.9rem;
+      margin: 0;
+      line-height: 1.4;
+      color: #8b949e;
+    }
+
+    .control-group {
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+    }
+
+    label {
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: #ffffff;
+      display: flex;
+      justify-content: space-between;
+    }
+
+    label span {
+      color: var(--accent-color);
+      font-family: monospace;
+    }
+
+    input[type="range"] {
+      -webkit-appearance: none;
+      width: 100%;
+      height: 6px;
+      border-radius: 3px;
+      background: #21262d;
+      outline: none;
+    }
+
+    input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 16px;
+      height: 16px;
+      border-radius: 50%;
+      background: var(--accent-color);
+      cursor: pointer;
+      transition: background 0.15s;
+    }
+
+    input[type="range"]::-webkit-slider-thumb:hover {
+      background: var(--accent-hover);
+    }
+
+    .btn {
+      background-color: var(--accent-color);
+      color: #ffffff;
+      border: none;
+      border-radius: 6px;
+      padding: 10px 16px;
+      font-size: 0.9rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background-color 0.15s, transform 0.1s;
+      outline: none;
+    }
+
+    .btn:hover {
+      background-color: var(--accent-hover);
+    }
+
+    .btn:active {
+      transform: scale(0.98);
+    }
+
+    .status {
+      font-size: 0.85rem;
+      font-weight: 500;
+      padding: 8px 12px;
+      border-radius: 6px;
+      background-color: rgba(88, 166, 255, 0.15);
+      border: 1px solid rgba(88, 166, 255, 0.2);
+      color: var(--accent-color);
+      text-align: center;
+      line-height: 1.35;
+    }
+
+    .back-btn {
+      position: absolute;
+      top: 15px;
+      left: 15px;
+      color: var(--accent-color);
+      text-decoration: none;
+      font-size: 0.9rem;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      transition: color 0.15s;
+    }
+
+    .back-btn:hover {
+      color: var(--accent-hover);
+    }
+  </style>
+</head>
+<body>
+  <a href="/" class="back-btn">← Back to Smooth Snake</a>
+
+  <div class="container">
+    <div class="canvas-container">
+      <canvas id="demoCanvas" width="800" height="600"></canvas>
+    </div>
+
+    <div class="control-panel">
+      <h1>🎯 Hunter Drone Demo</h1>
+      <p>Move your mouse to guide the **Snake Head** (green).</p>
+      <p>Eat **10 pellets** (yellow) to complete the stage!</p>
+      
+      <div class="status" id="statusBox">
+        Pellets Eaten: 0 / 10<br>
+        Drone Speed: 200 px/s<br>
+        Drone: ACTIVE (follows you, bounces off other spikes!)
+      </div>
+
+      <div class="control-group">
+        <label for="spikeSpeed">Wandering Spike Speed <span id="spikeSpeedVal">120 px/s</span></label>
+        <input type="range" id="spikeSpeed" min="50" max="250" value="120">
+      </div>
+
+      <div class="control-group">
+        <label for="spikeCount">Total Spikes <span id="spikeCountVal">14</span></label>
+        <input type="range" id="spikeCount" min="5" max="20" value="14">
+      </div>
+
+      <button class="btn" id="resetBtn">Restart Demo</button>
+    </div>
+  </div>
+
+  <script>
+    const canvas = document.getElementById("demoCanvas");
+    const ctx = canvas.getContext("2d");
+
+    // Settings
+    const settings = {
+      spikeSpeed: 120,
+      spikeCount: 14
+    };
+
+    // State
+    let mouse = { x: canvas.width / 2, y: canvas.height / 2 };
+    let spikes = [];
+    let food = { x: 0, y: 0 };
+    let pelletsEaten = 0;
+    let particles = [];
+    let spikeTimer = 0;
+    let lastTime = 0;
+    let victory = false;
+
+    const SPIKE_RADIUS = 12;
+    const SNAKE_RADIUS = 10;
+    const FOOD_RADIUS = 6;
+    const WALL_MARGIN = 20;
+
+    // Listeners
+    canvas.addEventListener("mousemove", (e) => {
+      const rect = canvas.getBoundingClientRect();
+      mouse.x = e.clientX - rect.left;
+      mouse.y = e.clientY - rect.top;
+    });
+
+    canvas.addEventListener("touchmove", (e) => {
+      e.preventDefault();
+      const rect = canvas.getBoundingClientRect();
+      const touch = e.touches[0];
+      mouse.x = touch.clientX - rect.left;
+      mouse.y = touch.clientY - rect.top;
+    }, { passive: false });
+
+    // UI Bindings
+    function bindSlider(id, key, formatFn) {
+      const slider = document.getElementById(id);
+      const valLabel = document.getElementById(id + "Val");
+      slider.addEventListener("input", (e) => {
+        const val = Number(e.target.value);
+        settings[key] = val;
+        valLabel.textContent = formatFn(val);
+        if (key === "spikeCount") {
+          initDemo();
+        }
+      });
+    }
+
+    bindSlider("spikeSpeed", "spikeSpeed", (v) => v + " px/s");
+    bindSlider("spikeCount", "spikeCount", (v) => v);
+
+    document.getElementById("resetBtn").addEventListener("click", initDemo);
+
+    // Initializer
+    function initDemo() {
+      spikes = [];
+      particles = [];
+      pelletsEaten = 0;
+      victory = false;
+      updateStatus();
+      spawnFood();
+
+      // Spawn spikes
+      for (let i = 0; i < settings.spikeCount; i++) {
+        let x, y, tooClose;
+        let attempts = 0;
+        do {
+          attempts++;
+          x = WALL_MARGIN + Math.random() * (canvas.width - 2 * WALL_MARGIN);
+          y = WALL_MARGIN + Math.random() * (canvas.height - 2 * WALL_MARGIN);
+          tooClose = Math.hypot(x - canvas.width / 2, y - canvas.height / 2) < 120;
+          for (const s of spikes) {
+            if (Math.hypot(x - s.x, y - s.y) < 60) tooClose = true;
+          }
+        } while (tooClose && attempts < 100);
+
+        spikes.push({
+          x,
+          y,
+          vx: 0,
+          vy: 0,
+          phase: "idle", // 'idle' | 'shake' | 'move'
+          t: 0,
+          isDrone: i === 0, // Designation: first spike is the drone!
+          bounceTimer: 0
+        });
+      }
+
+      // Initialize the drone's active state
+      const drone = spikes[0];
+      drone.phase = "move";
+      drone.vx = 0;
+      drone.vy = 0;
+    }
+
+    function spawnFood() {
+      let tooClose;
+      do {
+        food.x = WALL_MARGIN + Math.random() * (canvas.width - 2 * WALL_MARGIN);
+        food.y = WALL_MARGIN + Math.random() * (canvas.height - 2 * WALL_MARGIN);
+        tooClose = false;
+        for (const s of spikes) {
+          if (Math.hypot(food.x - s.x, food.y - s.y) < 40) tooClose = true;
+        }
+      } while (tooClose);
+    }
+
+    function updateStatus() {
+      const box = document.getElementById("statusBox");
+      const currentSpeed = 200 + (pelletsEaten / 10) * 140;
+      if (victory) {
+        box.innerHTML = `<span style="color:var(--success-color); font-weight:bold;">DEMO COMPLETED!</span><br>You successfully collected 10 pellets!`;
+      } else {
+        box.innerHTML = `Pellets Eaten: ${pelletsEaten} / 10<br>Drone Speed: ${Math.round(currentSpeed)} px/s (scales 200 to 340)<br>Drone: ACTIVE (bounces off other spikes!)`;
+      }
+    }
+
+    function spawnSpikeParticles(x, y, color, count = 8) {
+      for (let i = 0; i < count; i++) {
+        const angle = Math.random() * Math.PI * 2;
+        const speed = 30 + Math.random() * 80;
+        particles.push({
+          x,
+          y,
+          vx: Math.cos(angle) * speed,
+          vy: Math.sin(angle) * speed,
+          size: 2 + Math.random() * 2,
+          color,
+          alpha: 1,
+          decay: 1.5 + Math.random() * 1.5
+        });
+      }
+    }
+
+    // Update
+    function update(dt) {
+      if (victory) return;
+
+      // 1. Food Check
+      const dFood = Math.hypot(mouse.x - food.x, mouse.y - food.y);
+      if (dFood < SNAKE_RADIUS + FOOD_RADIUS) {
+        pelletsEaten++;
+        spawnSpikeParticles(food.x, food.y, "#ffd257", 12);
+        updateStatus();
+        if (pelletsEaten >= 10) {
+          victory = true;
+          updateStatus();
+          spikes = [];
+        } else {
+          spawnFood();
+        }
+      }
+
+      // 2. Select Wandering Spikes (similar to level 2, up to 4 spikes moving at once)
+      spikeTimer -= dt;
+      if (spikeTimer <= 0) {
+        spikeTimer = 1.0;
+        const idle = spikes.filter(s => s.phase === "idle" && !s.isDrone);
+        const awakeCount = spikes.filter(s => s.phase !== "idle" && !s.isDrone).length;
+        if (awakeCount < 4 && idle.length > 0) {
+          const s = idle[Math.floor(Math.random() * idle.length)];
+          s.phase = "shake";
+          s.t = 0;
+        }
+      }
+
+      // 3. Drone Movement & Spike-Spike Bounce
+      const drone = spikes.find(s => s.isDrone);
+      if (drone) {
+        drone.bounceTimer -= dt;
+
+        // Seeker drone speed scales dynamically from 200 to 340 based on pellets eaten
+        const droneSpeed = 200 + (pelletsEaten / 10) * 140;
+
+        // If tracking cooldown finished, steer towards mouse
+        if (drone.bounceTimer <= 0) {
+          const angle = Math.atan2(mouse.y - drone.y, mouse.x - drone.x);
+          drone.vx = Math.cos(angle) * droneSpeed;
+          drone.vy = Math.sin(angle) * droneSpeed;
+        }
+
+        // Move the drone
+        drone.x += drone.vx * dt;
+        drone.y += drone.vy * dt;
+
+        // Wall collisions for drone
+        if (drone.x - SPIKE_RADIUS < WALL_MARGIN || drone.x + SPIKE_RADIUS > canvas.width - WALL_MARGIN) {
+          drone.vx = -drone.vx;
+          drone.x = Math.max(WALL_MARGIN + SPIKE_RADIUS, Math.min(canvas.width - WALL_MARGIN - SPIKE_RADIUS, drone.x));
+        }
+        if (drone.y - SPIKE_RADIUS < WALL_MARGIN || drone.y + SPIKE_RADIUS > canvas.height - WALL_MARGIN) {
+          drone.vy = -drone.vy;
+          drone.y = Math.max(WALL_MARGIN + SPIKE_RADIUS, Math.min(canvas.height - WALL_MARGIN - SPIKE_RADIUS, drone.y));
+        }
+
+        // Collision check: Drone vs other spikes!
+        for (const other of spikes) {
+          if (other !== drone) {
+            const d = Math.hypot(drone.x - other.x, drone.y - other.y);
+            const minColDist = SPIKE_RADIUS * 2;
+            if (d < minColDist) {
+              // Resolve overlap
+              const angle = Math.atan2(drone.y - other.y, drone.x - other.x);
+              const overlap = minColDist - d;
+              drone.x += Math.cos(angle) * overlap;
+              drone.y += Math.sin(angle) * overlap;
+
+              // Bounce off other spike directly away
+              drone.vx = Math.cos(angle) * droneSpeed;
+              drone.vy = Math.sin(angle) * droneSpeed;
+
+              // Disable target tracking for 0.8s
+              drone.bounceTimer = 0.8;
+
+              // Spark particles!
+              spawnSpikeParticles(drone.x - Math.cos(angle) * SPIKE_RADIUS, drone.y - Math.sin(angle) * SPIKE_RADIUS, "#38bdf8", 10);
+            }
+          }
+        }
+      }
+
+      // 4. Update Wandering Spikes
+      for (const s of spikes) {
+        if (s.isDrone) continue;
+
+        if (s.phase === "shake") {
+          s.t += dt;
+          if (s.t >= 0.8) {
+            s.phase = "move";
+            s.t = 0;
+            const angle = Math.random() * Math.PI * 2;
+            s.vx = Math.cos(angle) * settings.spikeSpeed;
+            s.vy = Math.sin(angle) * settings.spikeSpeed;
+          }
+        } else if (s.phase === "move") {
+          s.t += dt;
+          s.x += s.vx * dt;
+          s.y += s.vy * dt;
+
+          // Wall bounce
+          if (s.x - SPIKE_RADIUS < WALL_MARGIN || s.x + SPIKE_RADIUS > canvas.width - WALL_MARGIN) {
+            s.vx = -s.vx;
+            s.x = Math.max(WALL_MARGIN + SPIKE_RADIUS, Math.min(canvas.width - WALL_MARGIN - SPIKE_RADIUS, s.x));
+          }
+          if (s.y - SPIKE_RADIUS < WALL_MARGIN || s.y + SPIKE_RADIUS > canvas.height - WALL_MARGIN) {
+            s.vy = -s.vy;
+            s.y = Math.max(WALL_MARGIN + SPIKE_RADIUS, Math.min(canvas.height - WALL_MARGIN - SPIKE_RADIUS, s.y));
+          }
+
+          if (s.t >= 2.5) { // settle
+            s.phase = "idle";
+            s.vx = 0;
+            s.vy = 0;
+            s.t = 0;
+          }
+        }
+      }
+
+      // 5. Collision Checks: Spike vs Head
+      for (const s of spikes) {
+        const d = Math.hypot(mouse.x - s.x, mouse.y - s.y);
+        if (d < SNAKE_RADIUS + SPIKE_RADIUS) {
+          spawnSpikeParticles(mouse.x, mouse.y, "#ff3050", 15);
+        }
+      }
+
+      // 6. Update particles
+      for (let i = particles.length - 1; i >= 0; i--) {
+        const p = particles[i];
+        p.x += p.vx * dt;
+        p.y += p.vy * dt;
+        p.alpha -= p.decay * dt;
+        if (p.alpha <= 0) {
+          particles.splice(i, 1);
+        }
+      }
+    }
+
+    // Render
+    function draw(time) {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      // Draw background grid lines
+      ctx.strokeStyle = "rgba(48, 54, 61, 0.15)";
+      ctx.lineWidth = 1;
+      const gridSize = 40;
+      for (let x = 0; x < canvas.width; x += gridSize) {
+        ctx.beginPath();
+        ctx.moveTo(x, 0);
+        ctx.lineTo(x, canvas.height);
+        ctx.stroke();
+      }
+      for (let y = 0; y < canvas.height; y += gridSize) {
+        ctx.beginPath();
+        ctx.moveTo(0, y);
+        ctx.lineTo(canvas.width, y);
+        ctx.stroke();
+      }
+
+      // Draw wall border
+      ctx.strokeStyle = "rgba(48, 54, 61, 0.5)";
+      ctx.lineWidth = 2;
+      ctx.strokeRect(WALL_MARGIN, WALL_MARGIN, canvas.width - 2 * WALL_MARGIN, canvas.height - 2 * WALL_MARGIN);
+
+      // Draw food
+      if (!victory) {
+        ctx.save();
+        ctx.shadowBlur = 10;
+        ctx.shadowColor = "#ffd257";
+        ctx.fillStyle = "#ffd257";
+        ctx.beginPath();
+        ctx.arc(food.x, food.y, FOOD_RADIUS, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+      }
+
+      // Draw particles
+      for (const p of particles) {
+        ctx.save();
+        ctx.globalAlpha = p.alpha;
+        ctx.fillStyle = p.color;
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+      }
+
+      // Draw spikes
+      const spikePoints = 8;
+      for (const s of spikes) {
+        let dx = 0, dy = 0;
+        if (s.phase === "shake") {
+          dx = Math.sin(s.t * 45) * 2.5;
+          dy = Math.cos(s.t * 38) * 2.5;
+        }
+        const sx = s.x + dx;
+        const sy = s.y + dy;
+
+        // Visual distinction for drone
+        if (s.isDrone) {
+          ctx.save();
+          const isCooldown = s.bounceTimer > 0;
+          ctx.shadowBlur = isCooldown ? 10 : 20;
+          ctx.shadowColor = isCooldown ? "#38bdf8" : "#ff3050";
+          ctx.strokeStyle = isCooldown ? "rgba(56, 189, 248, 0.6)" : "rgba(255, 48, 80, 0.8)";
+          ctx.lineWidth = 3;
+          ctx.beginPath();
+          ctx.arc(sx, sy, SPIKE_RADIUS * 1.3, 0, Math.PI * 2);
+          ctx.stroke();
+          ctx.restore();
+        }
+
+        // Draw radial gradient core
+        const grad = ctx.createRadialGradient(sx, sy, SPIKE_RADIUS * 0.1, sx, sy, SPIKE_RADIUS * 0.6);
+        const moving = s.phase === "move" || s.isDrone;
+        
+        if (s.isDrone) {
+          const isCooldown = s.bounceTimer > 0;
+          grad.addColorStop(0, isCooldown ? "#38bdf8" : "#ff3050");
+          grad.addColorStop(1, "#180a0d");
+        } else {
+          grad.addColorStop(0, moving ? "#ffa257" : "#ff5030");
+          grad.addColorStop(1, "#1c1214");
+        }
+        
+        ctx.fillStyle = grad;
+        ctx.beginPath();
+        ctx.arc(sx, sy, SPIKE_RADIUS * 0.6, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Draw spikes tips
+        if (s.isDrone) {
+          ctx.fillStyle = s.bounceTimer > 0 ? "#7dd3fc" : "#ff6b8b";
+        } else {
+          ctx.fillStyle = moving ? "#ffb066" : "#e62240";
+        }
+        
+        for (let i = 0; i < spikePoints; i++) {
+          const angle = (i / spikePoints) * Math.PI * 2 + (moving ? time / 200 : 0);
+          const base1 = angle - Math.PI / spikePoints;
+          const base2 = angle + Math.PI / spikePoints;
+          ctx.beginPath();
+          ctx.moveTo(sx + Math.cos(angle) * SPIKE_RADIUS, sy + Math.sin(angle) * SPIKE_RADIUS);
+          ctx.lineTo(sx + Math.cos(base1) * SPIKE_RADIUS * 0.5, sy + Math.sin(base1) * SPIKE_RADIUS * 0.5);
+          ctx.lineTo(sx + Math.cos(base2) * SPIKE_RADIUS * 0.5, sy + Math.sin(base2) * SPIKE_RADIUS * 0.5);
+          ctx.closePath();
+          ctx.fill();
+        }
+      }
+
+      // Draw Snake Head
+      ctx.save();
+      ctx.shadowBlur = 15;
+      ctx.shadowColor = "#56d364";
+      ctx.fillStyle = "#56d364";
+      ctx.beginPath();
+      ctx.arc(mouse.x, mouse.y, SNAKE_RADIUS, 0, Math.PI * 2);
+      ctx.fill();
+      
+      // Eye
+      ctx.fillStyle = "#0d1117";
+      ctx.beginPath();
+      ctx.arc(mouse.x + 3, mouse.y - 3, 2, 0, Math.PI * 2);
+      ctx.arc(mouse.x + 3, mouse.y + 3, 2, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+    }
+
+    // Loop
+    function loop(time) {
+      if (!lastTime) lastTime = time;
+      const dt = Math.min(1 / 30, (time - lastTime) / 1000);
+      lastTime = time;
+
+      update(dt);
+      draw(time);
+
+      requestAnimationFrame(loop);
+    }
+
+    // Start
+    initDemo();
+    requestAnimationFrame(loop);
+  </script>
+</body>
+</html>

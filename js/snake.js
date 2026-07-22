@@ -1,5 +1,6 @@
 import {
   SNAKE_RADIUS,
+  BODY_DIAMETER,
   SEGMENT_SPACING,
   BASE_SEGMENTS,
   SEGMENTS_PER_FOOD,
@@ -134,6 +135,21 @@ export function bounceOffSpike(snake, spike) {
   const pushDist = SNAKE_RADIUS + SPIKE_RADIUS * (spike.sizeMult || 1) + BOUNCE_CLEARANCE;
   snake.x = spike.x + nx * pushDist;
   snake.y = spike.y + ny * pushDist;
+}
+
+// Reflects heading off the body segment's normal and pushes the head just clear of it.
+export function bounceOffSegment(snake, segment, segmentRadius) {
+  const dx = snake.x - segment.x;
+  const dy = snake.y - segment.y;
+  const d = Math.hypot(dx, dy) || 1;
+  const nx = dx / d, ny = dy / d;
+  const vx = Math.cos(snake.theta), vy = Math.sin(snake.theta);
+  const dot = vx * nx + vy * ny;
+  snake.theta = Math.atan2(vy - 2 * dot * ny, vx - 2 * dot * nx);
+  // Use the passed tapered segmentRadius
+  const pushDist = SNAKE_RADIUS + segmentRadius + BOUNCE_CLEARANCE;
+  snake.x = segment.x + nx * pushDist;
+  snake.y = segment.y + ny * pushDist;
 }
 
 export function updateGrowthAndSpeed(snake, eaten, maxSpeed = MAX_SPEED) {
