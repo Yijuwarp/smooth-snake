@@ -6,7 +6,8 @@ const TRACKS = {
   level2: { name: "Stage 2 - Chiptune Adventures (Juhani Junkala)", file: "music/stage2.ogg", loop: true },
   level3: { name: "Stage 3 - Boss Fight (Juhani Junkala)", file: "music/stage3.ogg", loop: true },
   level4: { name: "Final Stage - As Fast As You Can (Centurion of War)", file: "music/stage4.ogg", loop: true },
-  victory: { name: "Victory Fanfare (congusbongus)", file: "music/victory.ogg", loop: false }
+  victory: { name: "Victory Fanfare (congusbongus)", file: "music/victory.ogg", loop: false },
+  gameover: { name: "Game Over (Cleyton Kauffman)", file: "music/gameover.ogg", loop: false }
 };
 
 let currentKey = "level1";
@@ -50,12 +51,6 @@ export function updateMusicForLevel(level) {
   else if (level === 2) playTrack("level2");
   else if (level === 3) playTrack("level3");
   else if (level === 4) playTrack("level4");
-}
-
-export function stopMusic() {
-  if (el) {
-    el.pause();
-  }
 }
 
 // First call must come from a user-gesture handler so autoplay is allowed.
