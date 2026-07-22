@@ -1,0 +1,391 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Smooth Snake Music Player</title>
+  <style>
+    :root {
+      --bg-color: #0d1117;
+      --panel-bg: #161b22;
+      --border-color: #30363d;
+      --text-color: #c9d1d9;
+      --text-muted: #8b949e;
+      --accent-color: #58a6ff;
+      --accent-hover: #1f6feb;
+      --success-color: #56d364;
+    }
+
+    body {
+      margin: 0;
+      padding: 0;
+      background-color: var(--bg-color);
+      color: var(--text-color);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 40px 20px;
+      box-sizing: border-box;
+    }
+
+    .container {
+      max-width: 800px;
+      width: 100%;
+      display: flex;
+      flex-direction: column;
+      gap: 30px;
+    }
+
+    header {
+      text-align: center;
+      border-bottom: 1px solid var(--border-color);
+      padding-bottom: 20px;
+      position: relative;
+    }
+
+    h1 {
+      font-size: 2rem;
+      color: #ffffff;
+      margin: 0 0 10px 0;
+    }
+
+    p {
+      color: var(--text-muted);
+      margin: 0;
+      font-size: 1rem;
+    }
+
+    .now-playing-panel {
+      background: linear-gradient(135deg, #1f2937 0%, #111827 100%);
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 15px;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+    }
+
+    .now-playing-title {
+      font-size: 1.2rem;
+      font-weight: 600;
+      color: #ffffff;
+      margin: 0;
+    }
+
+    .now-playing-artist {
+      font-size: 0.9rem;
+      color: var(--accent-color);
+      margin: 0;
+    }
+
+    audio {
+      width: 100%;
+      outline: none;
+    }
+
+    .section-title {
+      font-size: 1.3rem;
+      color: #ffffff;
+      margin: 20px 0 10px 0;
+      border-left: 4px solid var(--accent-color);
+      padding-left: 10px;
+    }
+
+    .track-list {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .track-card {
+      background-color: var(--panel-bg);
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      padding: 15px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      transition: transform 0.15s, border-color 0.15s;
+    }
+
+    .track-card:hover {
+      transform: translateY(-2px);
+      border-color: #8b949e;
+    }
+
+    .track-card.active {
+      border-color: var(--accent-color);
+      background-color: rgba(88, 166, 255, 0.05);
+    }
+
+    .track-info {
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+      flex: 1;
+    }
+
+    .track-name {
+      font-size: 1rem;
+      font-weight: 600;
+      color: #ffffff;
+    }
+
+    .track-meta {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      display: flex;
+      gap: 15px;
+    }
+
+    .track-tag {
+      background-color: #21262d;
+      padding: 2px 6px;
+      border-radius: 4px;
+      border: 1px solid var(--border-color);
+      color: var(--text-color);
+    }
+
+    .play-btn {
+      background-color: var(--accent-color);
+      color: #ffffff;
+      border: none;
+      border-radius: 50%;
+      width: 40px;
+      height: 40px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      font-size: 1.2rem;
+      transition: background-color 0.15s, transform 0.1s;
+    }
+
+    .play-btn:hover {
+      background-color: var(--accent-hover);
+      transform: scale(1.05);
+    }
+
+    .play-btn:active {
+      transform: scale(0.95);
+    }
+
+    .back-btn {
+      position: absolute;
+      top: 0;
+      left: 0;
+      color: var(--accent-color);
+      text-decoration: none;
+      font-size: 0.9rem;
+      font-weight: 600;
+      transition: color 0.15s;
+    }
+
+    .back-btn:hover {
+      color: var(--accent-hover);
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <a href="/" class="back-btn">← Back to Game</a>
+      <h1>🎵 Smooth Snake Music Explorer</h1>
+      <p>Listen to current, alternate, and newly downloaded tracks to preview level options.</p>
+    </header>
+
+    <div class="now-playing-panel">
+      <div>
+        <p class="now-playing-artist" id="playerArtist">Artist: Select a track below</p>
+        <h2 class="now-playing-title" id="playerTitle">Now Playing: None</h2>
+      </div>
+      <audio id="audioPlayer" controls></audio>
+    </div>
+
+    <!-- Group 1: Current BGM -->
+    <div>
+      <div class="section-title">Current Game Soundtrack</div>
+      <div class="track-list">
+        <div class="track-card" data-src="music/stage1.ogg" data-title="Stage 1 - Chiptune Adventures" data-artist="Juhani Junkala (CC0)">
+          <div class="track-info">
+            <div class="track-name">Stage 1 - Chiptune Adventures</div>
+            <div class="track-meta">
+              <span>Artist: Juhani Junkala</span>
+              <span class="track-tag">OGG</span>
+              <span class="track-tag">Looping</span>
+            </div>
+          </div>
+          <button class="play-btn">▶</button>
+        </div>
+
+        <div class="track-card" data-src="music/stage2.ogg" data-title="Stage 2 - Chiptune Adventures" data-artist="Juhani Junkala (CC0)">
+          <div class="track-info">
+            <div class="track-name">Stage 2 - Chiptune Adventures</div>
+            <div class="track-meta">
+              <span>Artist: Juhani Junkala</span>
+              <span class="track-tag">OGG</span>
+              <span class="track-tag">Looping</span>
+            </div>
+          </div>
+          <button class="play-btn">▶</button>
+        </div>
+
+        <div class="track-card" data-src="music/stage3.ogg" data-title="Stage 3 - Boss Fight" data-artist="Juhani Junkala (CC0)">
+          <div class="track-info">
+            <div class="track-name">Stage 3 - Boss Fight</div>
+            <div class="track-meta">
+              <span>Artist: Juhani Junkala</span>
+              <span class="track-tag">OGG</span>
+              <span class="track-tag">Looping</span>
+            </div>
+          </div>
+          <button class="play-btn">▶</button>
+        </div>
+
+        <div class="track-card" data-src="music/stage4.ogg" data-title="Stage 4 - As Fast As You Can" data-artist="Centurion of War (CC0)">
+          <div class="track-info">
+            <div class="track-name">Stage 4 - As Fast As You Can</div>
+            <div class="track-meta">
+              <span>Artist: Centurion of War</span>
+              <span class="track-tag">OGG</span>
+              <span class="track-tag">Looping</span>
+            </div>
+          </div>
+          <button class="play-btn">▶</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Group 2: Downloaded Adventure OGGs -->
+    <div>
+      <div class="section-title">Downloaded "Chiptune Adventures" (OGG)</div>
+      <div class="track-list">
+        <div class="track-card" data-src="music/chiptune_adventures/Juhani Junkala [Chiptune Adventures] 4. Stage Select.ogg" data-title="Stage Select (Loop)" data-artist="Juhani Junkala (CC0)">
+          <div class="track-info">
+            <div class="track-name">Stage Select (Unused Candidate)</div>
+            <div class="track-meta">
+              <span>Artist: Juhani Junkala</span>
+              <span class="track-tag">OGG</span>
+              <span class="track-tag">Looping</span>
+            </div>
+          </div>
+          <button class="play-btn">▶</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Group 3: Alternate Candidates (OGG) -->
+    <div>
+      <div class="section-title">Alternate Candidates from Candidates Folder (OGG)</div>
+      <div class="track-list">
+        <div class="track-card" data-src="music/candidates/level4-final/chiptune-battle-music [ALT, pmiller, CC0, loop@7.5s].ogg" data-title="Chiptune Battle Music" data-artist="pmiller (CC0)">
+          <div class="track-info">
+            <div class="track-name">Chiptune Battle Music (Final Level Alt)</div>
+            <div class="track-meta">
+              <span>Artist: pmiller</span>
+              <span class="track-tag">OGG</span>
+              <span class="track-tag">Looping</span>
+            </div>
+          </div>
+          <button class="play-btn">▶</button>
+        </div>
+
+        <div class="track-card" data-src="music/candidates/level4-final/trance-boss-battle [ALT2, MintoDog, CC0, loopable, EDM-style].ogg" data-title="Trance Boss Battle" data-artist="MintoDog (CC0)">
+          <div class="track-info">
+            <div class="track-name">Trance Boss Battle (EDM Final Level Alt)</div>
+            <div class="track-meta">
+              <span>Artist: MintoDog</span>
+              <span class="track-tag">OGG</span>
+              <span class="track-tag">Looping</span>
+            </div>
+          </div>
+          <button class="play-btn">▶</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Group 4: Action WAVs -->
+    <div>
+      <div class="section-title">Downloaded "Action Chiptunes" (WAV)</div>
+      <div class="track-list">
+        <div class="track-card" data-src="music/chiptune_action/Juhani Junkala [Retro Game Music Pack] Level 1.wav" data-title="Action - Level 1" data-artist="Juhani Junkala (CC0)">
+          <div class="track-info">
+            <div class="track-name">Action - Level 1</div>
+            <div class="track-meta">
+              <span>Artist: Juhani Junkala</span>
+              <span class="track-tag">WAV</span>
+              <span class="track-tag">Looping</span>
+            </div>
+          </div>
+          <button class="play-btn">▶</button>
+        </div>
+
+        <div class="track-card" data-src="music/chiptune_action/Juhani Junkala [Retro Game Music Pack] Level 2.wav" data-title="Action - Level 2" data-artist="Juhani Junkala (CC0)">
+          <div class="track-info">
+            <div class="track-name">Action - Level 2</div>
+            <div class="track-meta">
+              <span>Artist: Juhani Junkala</span>
+              <span class="track-tag">WAV</span>
+              <span class="track-tag">Looping</span>
+            </div>
+          </div>
+          <button class="play-btn">▶</button>
+        </div>
+
+        <div class="track-card" data-src="music/chiptune_action/Juhani Junkala [Retro Game Music Pack] Level 3.wav" data-title="Action - Level 3" data-artist="Juhani Junkala (CC0)">
+          <div class="track-info">
+            <div class="track-name">Action - Level 3</div>
+            <div class="track-meta">
+              <span>Artist: Juhani Junkala</span>
+              <span class="track-tag">WAV</span>
+              <span class="track-tag">Looping</span>
+            </div>
+          </div>
+          <button class="play-btn">▶</button>
+        </div>
+
+        <div class="track-card" data-src="music/chiptune_action/Juhani Junkala [Retro Game Music Pack] Title Screen.wav" data-title="Action - Title Screen" data-artist="Juhani Junkala (CC0)">
+          <div class="track-info">
+            <div class="track-name">Action - Title Screen</div>
+            <div class="track-meta">
+              <span>Artist: Juhani Junkala</span>
+              <span class="track-tag">WAV</span>
+              <span class="track-tag">Looping</span>
+            </div>
+          </div>
+          <button class="play-btn">▶</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const player = document.getElementById("audioPlayer");
+    const pTitle = document.getElementById("playerTitle");
+    const pArtist = document.getElementById("playerArtist");
+    const cards = document.querySelectorAll(".track-card");
+
+    cards.forEach(card => {
+      const btn = card.querySelector(".play-btn");
+      btn.addEventListener("click", () => {
+        const src = card.getAttribute("data-src");
+        const title = card.getAttribute("data-title");
+        const artist = card.getAttribute("data-artist");
+
+        // Remove active class from all cards
+        cards.forEach(c => c.classList.remove("active"));
+        card.classList.add("active");
+
+        // Set player source and play
+        player.src = src;
+        pTitle.textContent = "Now Playing: " + title;
+        pArtist.textContent = "Artist: " + artist;
+        player.play().catch(e => console.log("Play failed: ", e));
+      });
+    });
+  </script>
+</body>
+</html>

@@ -26,23 +26,26 @@ import {
   LIFE_BONUS_PCT,
   SPEED_BONUS_PCT,
 } from "./config.js";
-import { createSnake, steer, moveSnake, updateGrowthAndSpeed, bounceOffWall, bounceOffSpike } from "./snake.js";
+import { createSnake, steer, moveSnake, updateGrowthAndSpeed, bounceOffWall, bounceOffSpike, bounceOffSegment } from "./snake.js";
 import { generateSpikes, updateSpikes } from "./spikes.js";
 import { spawnFood } from "./food.js";
 import { spawnPowerUp } from "./powerup.js";
 import { spawnParticles, updateParticles } from "./particles.js";
-import { hitsFood, hitsPowerUp, findHitSpike, hitsWall, hitsSelf } from "./collision.js";
+import { hitsFood, hitsPowerUp, findHitSpike, hitsWall, hitsSelf, findHitSegment } from "./collision.js";
 import { getHighScore, setHighScore, getSettings, saveSettings } from "./storage.js";
 import { playEat, playDeath, playLevelUp, playHit, playWin, playPowerUp } from "./audio.js";
 import { updateMusicForLevel, playTrack } from "./music.js";
 
 function foodValueForLevel(level) {
-  if (level >= 3) return FOOD_VALUE_LEVEL3;
-  if (level >= 2) return FOOD_VALUE_LEVEL2;
+  if (level >= 5) return 10;
+  if (level >= 4) return 7;
+  if (level >= 3) return 5;
+  if (level >= 2) return 3;
   return 1;
 }
 
 function bannerTitle(level) {
+  if (level === 5) return "TRUE FINAL STAGE";
   return level >= FINAL_LEVEL ? "FINAL LEVEL" : `LEVEL ${level}`;
 }
 
@@ -53,6 +56,8 @@ function bannerSubtitle(level) {
     case 3:
       return "Watch for swelling spikes · pickups now worth ×5";
     case 4:
+      return "Hunter drone tracks you · eat 10 pellets to level up!";
+    case 5: // FINAL_LEVEL
       return `Every spike is loose — survive ${SURVIVAL_TIME}s before the star appears!`;
     default:
       return "";
@@ -119,6 +124,7 @@ export function createGame() {
     spikeTimer: 0,
     lastGrownSpikes: [],
     hearts: MAX_HEARTS,
+    maxHearts: MAX_HEARTS,
     invulnTimer: 0,
     hitFlash: 0,
     eatFlash: 0,
@@ -156,6 +162,7 @@ export function resetGame(game) {
   game.spikeTimer = 0;
   game.lastGrownSpikes = [];
   game.hearts = MAX_HEARTS;
+  game.maxHearts = MAX_HEARTS;
   game.invulnTimer = 0;
   game.hitFlash = 0;
   game.eatFlash = 0;
@@ -181,6 +188,37 @@ export function setTunable(game, key, value) {
   saveSettings({ tunables: game.tunables });
 }
 
+export function devLaunchLevel(game, level) {
+  // 1. Transition to the chosen level
+  applyLevelUp(game, level, "dev");
+
+  // 2. Set pellets eaten to match the level's expected progression
+  game.eaten = (level - 1) * 10;
+  game.pelletsSinceLevel = 0;
+
+  // 3. Scale size of snake
+  const maxSpeed = game.devMode ? game.tunables.maxSpeed : MAX_SPEED;
+  updateGrowthAndSpeed(game.snake, game.eaten, maxSpeed);
+
+  // Instantly grow/shrink snake segments to match scaled targetLength
+  const snake = game.snake;
+  while (snake.segments.length < snake.targetLength) {
+    const last = snake.segments[snake.segments.length - 1] || { x: snake.x, y: snake.y };
+    snake.segments.push({ x: last.x, y: last.y });
+  }
+  if (snake.segments.length > snake.targetLength) {
+    snake.segments.length = snake.targetLength;
+  }
+
+  // 4. Ensure food exists for normal levels
+  if (level < FINAL_LEVEL) {
+    game.food = spawnFood(game.spikes, snake.segments);
+  }
+
+  // 5. Force state to playing
+  game.state = "playing";
+}
+
 // A level-up applies regardless of trigger; only a pellet-triggered one (the
 // "fast" path) earns the speed bonus. The 20s-per-level timer always
 // restarts from here.
@@ -189,9 +227,26 @@ function applyLevelUp(game, newLevel, trigger) {
   game.banner = { t: 0, title: bannerTitle(newLevel), subtitle: bannerSubtitle(newLevel) };
   game.levelTimer = 0;
   game.pelletsSinceLevel = 0;
-  game.hearts = Math.min(MAX_HEARTS, game.hearts + 1);
+  game.hearts = Math.min(game.maxHearts || MAX_HEARTS, game.hearts + 1);
   if (trigger === "pellets") game.speedBonusCount++;
-  if (newLevel >= FINAL_LEVEL) {
+
+  // Reset all spikes to default static state on any level transition
+  for (const s of game.spikes) {
+    s.phase = undefined;
+    s.vx = 0;
+    s.vy = 0;
+    s.t = 0;
+    s.growActive = false;
+    s.growT = 0;
+    s.rotation = 0;
+    s.sizeMult = 1;
+    s.isDrone = false;
+    s.bounceTimer = 0;
+  }
+  game.spikeTimer = 0;
+  game.hunterQueue = [];
+
+  if (newLevel === FINAL_LEVEL) {
     // No more pellets at the final level — just survive a countdown (shown
     // once this banner clears), then the star appears.
     game.starPending = true;
@@ -299,27 +354,23 @@ export function update(game, dt) {
 
   const invincible = game.devMode && game.tunables.immortal;
 
-  // Self-collision is still an instant kill — only wall/spike hits bounce.
-  // Zero the hearts first so the life bonus at game end reflects the death,
-  // even if hearts were still remaining when the snake ran into itself.
-  if (hitsSelf(snake) && !invincible) {
-    game.hearts = 0;
-    // Spawn large disintegration explosion
-    spawnParticles(game, snake.x, snake.y, 45, {
-      colors: ["#7fe8ff", "#4fd1e8", "#ffffff"],
-      speed: 150,
-      size: 4.5,
-      decay: 1.2,
-    });
-    endGame(game, false);
-    return;
-  }
-
   const wallHit = hitsWall(snake);
   const hitSpike = wallHit ? null : findHitSpike(snake, game.spikes);
-  if ((wallHit || hitSpike) && game.invulnTimer <= 0) {
+  const hitSelfSeg = (wallHit || hitSpike) ? null : findHitSegment(snake);
+
+  if ((wallHit || hitSpike || hitSelfSeg) && game.invulnTimer <= 0) {
     if (wallHit) bounceOffWall(snake);
-    else bounceOffSpike(snake, hitSpike);
+    else if (hitSpike) {
+      bounceOffSpike(snake, hitSpike);
+      if (hitSpike.isDrone) {
+        hitSpike.speedTimer = 0;    // Reset speed scaling to 180 px/s (minimum)
+        hitSpike.stopTimer = 0.8;   // Freeze in place for 0.8 seconds
+        hitSpike.hitPlayerTimer = 1.5; // Blue flash for 1.5 seconds
+        hitSpike.vx = 0;
+        hitSpike.vy = 0;
+      }
+    }
+    else bounceOffSegment(snake, hitSelfSeg.segment, hitSelfSeg.radius);
 
     if (!invincible) {
       game.hearts--;
@@ -328,8 +379,18 @@ export function update(game, dt) {
       game.screenShake = 0.35; // Trigger screen shake!
 
       // Spawn impact particles
-      const hitX = wallHit ? snake.x : (hitSpike.x + snake.x) / 2;
-      const hitY = wallHit ? snake.y : (hitSpike.y + snake.y) / 2;
+      let hitX, hitY;
+      if (wallHit) {
+        hitX = snake.x;
+        hitY = snake.y;
+      } else if (hitSpike) {
+        hitX = (hitSpike.x + snake.x) / 2;
+        hitY = (hitSpike.y + snake.y) / 2;
+      } else {
+        hitX = (hitSelfSeg.segment.x + snake.x) / 2;
+        hitY = (hitSelfSeg.segment.y + snake.y) / 2;
+      }
+
       spawnParticles(game, hitX, hitY, 18, {
         colors: ["#ff3050", "#ff7a4a", "#ffffff"],
         speed: 110,
@@ -380,6 +441,8 @@ export function update(game, dt) {
         size: 5.0,
         decay: 1.0,
       });
+      // Collect Star -> Restore 2 HP (+1 from round finish = 3 HP restored total)
+      game.hearts = Math.min(game.maxHearts || MAX_HEARTS, game.hearts + 2);
       endGame(game, true);
       return;
     }

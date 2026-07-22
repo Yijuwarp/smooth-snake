@@ -51,14 +51,14 @@ export const NECK_GRACE_SEGMENTS = 4;
 
 export const BASE_SPEED = 140;
 export const SPEED_PER_FOOD = 12;
-export const MAX_SPEED = 340;
+export const MAX_SPEED = 320;
 export const TURN_RATE = 4.0;
 
 export const COMBO_WINDOW = 5; // seconds to reach the next food before the multiplier resets
 
 export const LEVEL_PELLETS_REQUIRED = 10; // pellets eaten since the last level-up forces a transition
 export const LEVEL_TIME_REQUIRED = 30; // seconds since the last level-up forces a transition, whichever comes first
-export const FINAL_LEVEL = 4;
+export const FINAL_LEVEL = 5;
 export const SURVIVAL_TIME = 10; // seconds to survive at the final level, after its banner clears, before the star appears
 export const LEVEL_BANNER_DURATION = 2.2; // seconds of slow-motion banner
 export const TUTORIAL_BANNER_DURATION = 3; // longer banner for the one-time power-up explainer
@@ -83,7 +83,7 @@ export const GROW_MAX_MULT = 4; // peak radius = 4x normal (a 300% increase)
 export const GROW_SPIN_SPEED = 6; // radians/sec of visual spin while active
 
 // Hearts & bounce.
-export const MAX_HEARTS = 3;
+export const MAX_HEARTS = 6;
 export const INVULN_TIME = 1.2; // seconds of no further heart loss after a bounce
 export const HIT_FLASH_DURATION = 0.35; // seconds the red screen-flash takes to fade
 export const EAT_FLASH_DURATION = 0.4; // seconds the "happy" eyes show after eating
@@ -105,7 +105,7 @@ export const POWER_UP_SPAWN_INTERVAL = 5; // seconds of cooldown before another 
 export const POWER_UP_RADIUS = 9;
 
 export const FOOD_RADIUS = 8;
-export const STAR_RADIUS = FOOD_RADIUS * 1.6;
+export const STAR_RADIUS = FOOD_RADIUS * 3.2;
 export const SPIKE_COUNT = 14;
 export const SPIKE_RADIUS = 12;
 

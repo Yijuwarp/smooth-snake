@@ -1,5 +1,5 @@
 import { MAX_DT, setArenaSize, setTouchMode } from "./config.js";
-import { createGame, resetGame, update, setDevMode, setTunable } from "./game.js";
+import { createGame, resetGame, update, setDevMode, setTunable, devLaunchLevel } from "./game.js";
 import { render, resizeCanvas } from "./render.js";
 import { setupInput } from "./input.js";
 import { playStart, getSfxVolume, setSfxVolume, getSfxEnabled, setSfxEnabled } from "./audio.js";
@@ -326,6 +326,11 @@ fullscreenToggle.addEventListener("change", () => {
 });
 devModeToggle.addEventListener("change", () => setDevMode(game, devModeToggle.checked));
 devImmortalToggle.addEventListener("change", () => setTunable(game, "immortal", devImmortalToggle.checked));
+document.getElementById("dev-launch-level").addEventListener("click", () => {
+  const level = Number(document.getElementById("dev-level-select").value);
+  devLaunchLevel(game, level);
+  menu.hidden = true;
+});
 document.getElementById("resume-btn").addEventListener("click", togglePause);
 
 setupInput(game, canvas, { onActivate: activate, onPause: onEscapeKey, onToggleFullscreen: toggleFullscreen });

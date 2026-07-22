@@ -46,12 +46,24 @@ export function hitsWall(snake) {
   );
 }
 
-export function hitsSelf(snake) {
-  const threshold = SNAKE_RADIUS + BODY_DIAMETER / 2;
+export function findHitSegment(snake) {
   const segments = snake.segments;
-  for (let i = NECK_GRACE_SEGMENTS; i < segments.length; i++) {
+  const segCount = segments.length;
+  for (let i = NECK_GRACE_SEGMENTS; i < segCount; i++) {
     const seg = segments[i];
-    if (dist(snake.x, snake.y, seg.x, seg.y) < threshold) return true;
+    const t = segCount > 1 ? i / (segCount - 1) : 0;
+    // Segment radius matches the visual rendering in render.js: SNAKE_RADIUS * (1.0 - t * 0.45)
+    const segRadius = SNAKE_RADIUS * (1.0 - t * 0.45);
+    const threshold = SNAKE_RADIUS + segRadius;
+    if (dist(snake.x, snake.y, seg.x, seg.y) < threshold) {
+      return { segment: seg, radius: segRadius };
+    }
   }
-  return false;
+  return null;
 }
+
+export function hitsSelf(snake) {
+  return findHitSegment(snake) !== null;
+}
+
+

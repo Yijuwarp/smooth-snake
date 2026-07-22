@@ -197,6 +197,47 @@ html, body {
   font-weight: normal;
 }
 
+.dev-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.dev-row label {
+  margin: 0 !important;
+  font-size: 14px;
+}
+
+.dev-row select {
+  background: #121d30;
+  color: #e8f0f8;
+  border: 1px solid #3a4a63;
+  border-radius: 4px;
+  padding: 4px 8px;
+  font-family: inherit;
+  font-size: 13px;
+  cursor: pointer;
+  outline: none;
+}
+
+.dev-row button {
+  background: #4fd1e8;
+  color: #0b0f19;
+  border: none;
+  border-radius: 4px;
+  padding: 4px 12px;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: bold;
+  cursor: pointer;
+  transition: opacity 0.15s;
+}
+
+.dev-row button:hover {
+  opacity: 0.9;
+}
+
 #leaderboard-container {
   position: fixed;
   top: 50%;
