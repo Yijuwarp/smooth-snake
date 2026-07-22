@@ -36,6 +36,18 @@ import { getHighScore, setHighScore, getSettings, saveSettings } from "./storage
 import { playEat, playDeath, playLevelUp, playHit, playWin, playPowerUp } from "./audio.js";
 import { updateMusicForLevel, playTrack } from "./music.js";
 
+// Valid control schemes for non-touch desktop play.
+export const CONTROL_TYPES = ["mouse", "keyboard_wasd", "keyboard_arrows"];
+
+export function getControlType() {
+  const saved = getSettings().controlType;
+  return CONTROL_TYPES.includes(saved) ? saved : "mouse";
+}
+
+export function saveControlType(type) {
+  saveSettings({ controlType: type });
+}
+
 function foodValueForLevel(level) {
   if (level >= 5) return 10;
   if (level >= 4) return 7;
@@ -65,22 +77,33 @@ function bannerSubtitle(level) {
 }
 
 // Built per-collect (not a constant) so the copy matches the active control
-// scheme — TOUCH_MODE is set at startup, before the first pickup.
-function powerUpTutorial() {
-  const controls = TOUCH_MODE
-    ? [
-        { text: "Hold " },
-        { text: "≫", bold: true },
-        { text: " to boost, " },
-        { text: "🕐", bold: true },
-        { text: " to slow down" },
-      ]
-    : [
-        { text: "Hold left-click to " },
-        { text: "boost", bold: true },
-        { text: ", right-click to " },
-        { text: "slow down", bold: true },
-      ];
+// scheme — TOUCH_MODE and game.controlType are both set before the first pickup.
+function powerUpTutorial(controlType) {
+  let controls;
+  if (TOUCH_MODE) {
+    controls = [
+      { text: "Hold " },
+      { text: "≫", bold: true },
+      { text: " to boost, " },
+      { text: "🕐", bold: true },
+      { text: " to slow down" },
+    ];
+  } else if (controlType === "keyboard_wasd" || controlType === "keyboard_arrows") {
+    controls = [
+      { text: "Hold " },
+      { text: "Space", bold: true },
+      { text: " to boost, " },
+      { text: "Shift", bold: true },
+      { text: " to slow down" },
+    ];
+  } else {
+    controls = [
+      { text: "Hold left-click to " },
+      { text: "boost", bold: true },
+      { text: ", right-click to " },
+      { text: "slow down", bold: true },
+    ];
+  }
   return {
     title: "Power Up!",
     subtitle: [controls],
@@ -135,6 +158,8 @@ export function createGame() {
     highScore: getHighScore(),
     devMode: !!getSettings().devMode,
     tunables: loadTunables(),
+    controlType: getControlType(), // 'mouse' | 'keyboard_wasd' | 'keyboard_arrows'
+    keysPressed: new Set(),        // currently held keys for keyboard steering
     mouse: { x: ARENA_W / 2 + 200, y: ARENA_H / 2 },
     time: 0,
     onGameOver: null, // (score) => void, set by main.js to offer a highscore submission
@@ -152,6 +177,7 @@ export function resetGame(game) {
   game.boost = 0;
   game.boosting = false;
   game.slowing = false;
+  game.keysPressed.clear();
   game.powerUp = null;
   game.powerUpCooldown = POWER_UP_SPAWN_INTERVAL;
   game.level = 1;
@@ -307,7 +333,29 @@ export function update(game, dt) {
   }
 
   const snake = game.snake;
-  steer(snake, game.mouse.x, game.mouse.y, dt, turnRate);
+  // Steer: keyboard modes use key-pressed direction; mouse mode steers toward
+  // the cursor. In keyboard mode with no keys held, the snake glides straight.
+  if (!TOUCH_MODE && (game.controlType === "keyboard_wasd" || game.controlType === "keyboard_arrows")) {
+    const keys = game.keysPressed;
+    let dx = 0, dy = 0;
+    if (game.controlType === "keyboard_wasd") {
+      if (keys.has("w") || keys.has("W")) dy -= 1;
+      if (keys.has("s") || keys.has("S")) dy += 1;
+      if (keys.has("a") || keys.has("A")) dx -= 1;
+      if (keys.has("d") || keys.has("D")) dx += 1;
+    } else {
+      if (keys.has("ArrowUp"))    dy -= 1;
+      if (keys.has("ArrowDown"))  dy += 1;
+      if (keys.has("ArrowLeft"))  dx -= 1;
+      if (keys.has("ArrowRight")) dx += 1;
+    }
+    if (dx !== 0 || dy !== 0) {
+      steer(snake, snake.x + dx * 9999, snake.y + dy * 9999, dt, turnRate);
+    }
+    // No keys held → snake continues on its current heading (no steer call).
+  } else {
+    steer(snake, game.mouse.x, game.mouse.y, dt, turnRate);
+  }
   moveSnake(snake, dt, speedMult);
   game.currentSpeed = snake.speed * speedMult;
   updateSpikes(game, dt);
@@ -428,7 +476,7 @@ export function update(game, dt) {
     playPowerUp();
     if (!game.hasSeenPowerTutorial) {
       game.hasSeenPowerTutorial = true;
-      if (!game.banner) game.banner = { t: 0, ...powerUpTutorial() };
+      if (!game.banner) game.banner = { t: 0, ...powerUpTutorial(game.controlType) };
     }
   }
 

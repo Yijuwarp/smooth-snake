@@ -1,9 +1,9 @@
-import { MAX_DT, setArenaSize, setTouchMode } from "./config.js";
-import { createGame, resetGame, update, setDevMode, setTunable, devLaunchLevel } from "./game.js";
+import { MAX_DT, setArenaSize, setTouchMode, TOUCH_MODE } from "./config.js";
+import { createGame, resetGame, update, setDevMode, setTunable, getControlType, saveControlType } from "./game.js";
 import { render, resizeCanvas } from "./render.js";
 import { setupInput } from "./input.js";
 import { playStart, getSfxVolume, setSfxVolume, getSfxEnabled, setSfxEnabled } from "./audio.js";
-import { startMusic, getMusicVolume, setMusicVolume, getMusicEnabled, setMusicEnabled, currentTrackName } from "./music.js";
+import { startMusic, getMusicVolume, setMusicVolume, getMusicEnabled, setMusicEnabled, currentTrackName, playMenuMusic, stopCurrentTrack } from "./music.js";
 
 const canvas = document.getElementById("game-canvas");
 const ctx = canvas.getContext("2d");
@@ -23,6 +23,13 @@ async function activate() {
   if (!highscoreModal.hidden) return;
   if (activating || game.state === "playing" || game.state === "paused") return;
   activating = true;
+
+  // Hide the HTML start menu (desktop only — it is already hidden on touch).
+  const startMenu = document.getElementById("start-menu");
+  startMenu.hidden = true;
+
+  // Stop the menu music before the game music kicks in.
+  stopCurrentTrack();
 
   // Auto-enter fullscreen on start. Browsers only allow requestFullscreen
   // inside a user gesture, so page load is too early — the activation
@@ -326,12 +333,87 @@ fullscreenToggle.addEventListener("change", () => {
 });
 devModeToggle.addEventListener("change", () => setDevMode(game, devModeToggle.checked));
 devImmortalToggle.addEventListener("change", () => setTunable(game, "immortal", devImmortalToggle.checked));
-document.getElementById("dev-launch-level").addEventListener("click", () => {
-  const level = Number(document.getElementById("dev-level-select").value);
-  devLaunchLevel(game, level);
-  menu.hidden = true;
-});
 document.getElementById("resume-btn").addEventListener("click", togglePause);
+
+// --- Start menu & control-type picker -----------------------------------
+
+// Hint text for each control scheme.
+const CTRL_HINTS = {
+  mouse:           "Steer with the cursor · left-click boost · right-click slow",
+  keyboard_wasd:   "WASD to steer · Space to boost · Shift to slow",
+  keyboard_arrows: "Arrow keys to steer · Space to boost · Shift to slow",
+};
+
+function setupStartMenu() {
+  const startMenu   = document.getElementById("start-menu");
+  const playBtn     = document.getElementById("start-play-btn");
+  const ctrlHint    = document.getElementById("ctrl-hint");
+  const pauseCtrlRow = document.getElementById("pause-ctrl-row");
+
+  // On touch devices the HTML start menu is never needed.
+  if (TOUCH_MODE) {
+    startMenu.hidden = true;
+    pauseCtrlRow.hidden = true;
+    return;
+  }
+
+  // Show the start menu overlay on desktop.
+  startMenu.hidden = false;
+  pauseCtrlRow.hidden = false;
+
+  // --- Sync active pill button across both pickers ---
+  function setControlType(type) {
+    game.controlType = type;
+    saveControlType(type);
+
+    // Update .ctrl-active on start-menu buttons.
+    document.querySelectorAll("#control-options .ctrl-btn").forEach((btn) => {
+      btn.classList.toggle("ctrl-active", btn.dataset.ctrl === type);
+    });
+    // Update .ctrl-active on pause-menu buttons.
+    document.querySelectorAll("#pause-control-options .ctrl-btn").forEach((btn) => {
+      btn.classList.toggle("ctrl-active", btn.dataset.ctrl === type);
+    });
+    // Update hint text in start menu.
+    if (ctrlHint) ctrlHint.textContent = CTRL_HINTS[type] || "";
+  }
+
+  // Initialise to the saved preference.
+  setControlType(getControlType());
+
+  // Wire start-menu control buttons.
+  let menuMusicStarted = false;
+  function startMenuMusic() {
+    if (!menuMusicStarted) {
+      menuMusicStarted = true;
+      playMenuMusic();
+    }
+  }
+
+  document.querySelectorAll("#control-options .ctrl-btn").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      startMenuMusic();
+      setControlType(btn.dataset.ctrl);
+    });
+  });
+
+  // Wire pause-menu control buttons (live-switch during a run).
+  document.querySelectorAll("#pause-control-options .ctrl-btn").forEach((btn) => {
+    btn.addEventListener("click", () => setControlType(btn.dataset.ctrl));
+  });
+
+  // PLAY button — start menu music first, then begin the game.
+  playBtn.addEventListener("click", () => {
+    startMenuMusic();
+    activate();
+  });
+
+  // Also start menu music on any first interaction with the card
+  // (e.g. hovering over PLAY button before clicking).
+  document.querySelector(".start-card").addEventListener("pointerenter", startMenuMusic, { once: true });
+}
+
+setupStartMenu();
 
 setupInput(game, canvas, { onActivate: activate, onPause: onEscapeKey, onToggleFullscreen: toggleFullscreen });
 
