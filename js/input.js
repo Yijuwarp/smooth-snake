@@ -104,6 +104,9 @@ export function setupInput(game, canvas, { onActivate, onPause, onToggleFullscre
   window.addEventListener("touchend", endTouch);
   window.addEventListener("touchcancel", endTouch);
 
+  const STEER_KEYS = new Set(["w","W","a","A","s","S","d","D","ArrowUp","ArrowDown","ArrowLeft","ArrowRight"]);
+  const SCROLL_PREVENT_KEYS = new Set(["ArrowUp","ArrowDown","ArrowLeft","ArrowRight"," "]);
+
   window.addEventListener("keydown", (e) => {
     // Typing a nickname into the highscore text input shouldn't also
     // restart the game, mute audio, or toggle fullscreen.
@@ -116,6 +119,31 @@ export function setupInput(game, canvas, { onActivate, onPause, onToggleFullscre
       setMusicMuted(m);
     }
     if (e.key === "f" || e.key === "F") onToggleFullscreen();
+
+    if (game.state === "playing") {
+      // Prevent browser scroll/zoom interference during gameplay.
+      if (SCROLL_PREVENT_KEYS.has(e.key)) e.preventDefault();
+
+      // Track steering keys for keyboard control modes.
+      if (STEER_KEYS.has(e.key)) game.keysPressed.add(e.key);
+
+      // Space = boost, Shift = slow — mirrors left/right mouse buttons.
+      if (e.key === " " && !e.repeat) game.boosting = true;
+      if ((e.key === "Shift") && !e.repeat) game.slowing = true;
+    }
+  });
+
+  window.addEventListener("keyup", (e) => {
+    game.keysPressed.delete(e.key);
+    if (e.key === " ") game.boosting = false;
+    if (e.key === "Shift") game.slowing = false;
+  });
+
+  // Clear all held keys if the window loses focus so keys don't get stuck.
+  window.addEventListener("blur", () => {
+    game.keysPressed.clear();
+    game.boosting = false;
+    game.slowing = false;
   });
 }
 

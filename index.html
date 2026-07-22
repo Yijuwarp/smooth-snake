@@ -10,6 +10,29 @@
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
+  <!-- ============================================================
+       Start Menu: full-screen overlay shown on desktop before first play.
+       Hidden on mobile (TOUCH_MODE) via JS. Not shown during gameplay.
+       ============================================================ -->
+  <div id="start-menu" hidden>
+    <div class="start-card">
+      <h1 class="start-title">SSNAKE</h1>
+      <p class="start-tagline">Choose your controls</p>
+
+      <div class="control-options" id="control-options" role="group" aria-label="Control type">
+        <button class="ctrl-btn" id="ctrl-mouse"   data-ctrl="mouse"           type="button">🖱 Mouse</button>
+        <button class="ctrl-btn" id="ctrl-wasd"    data-ctrl="keyboard_wasd"   type="button">WASD</button>
+        <button class="ctrl-btn" id="ctrl-arrows"  data-ctrl="keyboard_arrows" type="button">↑ Arrow Keys</button>
+      </div>
+
+      <p class="ctrl-hint" id="ctrl-hint"></p>
+
+      <button id="start-play-btn" type="button" class="start-play-btn">PLAY</button>
+
+      <p class="start-footer">Esc pauses · M mutes · F fullscreen</p>
+    </div>
+  </div>
+
   <canvas id="game-canvas"></canvas>
 
   <div id="leaderboard-container" hidden>
@@ -46,6 +69,17 @@
       </div>
       <input id="sfx-vol" type="range" min="0" max="100" step="1" />
     </div>
+
+    <!-- Control type switcher — only visible on desktop (not TOUCH_MODE) -->
+    <div class="volume-control" id="pause-ctrl-row">
+      <div class="volume-title"><span>Controls</span></div>
+      <div class="control-options control-options--compact" id="pause-control-options" role="group" aria-label="Control type">
+        <button class="ctrl-btn" id="p-ctrl-mouse"  data-ctrl="mouse"           type="button">🖱 Mouse</button>
+        <button class="ctrl-btn" id="p-ctrl-wasd"   data-ctrl="keyboard_wasd"   type="button">WASD</button>
+        <button class="ctrl-btn" id="p-ctrl-arrows" data-ctrl="keyboard_arrows" type="button">↑ Arrows</button>
+      </div>
+    </div>
+
     <label class="checkbox-row">
       <input id="fullscreen-toggle" type="checkbox" />
       Fullscreen

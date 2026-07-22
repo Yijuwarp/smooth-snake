@@ -474,3 +474,185 @@ html, body {
 #hs-cancel-btn:active {
   transform: translateY(0);
 }
+
+/* ================================================================
+   Start Menu Overlay
+   ================================================================ */
+
+#start-menu {
+  position: fixed;
+  inset: 0;
+  z-index: 30;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  /* Slight blur behind the card so the live snake preview shows through softly */
+  backdrop-filter: blur(2px);
+  -webkit-backdrop-filter: blur(2px);
+}
+
+#start-menu[hidden] {
+  display: none;
+}
+
+.start-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 20px;
+  padding: 44px 48px 36px;
+  min-width: 340px;
+  max-width: 480px;
+  width: min(90vw, 480px);
+  background: rgba(10, 15, 24, 0.82);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+  border: 1px solid rgba(79, 209, 232, 0.30);
+  border-radius: 22px;
+  box-shadow:
+    0 0 0 1px rgba(79, 209, 232, 0.08),
+    0 16px 56px rgba(0, 0, 0, 0.7),
+    0 0 60px rgba(79, 209, 232, 0.08);
+  text-align: center;
+  animation: start-card-in 0.45s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@keyframes start-card-in {
+  from { opacity: 0; transform: translateY(28px) scale(0.96); }
+  to   { opacity: 1; transform: none; }
+}
+
+.start-title {
+  margin: 0;
+  font: 800 58px/1 'Outfit', sans-serif;
+  letter-spacing: 0.06em;
+  background: linear-gradient(135deg, #7fe8ff 0%, #4fd1e8 45%, #c792ff 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  filter: drop-shadow(0 0 18px rgba(79, 209, 232, 0.45));
+}
+
+.start-tagline {
+  margin: 0;
+  font: 400 15px 'Outfit', sans-serif;
+  color: #9fb3c8;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+/* ---- Control-type pill buttons ---- */
+
+.control-options {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.control-options--compact {
+  gap: 7px;
+}
+
+.ctrl-btn {
+  padding: 9px 20px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1.5px solid rgba(79, 209, 232, 0.2);
+  border-radius: 999px;
+  color: #9fb3c8;
+  font: 600 14px 'Outfit', sans-serif;
+  cursor: pointer;
+  transition: all 0.18s cubic-bezier(0.4, 0, 0.2, 1);
+  white-space: nowrap;
+  letter-spacing: 0.03em;
+}
+
+.control-options--compact .ctrl-btn {
+  padding: 6px 14px;
+  font-size: 13px;
+}
+
+.ctrl-btn:hover {
+  border-color: rgba(79, 209, 232, 0.55);
+  color: #e8f0f8;
+  background: rgba(79, 209, 232, 0.08);
+  transform: translateY(-1px);
+}
+
+.ctrl-btn.ctrl-active {
+  background: rgba(79, 209, 232, 0.18);
+  border-color: #4fd1e8;
+  color: #7fe8ff;
+  box-shadow: 0 0 14px rgba(79, 209, 232, 0.25);
+}
+
+/* ---- Hint text under the control buttons ---- */
+
+.ctrl-hint {
+  margin: -6px 0 0;
+  min-height: 1.3em;
+  font: 400 13px 'Outfit', sans-serif;
+  color: #6b8096;
+  letter-spacing: 0.02em;
+}
+
+/* ---- PLAY button ---- */
+
+.start-play-btn {
+  margin-top: 4px;
+  padding: 14px 56px;
+  background: linear-gradient(135deg, #4fd1e8, #6fb8ff);
+  border: none;
+  border-radius: 999px;
+  color: #070d18;
+  font: 800 18px/1 'Outfit', sans-serif;
+  letter-spacing: 0.14em;
+  cursor: pointer;
+  box-shadow:
+    0 6px 24px rgba(79, 209, 232, 0.40),
+    0 0 0 0 rgba(79, 209, 232, 0.35);
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  animation: play-pulse 2.4s ease-in-out infinite;
+}
+
+@keyframes play-pulse {
+  0%, 100% { box-shadow: 0 6px 24px rgba(79, 209, 232, 0.40), 0 0 0 0 rgba(79, 209, 232, 0.35); }
+  50%       { box-shadow: 0 8px 32px rgba(79, 209, 232, 0.55), 0 0 0 8px rgba(79, 209, 232, 0.0); }
+}
+
+.start-play-btn:hover {
+  transform: translateY(-3px) scale(1.04);
+  box-shadow: 0 10px 36px rgba(79, 209, 232, 0.55);
+  animation: none;
+}
+
+.start-play-btn:active {
+  transform: translateY(-1px) scale(1.01);
+}
+
+.start-footer {
+  margin: 0;
+  font: 400 12px 'Outfit', sans-serif;
+  color: #4a5f74;
+  letter-spacing: 0.04em;
+}
+
+/* ---- Pause menu: hide control row on touch devices ---- */
+#pause-ctrl-row[hidden] {
+  display: none;
+}
+
+/* Responsive: shrink start card on narrow screens */
+@media (max-width: 480px) {
+  .start-card {
+    padding: 32px 24px 28px;
+    gap: 16px;
+  }
+  .start-title {
+    font-size: 42px;
+  }
+  .start-play-btn {
+    padding: 12px 44px;
+    font-size: 16px;
+  }
+}

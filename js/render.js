@@ -120,7 +120,15 @@ export function render(game, ctx, canvas) {
   }
 
   if (game.state === "menu") {
-    drawOverlay(ctx, "SSNAKE", TOUCH_MODE ? "Tap to Play!" : "Click to Play!", game);
+    if (TOUCH_MODE) {
+      // Touch: no HTML overlay — use the canvas title card as before.
+      drawOverlay(ctx, "SSNAKE", "Tap to Play!", game);
+    } else {
+      // Desktop: the HTML #start-menu overlay handles all copy.
+      // Just dim the live game preview behind it.
+      ctx.fillStyle = "rgba(10, 14, 20, 0.72)";
+      ctx.fillRect(0, 0, ARENA_W, ARENA_H);
+    }
   }
   if (game.state === "gameover") {
     const again = TOUCH_MODE ? "Tap to Play Again!" : "Click to Play Again!";
@@ -726,8 +734,15 @@ function drawOverlay(ctx, title, subtitle, game) {
 
   y += 32 * k;
   ctx.font = font(16);
-  const hint = TOUCH_MODE
-    ? "Drag to steer · hold the corner buttons to boost or slow"
-    : "Steer with the mouse · Esc pauses · M mutes · F fullscreen";
+  let hint;
+  if (TOUCH_MODE) {
+    hint = "Drag to steer · hold the corner buttons to boost or slow";
+  } else if (game.controlType === "keyboard_wasd") {
+    hint = "WASD to steer · Space boost · Shift slow · Esc pauses · M mutes";
+  } else if (game.controlType === "keyboard_arrows") {
+    hint = "Arrows to steer · Space boost · Shift slow · Esc pauses · M mutes";
+  } else {
+    hint = "Steer with the mouse · Esc pauses · M mutes · F fullscreen";
+  }
   ctx.fillText(hint, ARENA_W / 2, y);
 }
