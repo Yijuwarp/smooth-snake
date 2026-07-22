@@ -29,12 +29,16 @@ html, body {
   max-height: 90vh;
   overflow-y: auto;
   padding: 28px 32px;
-  background: rgba(15, 21, 32, 0.94);
-  border: 1px solid #3a4a63;
-  border-radius: 12px;
+  background: rgba(15, 21, 32, 0.78);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(79, 209, 232, 0.25);
+  border-radius: 16px;
   color: #e8f0f8;
-  font: 16px/1.4 sans-serif;
+  font: 16px/1.4 'Outfit', sans-serif;
   text-align: center;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.6), 0 0 20px rgba(79, 209, 232, 0.1);
+  transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
 #pause-menu[hidden] {
@@ -44,6 +48,10 @@ html, body {
 #pause-menu h2 {
   margin: 0 0 6px;
   font-size: 28px;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  color: #7fe8ff;
+  text-shadow: 0 0 10px rgba(127, 232, 255, 0.3);
 }
 
 #pause-menu label {
@@ -55,8 +63,52 @@ html, body {
 }
 
 #pause-menu input[type="range"] {
+  -webkit-appearance: none;
+  appearance: none;
   width: 100%;
-  accent-color: #4fd1e8;
+  height: 6px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 3px;
+  outline: none;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+#pause-menu input[type="range"]:hover {
+  background: rgba(255, 255, 255, 0.15);
+}
+
+#pause-menu input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: #4fd1e8;
+  cursor: pointer;
+  box-shadow: 0 0 8px rgba(79, 209, 232, 0.8);
+  transition: transform 0.1s, background-color 0.1s;
+}
+
+#pause-menu input[type="range"]::-webkit-slider-thumb:hover {
+  transform: scale(1.2);
+  background: #7fe8ff;
+}
+
+#pause-menu input[type="range"]::-moz-range-thumb {
+  width: 16px;
+  height: 16px;
+  border: none;
+  border-radius: 50%;
+  background: #4fd1e8;
+  cursor: pointer;
+  box-shadow: 0 0 8px rgba(79, 209, 232, 0.8);
+  transition: transform 0.1s, background-color 0.1s;
+}
+
+#pause-menu input[type="range"]::-moz-range-thumb:hover {
+  transform: scale(1.2);
+  background: #7fe8ff;
 }
 
 #pause-menu label.checkbox-row {
@@ -93,12 +145,20 @@ html, body {
   color: #0f1520;
   border: none;
   border-radius: 8px;
-  font: bold 16px sans-serif;
+  font: 800 16px 'Outfit', sans-serif;
   cursor: pointer;
+  box-shadow: 0 4px 14px rgba(79, 209, 232, 0.3);
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 #pause-menu button:hover {
   background: #7fe8ff;
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(79, 209, 232, 0.5);
+}
+
+#pause-menu button:active {
+  transform: translateY(0);
 }
 
 .pause-hint {
@@ -147,12 +207,15 @@ html, body {
   max-height: 70vh;
   overflow-y: auto;
   padding: 18px 20px;
-  background: rgba(15, 21, 32, 0.82);
-  backdrop-filter: blur(6px);
-  border: 1px solid #3a4a63;
-  border-radius: 12px;
+  background: rgba(15, 21, 32, 0.65);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(79, 209, 232, 0.15);
+  border-radius: 16px;
   color: #e8f0f8;
-  font: 14px/1.4 sans-serif;
+  font: 14px/1.4 'Outfit', sans-serif;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+  transition: all 0.3s ease;
 }
 
 #leaderboard-container[hidden] {
@@ -203,7 +266,9 @@ html, body {
   display: flex;
   align-items: baseline;
   gap: 8px;
-  padding: 4px 0;
+  padding: 5px 0;
+  font-family: 'Share Tech Mono', monospace;
+  font-size: 15px;
 }
 
 #leaderboard-list li::before {
@@ -211,7 +276,7 @@ html, body {
   width: 18px;
   flex: none;
   color: #9fb3c8;
-  font-size: 12px;
+  font-size: 13px;
 }
 
 #leaderboard-list .lb-name {
@@ -219,11 +284,13 @@ html, body {
   letter-spacing: 0.06em;
   color: #4fd1e8;
   font-weight: bold;
+  text-shadow: 0 0 5px rgba(79, 209, 232, 0.2);
 }
 
 #leaderboard-list .lb-score {
   color: #ffd257;
-  font-variant-numeric: tabular-nums;
+  font-weight: bold;
+  text-shadow: 0 0 5px rgba(255, 210, 87, 0.25);
 }
 
 #leaderboard-container .lb-empty {
@@ -253,22 +320,27 @@ html, body {
   gap: 12px;
   min-width: 280px;
   padding: 32px 36px;
-  background: rgba(15, 21, 32, 0.94);
-  border: 1px solid #4fd1e8;
-  border-radius: 14px;
-  box-shadow: 0 0 32px rgba(79, 209, 232, 0.25);
+  background: rgba(15, 21, 32, 0.78);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(79, 209, 232, 0.35);
+  border-radius: 16px;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.6), 0 0 30px rgba(79, 209, 232, 0.25);
   color: #e8f0f8;
-  font: 16px/1.4 sans-serif;
+  font: 16px/1.4 'Outfit', sans-serif;
   text-align: center;
+  transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
 .modal-card h2 {
   margin: 0;
   font-size: 22px;
+  font-weight: 800;
 }
 
 .modal-card h2 span {
   color: #ffd257;
+  text-shadow: 0 0 8px rgba(255, 210, 87, 0.3);
 }
 
 .modal-card p {
@@ -278,22 +350,24 @@ html, body {
 }
 
 #hs-nickname-input {
-  width: 140px;
+  width: 150px;
   padding: 10px 0;
   background: rgba(255, 255, 255, 0.06);
-  border: 1px solid #3a4a63;
+  border: 1px solid rgba(79, 209, 232, 0.2);
   border-radius: 8px;
   color: #e8f0f8;
-  font: bold 22px monospace;
+  font: bold 22px 'Share Tech Mono', monospace;
   letter-spacing: 0.3em;
   text-align: center;
   text-transform: uppercase;
+  transition: all 0.2s ease;
 }
 
 #hs-nickname-input:focus {
   outline: none;
   border-color: #4fd1e8;
   box-shadow: 0 0 0 2px rgba(79, 209, 232, 0.3);
+  background: rgba(255, 255, 255, 0.1);
 }
 
 .hs-error {
@@ -315,23 +389,32 @@ html, body {
   padding: 10px 22px;
   border: none;
   border-radius: 8px;
-  font: bold 15px sans-serif;
+  font: 800 15px 'Outfit', sans-serif;
   cursor: pointer;
-  transition: background 0.15s ease;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 #hs-submit-btn {
   background: #4fd1e8;
   color: #0f1520;
+  box-shadow: 0 4px 12px rgba(79, 209, 232, 0.3);
 }
 
 #hs-submit-btn:hover:not(:disabled) {
   background: #7fe8ff;
+  transform: translateY(-2px);
+  box-shadow: 0 6px 18px rgba(79, 209, 232, 0.5);
+}
+
+#hs-submit-btn:active:not(:disabled) {
+  transform: translateY(0);
 }
 
 #hs-submit-btn:disabled {
   opacity: 0.6;
   cursor: default;
+  transform: none;
+  box-shadow: none;
 }
 
 #hs-cancel-btn {
@@ -343,4 +426,10 @@ html, body {
 #hs-cancel-btn:hover {
   color: #e8f0f8;
   border-color: #4fd1e8;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(79, 209, 232, 0.1);
+}
+
+#hs-cancel-btn:active {
+  transform: translateY(0);
 }

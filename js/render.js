@@ -14,6 +14,7 @@ import {
   TOUCH_MODE,
   getTouchButtons,
 } from "./config.js";
+import { drawParticles } from "./particles.js";
 // On-screen touch button sprites (assets/btn-{kind}-{state}.png): state 0 is
 // disabled (meter empty), 1 ready, 2 held. Each file is a 360px cell whose
 // button frame is ~310px — SPRITE_FRAME_FRAC scales so the frame (not the
@@ -66,10 +67,20 @@ export function render(game, ctx, canvas) {
   ctx.save();
   ctx.setTransform(1, 0, 0, 1, 0, 0);
   ctx.clearRect(0, 0, canvas.width, canvas.height);
-  ctx.translate(offsetX, offsetY);
+
+  let shakeX = 0, shakeY = 0;
+  if (game.screenShake > 0) {
+    const power = game.screenShake * 12;
+    shakeX = (Math.random() - 0.5) * power;
+    shakeY = (Math.random() - 0.5) * power;
+  }
+
+  ctx.translate(offsetX + shakeX, offsetY + shakeY);
   ctx.scale(scale, scale);
 
   drawArena(ctx);
+  drawParticles(ctx, game);
+
   if (game.food) {
     if (game.food.isStar) drawStar(ctx, game.food, game.time);
     else drawFood(ctx, game.food, game.time);
@@ -93,7 +104,7 @@ export function render(game, ctx, canvas) {
     ctx.save();
     ctx.globalAlpha = 0.4 + 0.5 * Math.abs(Math.sin(game.time * 18));
   }
-  drawSnake(ctx, game.snake, expression);
+  drawSnake(ctx, game.snake, expression, game.time);
   if (blinking) ctx.restore();
 
   drawHud(ctx, game);
@@ -127,6 +138,30 @@ export function render(game, ctx, canvas) {
 function drawArena(ctx) {
   ctx.fillStyle = COLOR_BG;
   ctx.fillRect(0, 0, ARENA_W, ARENA_H);
+
+  // Subtle neon grid background
+  ctx.strokeStyle = "rgba(79, 209, 232, 0.04)";
+  ctx.lineWidth = 1;
+  const gridSpacing = 40;
+  ctx.beginPath();
+  for (let x = 0; x < ARENA_W; x += gridSpacing) {
+    ctx.moveTo(x, 0);
+    ctx.lineTo(x, ARENA_H);
+  }
+  for (let y = 0; y < ARENA_H; y += gridSpacing) {
+    ctx.moveTo(0, y);
+    ctx.lineTo(ARENA_W, y);
+  }
+  ctx.stroke();
+
+  // Tiny neon dots at grid intersections
+  ctx.fillStyle = "rgba(79, 209, 232, 0.15)";
+  for (let x = gridSpacing; x < ARENA_W; x += gridSpacing) {
+    for (let y = gridSpacing; y < ARENA_H; y += gridSpacing) {
+      ctx.fillRect(x - 1, y - 1, 2, 2);
+    }
+  }
+
   ctx.strokeStyle = COLOR_BORDER;
   ctx.lineWidth = 4;
   ctx.strokeRect(2, 2, ARENA_W - 4, ARENA_H - 4);
@@ -162,10 +197,30 @@ function drawWallTeeth(ctx) {
 }
 
 function drawFood(ctx, food, time) {
-  const pulse = Math.sin(time * 4) * 1.5;
+  const pulse = Math.sin(time * 6) * 1.5;
+  const radius = FOOD_RADIUS + pulse;
+
+  // Outer glowing aura
+  const glow = ctx.createRadialGradient(food.x, food.y, radius * 0.3, food.x, food.y, radius * 2.2);
+  glow.addColorStop(0, "rgba(78, 224, 138, 0.45)");
+  glow.addColorStop(1, "rgba(78, 224, 138, 0)");
+  ctx.save();
+  ctx.fillStyle = glow;
+  ctx.beginPath();
+  ctx.arc(food.x, food.y, radius * 2.2, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.restore();
+
+  // Food body
   ctx.fillStyle = COLOR_FOOD;
   ctx.beginPath();
-  ctx.arc(food.x, food.y, FOOD_RADIUS + pulse, 0, Math.PI * 2);
+  ctx.arc(food.x, food.y, radius, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Specular shine (reflection)
+  ctx.fillStyle = "#ffffff";
+  ctx.beginPath();
+  ctx.arc(food.x - radius * 0.35, food.y - radius * 0.35, radius * 0.25, 0, Math.PI * 2);
   ctx.fill();
 }
 
@@ -235,7 +290,26 @@ function drawSpikes(ctx, spikes, time) {
     const rotation = s.rotation || 0;
     const r = SPIKE_RADIUS * sizeMult;
 
-    ctx.fillStyle = COLOR_SPIKE_BASE;
+    // Draw warning threat ring around shaking spikes
+    if (s.phase === "shake") {
+      ctx.save();
+      ctx.strokeStyle = "rgba(255, 48, 80, 0.65)";
+      ctx.lineWidth = 2.0;
+      ctx.setLineDash([4, 4]);
+
+      const progress = s.t / 0.8; // SPIKE_SHAKE_TIME is 0.8
+      const ringRadius = r * (1.5 + (1 - progress) * 1.5);
+      ctx.beginPath();
+      ctx.arc(sx, sy, ringRadius, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.restore();
+    }
+
+    // Central core with radial gradient
+    const spikeGrad = ctx.createRadialGradient(sx, sy, r * 0.1, sx, sy, r * 0.6);
+    spikeGrad.addColorStop(0, moving || growing ? "#ffa257" : "#ff5030");
+    spikeGrad.addColorStop(1, COLOR_SPIKE_BASE);
+    ctx.fillStyle = spikeGrad;
     ctx.beginPath();
     ctx.arc(sx, sy, r * 0.6, 0, Math.PI * 2);
     ctx.fill();
@@ -255,23 +329,78 @@ function drawSpikes(ctx, spikes, time) {
   }
 }
 
-function drawSnake(ctx, snake, expression) {
-  ctx.strokeStyle = COLOR_SNAKE_BODY;
-  ctx.lineWidth = BODY_DIAMETER;
-  ctx.lineCap = "round";
-  ctx.lineJoin = "round";
+function drawSnake(ctx, snake, expression, time) {
+  const segCount = snake.segments.length;
 
-  ctx.beginPath();
-  ctx.moveTo(snake.x, snake.y);
-  for (const seg of snake.segments) {
-    ctx.lineTo(seg.x, seg.y);
+  // 1. Draw outer body glow (tail to head)
+  ctx.fillStyle = "rgba(79, 209, 232, 0.22)";
+  for (let i = segCount - 1; i >= 0; i--) {
+    const seg = snake.segments[i];
+    const t = segCount > 1 ? i / (segCount - 1) : 0;
+    const r = SNAKE_RADIUS * (1.0 - t * 0.45); // Taper down to 55%
+    ctx.beginPath();
+    ctx.arc(seg.x, seg.y, r * 1.35, 0, Math.PI * 2);
+    ctx.fill();
   }
-  ctx.stroke();
 
+  // 2. Draw inner body (tail to head)
+  ctx.fillStyle = COLOR_SNAKE_BODY;
+  for (let i = segCount - 1; i >= 0; i--) {
+    const seg = snake.segments[i];
+    const t = segCount > 1 ? i / (segCount - 1) : 0;
+    const r = SNAKE_RADIUS * (1.0 - t * 0.45);
+    ctx.beginPath();
+    ctx.arc(seg.x, seg.y, r, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  // 3. Draw head glow
+  ctx.fillStyle = "rgba(127, 232, 255, 0.35)";
+  ctx.beginPath();
+  ctx.arc(snake.x, snake.y, SNAKE_RADIUS * 1.2 * 1.45, 0, Math.PI * 2);
+  ctx.fill();
+
+  // 4. Draw head solid
   ctx.fillStyle = COLOR_SNAKE_HEAD;
   ctx.beginPath();
   ctx.arc(snake.x, snake.y, SNAKE_RADIUS * 1.2, 0, Math.PI * 2);
   ctx.fill();
+
+  // 5. Draw animated tongue occasionally (repeats every 2.4s, darts for 0.35s)
+  const tongueCycle = time % 2.4;
+  if (tongueCycle < 0.35 && expression !== "dead") {
+    ctx.save();
+    ctx.strokeStyle = "#ff4f73";
+    ctx.lineWidth = 2.5;
+    ctx.lineCap = "round";
+    ctx.lineJoin = "round";
+
+    const progress = tongueCycle / 0.35;
+    const len = SNAKE_RADIUS * 1.0 * Math.sin(progress * Math.PI); // extend & retract smoothly
+
+    const hx = snake.x + Math.cos(snake.theta) * SNAKE_RADIUS * 1.1;
+    const hy = snake.y + Math.sin(snake.theta) * SNAKE_RADIUS * 1.1;
+    const tx = hx + Math.cos(snake.theta) * len;
+    const ty = hy + Math.sin(snake.theta) * len;
+
+    // fork
+    const forkAngle = 0.45;
+    const forkLen = len * 0.35;
+    const fx1 = tx + Math.cos(snake.theta + forkAngle) * forkLen;
+    const fy1 = ty + Math.sin(snake.theta + forkAngle) * forkLen;
+    const fx2 = tx + Math.cos(snake.theta - forkAngle) * forkLen;
+    const fy2 = ty + Math.sin(snake.theta - forkAngle) * forkLen;
+
+    ctx.beginPath();
+    ctx.moveTo(hx, hy);
+    ctx.lineTo(tx, ty);
+    ctx.moveTo(tx, ty);
+    ctx.lineTo(fx1, fy1);
+    ctx.moveTo(tx, ty);
+    ctx.lineTo(fx2, fy2);
+    ctx.stroke();
+    ctx.restore();
+  }
 
   const eyeOffset = SNAKE_RADIUS * 0.6;
   const eyeForward = SNAKE_RADIUS * 0.7;
@@ -331,12 +460,18 @@ function drawEye(ctx, x, y, r, expression, sign) {
     ctx.beginPath();
     ctx.arc(x, y, r, 0, Math.PI * 2);
     ctx.fill();
+
+    // Add white shine highlight dot
+    ctx.fillStyle = "#ffffff";
+    ctx.beginPath();
+    ctx.arc(x - r * 0.35, y - r * 0.35, r * 0.3, 0, Math.PI * 2);
+    ctx.fill();
   }
 }
 
 function drawHud(ctx, game) {
   ctx.fillStyle = "#e8f0f8";
-  ctx.font = "bold 22px sans-serif";
+  ctx.font = "bold 22px 'Outfit', sans-serif";
   ctx.textBaseline = "top";
 
   // Combo multiplier + countdown bar, only while a chain is running.
@@ -344,7 +479,7 @@ function drawHud(ctx, game) {
   if (game.comboTimer > 0) {
     ctx.textAlign = "right";
     ctx.fillStyle = "#ffd257";
-    ctx.font = "bold 20px sans-serif";
+    ctx.font = "bold 20px 'Outfit', sans-serif";
     ctx.fillText(`×${game.multiplier}`, ARENA_W - 16, 42);
     const frac = game.comboTimer / COMBO_WINDOW;
     const barW = 90, barX = ARENA_W - 150;
@@ -396,12 +531,12 @@ function drawHud(ctx, game) {
   }
 
   ctx.fillStyle = "#e8f0f8";
-  ctx.font = "bold 22px sans-serif";
+  ctx.font = "bold 22px 'Outfit', sans-serif";
   ctx.textAlign = "right";
   ctx.fillText(`Score: ${game.score}`, ARENA_W - 16, 14);
 
   if (game.devMode) {
-    ctx.font = "13px monospace";
+    ctx.font = "13px 'Share Tech Mono', monospace";
     ctx.fillStyle = "#9fb3c8";
     ctx.textAlign = "right";
     ctx.fillText(`Speed: ${game.currentSpeed.toFixed(0)} px/s`, ARENA_W - 16, 64);
@@ -409,7 +544,7 @@ function drawHud(ctx, game) {
   }
 
   ctx.textAlign = "center";
-  ctx.font = "bold 18px sans-serif";
+  ctx.font = "bold 18px 'Outfit', sans-serif";
   ctx.fillStyle = "#9fb3c8";
   ctx.fillText(`Level ${game.level}`, ARENA_W / 2, 14);
 
@@ -419,7 +554,7 @@ function drawHud(ctx, game) {
   // star appears. Only shown once the FINAL LEVEL banner has cleared.
   if (game.starPending && !game.banner) {
     ctx.textAlign = "center";
-    ctx.font = "bold 20px sans-serif";
+    ctx.font = "bold 20px 'Outfit', sans-serif";
     ctx.fillStyle = "#ff6b4a";
     ctx.fillText(`Survive! ${Math.ceil(game.survivalTimer)}`, ARENA_W / 2, 66);
   }
@@ -443,7 +578,7 @@ function drawHearts(ctx, game) {
   const startX = ARENA_W / 2 - ((MAX_HEARTS - 1) * size) / 2;
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
-  ctx.font = "16px sans-serif";
+  ctx.font = "16px 'Outfit', sans-serif";
   for (let i = 0; i < MAX_HEARTS; i++) {
     ctx.fillStyle = i < game.hearts ? "#ff5c72" : "rgba(255, 255, 255, 0.18)";
     ctx.fillText("♥", startX + i * size, 40);
@@ -469,11 +604,11 @@ function drawLevelBanner(ctx, game) {
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
   ctx.fillStyle = "#ffd257";
-  ctx.font = "bold 54px sans-serif";
+  ctx.font = "bold 54px 'Outfit', sans-serif";
   ctx.fillText(title, ARENA_W / 2, ARENA_H / 2 - 16);
 
   ctx.fillStyle = "#e8f0f8";
-  ctx.font = "20px sans-serif";
+  ctx.font = "20px 'Outfit', sans-serif";
   lines.forEach((line, i) => {
     const lineY = ARENA_H / 2 + 34 + i * 26;
     if (Array.isArray(line)) drawMixedBoldLine(ctx, line, ARENA_W / 2, lineY);
@@ -486,8 +621,8 @@ function drawLevelBanner(ctx, game) {
 // canvas fillText has no inline bold, so segment widths are measured first
 // to find the combined line's left edge, then each piece is drawn in turn.
 function drawMixedBoldLine(ctx, segments, centerX, y) {
-  const NORMAL_FONT = "20px sans-serif";
-  const BOLD_FONT = "bold 20px sans-serif";
+  const NORMAL_FONT = "20px 'Outfit', sans-serif";
+  const BOLD_FONT = "bold 20px 'Outfit', sans-serif";
   let totalWidth = 0;
   for (const seg of segments) {
     ctx.font = seg.bold ? BOLD_FONT : NORMAL_FONT;
@@ -514,7 +649,7 @@ function drawOverlay(ctx, title, subtitle, game) {
   // tuned for. Scale fonts and line spacing down with the arena so nothing
   // overflows; k tops out at 1 so desktop is untouched.
   const k = Math.min(1, ARENA_W / 720, ARENA_H / 560);
-  const font = (px, style = "") => `${style}${Math.round(px * k)}px sans-serif`;
+  const font = (px, style = "") => `${style}${Math.round(px * k)}px 'Outfit', sans-serif`;
 
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
