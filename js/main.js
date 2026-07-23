@@ -401,15 +401,13 @@ function setupStartMenu() {
     btn.addEventListener("click", () => setControlType(btn.dataset.ctrl));
   });
 
-  // PLAY button — start menu music first, then begin the game.
+  // PLAY button — start menu music first (first real user click), then begin the game.
+  // If the user clicks PLAY directly without first clicking a control option,
+  // music still starts here before activate() switches to the level track.
   playBtn.addEventListener("click", () => {
     startMenuMusic();
     activate();
   });
-
-  // Also start menu music on any first interaction with the card
-  // (e.g. hovering over PLAY button before clicking).
-  document.querySelector(".start-card").addEventListener("pointerenter", startMenuMusic, { once: true });
 }
 
 setupStartMenu();
