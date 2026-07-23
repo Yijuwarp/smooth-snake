@@ -737,10 +737,8 @@ function drawOverlay(ctx, title, subtitle, game) {
   let hint;
   if (TOUCH_MODE) {
     hint = "Drag to steer · hold the corner buttons to boost or slow";
-  } else if (game.controlType === "keyboard_wasd") {
-    hint = "WASD to steer · Space boost · Shift slow · Esc pauses · M mutes";
-  } else if (game.controlType === "keyboard_arrows") {
-    hint = "Arrows to steer · Space boost · Shift slow · Esc pauses · M mutes";
+  } else if (game.controlType === "keyboard" || game.controlType === "keyboard_wasd" || game.controlType === "keyboard_arrows") {
+    hint = "WASD / Arrows to steer · Space boost · Shift slow · Esc pauses";
   } else {
     hint = "Steer with the mouse · Esc pauses · M mutes · F fullscreen";
   }

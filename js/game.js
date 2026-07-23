@@ -37,11 +37,13 @@ import { playEat, playDeath, playLevelUp, playHit, playWin, playPowerUp } from "
 import { updateMusicForLevel, playTrack } from "./music.js";
 
 // Valid control schemes for non-touch desktop play.
-export const CONTROL_TYPES = ["mouse", "keyboard_wasd", "keyboard_arrows"];
+export const CONTROL_TYPES = ["mouse", "keyboard"];
 
 export function getControlType() {
   const saved = getSettings().controlType;
-  return CONTROL_TYPES.includes(saved) ? saved : "mouse";
+  // Migrate old multi-key values to unified 'keyboard'
+  if (saved === "keyboard_wasd" || saved === "keyboard_arrows" || saved === "keyboard") return "keyboard";
+  return "mouse";
 }
 
 export function saveControlType(type) {
@@ -88,7 +90,7 @@ function powerUpTutorial(controlType) {
       { text: "🕐", bold: true },
       { text: " to slow down" },
     ];
-  } else if (controlType === "keyboard_wasd" || controlType === "keyboard_arrows") {
+  } else if (controlType === "keyboard" || controlType === "keyboard_wasd" || controlType === "keyboard_arrows") {
     controls = [
       { text: "Hold " },
       { text: "Space", bold: true },
@@ -335,24 +337,18 @@ export function update(game, dt) {
   const snake = game.snake;
   // Steer: keyboard modes use key-pressed direction; mouse mode steers toward
   // the cursor. In keyboard mode with no keys held, the snake glides straight.
-  if (!TOUCH_MODE && (game.controlType === "keyboard_wasd" || game.controlType === "keyboard_arrows")) {
+  if (!TOUCH_MODE && game.controlType === "keyboard") {
     const keys = game.keysPressed;
     let dx = 0, dy = 0;
-    if (game.controlType === "keyboard_wasd") {
-      if (keys.has("w") || keys.has("W")) dy -= 1;
-      if (keys.has("s") || keys.has("S")) dy += 1;
-      if (keys.has("a") || keys.has("A")) dx -= 1;
-      if (keys.has("d") || keys.has("D")) dx += 1;
-    } else {
-      if (keys.has("ArrowUp"))    dy -= 1;
-      if (keys.has("ArrowDown"))  dy += 1;
-      if (keys.has("ArrowLeft"))  dx -= 1;
-      if (keys.has("ArrowRight")) dx += 1;
-    }
+    // Both WASD and Arrow keys steer — whichever the player prefers.
+    if (keys.has("w") || keys.has("W") || keys.has("ArrowUp"))    dy -= 1;
+    if (keys.has("s") || keys.has("S") || keys.has("ArrowDown"))  dy += 1;
+    if (keys.has("a") || keys.has("A") || keys.has("ArrowLeft"))  dx -= 1;
+    if (keys.has("d") || keys.has("D") || keys.has("ArrowRight")) dx += 1;
     if (dx !== 0 || dy !== 0) {
       steer(snake, snake.x + dx * 9999, snake.y + dy * 9999, dt, turnRate);
     }
-    // No keys held → snake continues on its current heading (no steer call).
+    // No keys held → snake continues on its current heading.
   } else {
     steer(snake, game.mouse.x, game.mouse.y, dt, turnRate);
   }

@@ -3,7 +3,7 @@ import { createGame, resetGame, update, setDevMode, setTunable, getControlType, 
 import { render, resizeCanvas } from "./render.js";
 import { setupInput } from "./input.js";
 import { playStart, getSfxVolume, setSfxVolume, getSfxEnabled, setSfxEnabled } from "./audio.js";
-import { startMusic, getMusicVolume, setMusicVolume, getMusicEnabled, setMusicEnabled, currentTrackName, playMenuMusic, stopCurrentTrack } from "./music.js";
+import { startMusic, getMusicVolume, setMusicVolume, getMusicEnabled, setMusicEnabled, currentTrackName, playMenuMusic } from "./music.js";
 
 const canvas = document.getElementById("game-canvas");
 const ctx = canvas.getContext("2d");
@@ -28,8 +28,8 @@ async function activate() {
   const startMenu = document.getElementById("start-menu");
   startMenu.hidden = true;
 
-  // Stop the menu music before the game music kicks in.
-  stopCurrentTrack();
+  // Note: no need to call stopCurrentTrack() here — startMusic() below
+  // switches the audio element's src, which implicitly stops menu music.
 
   // Auto-enter fullscreen on start. Browsers only allow requestFullscreen
   // inside a user gesture, so page load is too early — the activation
@@ -339,9 +339,8 @@ document.getElementById("resume-btn").addEventListener("click", togglePause);
 
 // Hint text for each control scheme.
 const CTRL_HINTS = {
-  mouse:           "Steer with the cursor · left-click boost · right-click slow",
-  keyboard_wasd:   "WASD to steer · Space to boost · Shift to slow",
-  keyboard_arrows: "Arrow keys to steer · Space to boost · Shift to slow",
+  mouse:    "Steer with the cursor · left-click boost · right-click slow",
+  keyboard: "WASD or Arrow keys · Space to boost · Shift to slow",
 };
 
 function setupStartMenu() {
