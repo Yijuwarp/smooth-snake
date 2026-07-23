@@ -186,6 +186,10 @@ export function render(game, ctx, canvas) {
   if (game.powerUp) drawPowerUp(ctx, game.powerUp, game.time);
   drawSpikes(ctx, game.spikes, game.time, game.level);
 
+  if (TOUCH_MODE && (game.state === "playing" || game.state === "paused")) {
+    drawGestureLine(ctx, game);
+  }
+
   // A fresh bite always shows through even mid-boost/slow — it's the shorter,
   // more special pulse, while serious/constipated are the sustained "what
   // the player is currently doing" state underneath it.
@@ -696,6 +700,63 @@ function drawTouchButtons(ctx, game) {
   }
 }
 
+function drawGestureLine(ctx, game) {
+  const path = game.gesturePath;
+  if (!path || path.length === 0) return;
+
+  const snake = game.snake;
+
+  ctx.save();
+  ctx.lineCap = "round";
+  ctx.lineJoin = "round";
+
+  // Build line sequence starting from snake head position
+  ctx.beginPath();
+  ctx.moveTo(snake.x, snake.y);
+  for (const pt of path) {
+    ctx.lineTo(pt.x, pt.y);
+  }
+
+  // 1. Outer Neon Glow Line
+  ctx.lineWidth = 6;
+  ctx.strokeStyle = "rgba(79, 209, 232, 0.45)";
+  ctx.shadowColor = "#7fe8ff";
+  ctx.shadowBlur = 12;
+  ctx.stroke();
+
+  // 2. Inner Bright Core Line
+  ctx.shadowBlur = 0;
+  ctx.lineWidth = 2.5;
+  ctx.strokeStyle = "#7fe8ff";
+  ctx.stroke();
+
+  // 3. Draw small pulsing dots at waypoints along path
+  for (let i = 0; i < path.length; i++) {
+    const pt = path[i];
+    const isEnd = i === path.length - 1;
+    const r = isEnd ? 4 + Math.sin(game.time * 8) * 1 : 2;
+
+    if (isEnd) {
+      // Endpoint pulsing target ring
+      ctx.save();
+      ctx.fillStyle = "rgba(127, 232, 255, 0.9)";
+      ctx.shadowColor = "#7fe8ff";
+      ctx.shadowBlur = 10;
+      ctx.beginPath();
+      ctx.arc(pt.x, pt.y, r + 2, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+    } else {
+      ctx.fillStyle = "#ffffff";
+      ctx.beginPath();
+      ctx.arc(pt.x, pt.y, r, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  }
+
+  ctx.restore();
+}
+
 function drawHearts(ctx, game) {
   const size = 20;
   const maxHearts = game.maxHearts || MAX_HEARTS;
@@ -827,7 +888,7 @@ function drawOverlay(ctx, title, subtitle, game) {
   ctx.font = font(16);
   let hint;
   if (TOUCH_MODE) {
-    hint = "Drag to steer · hold the corner buttons to boost or slow";
+    hint = "Draw gestures to steer · hold corner buttons to boost or slow";
   } else if (game.controlType === "keyboard" || game.controlType === "keyboard_wasd" || game.controlType === "keyboard_arrows") {
     hint = "WASD / Arrows to steer · Space boost · Shift slow · Esc pauses";
   } else {

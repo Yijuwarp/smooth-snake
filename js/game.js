@@ -25,6 +25,7 @@ import {
   STAR_BONUS_PCT,
   LIFE_BONUS_PCT,
   SPEED_BONUS_PCT,
+  WAYPOINT_REACH_RADIUS,
 } from "./config.js";
 import { createSnake, steer, moveSnake, updateGrowthAndSpeed, bounceOffWall, bounceOffSpike, bounceOffSegment } from "./snake.js";
 import { generateSpikes, updateSpikes } from "./spikes.js";
@@ -163,6 +164,7 @@ export function createGame() {
     controlType: getControlType(), // 'mouse' | 'keyboard_wasd' | 'keyboard_arrows'
     keysPressed: new Set(),        // currently held keys for keyboard steering
     mouse: { x: ARENA_W / 2 + 200, y: ARENA_H / 2 },
+    gesturePath: [],               // touch gesture waypoints array for Android controls
     time: 0,
     onGameOver: null, // (score) => void, set by main.js to offer a highscore submission
     particles: [],
@@ -172,6 +174,7 @@ export function createGame() {
 
 export function resetGame(game) {
   game.snake = createSnake();
+  game.gesturePath = [];
   game.eaten = 0;
   game.score = 0;
   game.multiplier = 1;
@@ -335,9 +338,34 @@ export function update(game, dt) {
   }
 
   const snake = game.snake;
-  // Steer: keyboard modes use key-pressed direction; mouse mode steers toward
-  // the cursor. In keyboard mode with no keys held, the snake glides straight.
-  if (!TOUCH_MODE && game.controlType === "keyboard") {
+  // Steer: keyboard modes use key-pressed direction; touch mode follows drawn
+  // gesture path; mouse mode steers toward the cursor.
+  if (TOUCH_MODE) {
+    if (game.gesturePath && game.gesturePath.length > 0) {
+      while (game.gesturePath.length > 0) {
+        const target = game.gesturePath[0];
+        const dx = target.x - snake.x;
+        const dy = target.y - snake.y;
+        const dist = Math.hypot(dx, dy);
+
+        const forwardX = Math.cos(snake.theta);
+        const forwardY = Math.sin(snake.theta);
+        const dot = (dx * forwardX + dy * forwardY) / (dist || 1);
+
+        // Waypoint reached if snake head is within radius or overshoots point
+        if (dist < WAYPOINT_REACH_RADIUS || (dist < 30 && dot < 0)) {
+          game.gesturePath.shift();
+        } else {
+          break;
+        }
+      }
+      if (game.gesturePath.length > 0) {
+        const nextTarget = game.gesturePath[0];
+        steer(snake, nextTarget.x, nextTarget.y, dt, turnRate);
+      }
+    }
+    // No waypoints in gesturePath -> snake glides straight on current heading.
+  } else if (game.controlType === "keyboard") {
     const keys = game.keysPressed;
     let dx = 0, dy = 0;
     // Both WASD and Arrow keys steer — whichever the player prefers.
