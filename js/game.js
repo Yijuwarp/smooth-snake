@@ -341,10 +341,11 @@ export function update(game, dt) {
     const keys = game.keysPressed;
     let dx = 0, dy = 0;
     // Both WASD and Arrow keys steer — whichever the player prefers.
-    if (keys.has("w") || keys.has("W") || keys.has("ArrowUp"))    dy -= 1;
-    if (keys.has("s") || keys.has("S") || keys.has("ArrowDown"))  dy += 1;
-    if (keys.has("a") || keys.has("A") || keys.has("ArrowLeft"))  dx -= 1;
-    if (keys.has("d") || keys.has("D") || keys.has("ArrowRight")) dx += 1;
+    // Keys are stored as e.code values (KeyW, ArrowUp, etc.) — modifier-safe.
+    if (keys.has("KeyW") || keys.has("ArrowUp"))    dy -= 1;
+    if (keys.has("KeyS") || keys.has("ArrowDown"))  dy += 1;
+    if (keys.has("KeyA") || keys.has("ArrowLeft"))  dx -= 1;
+    if (keys.has("KeyD") || keys.has("ArrowRight")) dx += 1;
     if (dx !== 0 || dy !== 0) {
       steer(snake, snake.x + dx * 9999, snake.y + dy * 9999, dt, turnRate);
     }

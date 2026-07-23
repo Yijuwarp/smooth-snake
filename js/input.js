@@ -104,8 +104,11 @@ export function setupInput(game, canvas, { onActivate, onPause, onToggleFullscre
   window.addEventListener("touchend", endTouch);
   window.addEventListener("touchcancel", endTouch);
 
-  const STEER_KEYS = new Set(["w","W","a","A","s","S","d","D","ArrowUp","ArrowDown","ArrowLeft","ArrowRight"]);
-  const SCROLL_PREVENT_KEYS = new Set(["ArrowUp","ArrowDown","ArrowLeft","ArrowRight"," "]);
+  // Use e.code (not e.key) so that modifier keys like Shift never change what
+  // code is stored — e.g. Shift+W fires e.code="KeyW" on both keydown and
+  // keyup, so the Set entry is always correctly removed on release.
+  const STEER_CODES = new Set(["KeyW","KeyA","KeyS","KeyD","ArrowUp","ArrowDown","ArrowLeft","ArrowRight"]);
+  const SCROLL_PREVENT_CODES = new Set(["ArrowUp","ArrowDown","ArrowLeft","ArrowRight","Space"]);
 
   window.addEventListener("keydown", (e) => {
     // Typing a nickname into the highscore text input shouldn't also
@@ -122,20 +125,20 @@ export function setupInput(game, canvas, { onActivate, onPause, onToggleFullscre
 
     if (game.state === "playing") {
       // Prevent browser scroll/zoom interference during gameplay.
-      if (SCROLL_PREVENT_KEYS.has(e.key)) e.preventDefault();
+      if (SCROLL_PREVENT_CODES.has(e.code)) e.preventDefault();
 
-      // Track steering keys for keyboard control modes.
-      if (STEER_KEYS.has(e.key)) game.keysPressed.add(e.key);
+      // Track steering keys by code so modifier state never causes mismatches.
+      if (STEER_CODES.has(e.code)) game.keysPressed.add(e.code);
 
       // Space = boost, Shift = slow — mirrors left/right mouse buttons.
-      if (e.key === " " && !e.repeat) game.boosting = true;
-      if ((e.key === "Shift") && !e.repeat) game.slowing = true;
+      if (e.code === "Space" && !e.repeat) game.boosting = true;
+      if (e.key === "Shift" && !e.repeat) game.slowing = true;
     }
   });
 
   window.addEventListener("keyup", (e) => {
-    game.keysPressed.delete(e.key);
-    if (e.key === " ") game.boosting = false;
+    game.keysPressed.delete(e.code);
+    if (e.code === "Space") game.boosting = false;
     if (e.key === "Shift") game.slowing = false;
   });
 
