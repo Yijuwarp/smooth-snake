@@ -1,0 +1,23 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "smooth-snake",
+      "runtimeExecutable": "python",
+      "runtimeArgs": ["-m", "http.server", "8341"],
+      "port": 8341
+    },
+    {
+      "name": "smooth-snake-8342",
+      "runtimeExecutable": "python",
+      "runtimeArgs": ["-m", "http.server", "8342"],
+      "port": 8342
+    },
+    {
+      "name": "smooth-snake-8343",
+      "runtimeExecutable": "python",
+      "runtimeArgs": ["-m", "http.server", "8343"],
+      "port": 8343
+    }
+  ]
+}

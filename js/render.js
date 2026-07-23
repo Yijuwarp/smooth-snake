@@ -29,6 +29,92 @@ function loadButtonSprites(kind) {
 }
 const BTN_SPRITES = { boost: loadButtonSprites("boost"), slow: loadButtonSprites("slow") };
 
+// ---- Animated menu background ------------------------------------------
+// Three snakes trace Lissajous curves at different speeds/colors.
+// Purely time-driven — no external state needed.
+let menuAnimTime = 0;
+
+const MENU_SNAKES_CFG = [
+  // { a, b, delta, speed, trailLen, outerR, innerR, rgb }
+  { a: 3.1, b: 2.0, delta: 0.9,  speed: 0.48, trail: 260, outerR: 18, innerR: 7,  rgb: "79,209,232"   }, // cyan
+  { a: 2.0, b: 3.0, delta: 2.1,  speed: 0.34, trail: 200, outerR: 14, innerR: 5,  rgb: "199,146,255"  }, // purple
+  { a: 5.0, b: 4.0, delta: 1.55, speed: 0.22, trail: 150, outerR: 10, innerR: 4,  rgb: "111,184,255"  }, // blue
+];
+
+function drawMenuBackground(ctx, canvas) {
+  const W = canvas.width, H = canvas.height;
+
+  // Solid dark background.
+  ctx.fillStyle = "#05070b";
+  ctx.fillRect(0, 0, W, H);
+
+  // Subtle dot-grid (mirrors splash screen feel).
+  ctx.save();
+  ctx.fillStyle = "rgba(79,209,232,0.055)";
+  const gs = Math.round(36 * (W / 1200 || 1));
+  for (let gx = gs / 2; gx < W; gx += gs)
+    for (let gy = gs / 2; gy < H; gy += gs) {
+      ctx.beginPath();
+      ctx.arc(gx, gy, 1, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  ctx.restore();
+
+  const t = menuAnimTime;
+  const cx = W / 2, cy = H / 2;
+  const rx = W * 0.40, ry = H * 0.38;
+  const BANDS = 12; // draw calls per snake per layer
+
+  ctx.save();
+  ctx.lineCap = "round";
+  ctx.lineJoin = "round";
+
+  for (const s of MENU_SNAKES_CFG) {
+    // Build point array: head at index 0, tail at index trail-1.
+    const pts = [];
+    const step = 0.012;
+    for (let i = 0; i < s.trail; i++) {
+      const ti = t * s.speed - i * step;
+      pts.push({
+        x: cx + rx * Math.sin(s.a * ti + s.delta),
+        y: cy + ry * Math.sin(s.b * ti),
+      });
+    }
+
+    // Draw in bands from tail→head so head is on top.
+    for (let band = BANDS - 1; band >= 0; band--) {
+      const start = Math.floor(band * s.trail / BANDS);
+      const end   = Math.min(Math.floor((band + 1) * s.trail / BANDS) + 1, s.trail);
+      const frac  = 1 - band / BANDS; // 1 = head band, 0 = tail
+
+      if (end - start < 2) continue;
+      ctx.beginPath();
+      ctx.moveTo(pts[start].x, pts[start].y);
+      for (let i = start + 1; i < end; i++) ctx.lineTo(pts[i].x, pts[i].y);
+
+      // Outer glow layer.
+      ctx.lineWidth = s.outerR * (0.2 + frac * 0.8) * 2;
+      ctx.strokeStyle = `rgba(${s.rgb},${frac * 0.12})`;
+      ctx.stroke();
+
+      // Inner bright core.
+      ctx.lineWidth = s.innerR * (0.15 + frac * 0.85) * 2;
+      ctx.strokeStyle = `rgba(${s.rgb},${frac * 0.65})`;
+      ctx.stroke();
+    }
+
+    // Bright head dot.
+    const h = pts[0];
+    ctx.beginPath();
+    ctx.arc(h.x, h.y, s.innerR * 1.5, 0, Math.PI * 2);
+    ctx.fillStyle = `rgba(${s.rgb},0.9)`;
+    ctx.fill();
+  }
+
+  ctx.restore();
+}
+
+
 const COLOR_BG = "#0f1520";
 const COLOR_BORDER = "#3a4a63";
 const COLOR_FOOD = "#4ee08a";
@@ -62,6 +148,18 @@ export function resizeCanvas(canvas) {
 }
 
 export function render(game, ctx, canvas) {
+  // Desktop menu state: skip the game board entirely and draw the animated
+  // snake background. The HTML #start-menu overlay sits on top.
+  if (!TOUCH_MODE && game.state === "menu") {
+    const now = performance.now() / 1000;
+    menuAnimTime = now; // use wall-clock time directly — no accumulation needed
+    ctx.save();
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    drawMenuBackground(ctx, canvas);
+    ctx.restore();
+    return;
+  }
+
   const { scale, offsetX, offsetY } = computeViewport(canvas);
 
   ctx.save();
@@ -87,6 +185,10 @@ export function render(game, ctx, canvas) {
   }
   if (game.powerUp) drawPowerUp(ctx, game.powerUp, game.time);
   drawSpikes(ctx, game.spikes, game.time, game.level);
+
+  if (TOUCH_MODE && (game.state === "playing" || game.state === "paused")) {
+    drawGestureLine(ctx, game);
+  }
 
   // A fresh bite always shows through even mid-boost/slow — it's the shorter,
   // more special pulse, while serious/constipated are the sustained "what
@@ -120,7 +222,8 @@ export function render(game, ctx, canvas) {
   }
 
   if (game.state === "menu") {
-    drawOverlay(ctx, "SSNAKE", TOUCH_MODE ? "Tap to Play!" : "Click to Play!", game);
+    // Touch-only: HTML overlay not available, use canvas title card.
+    drawOverlay(ctx, "SSNAKE", "Tap to Play!", game);
   }
   if (game.state === "gameover") {
     const again = TOUCH_MODE ? "Tap to Play Again!" : "Click to Play Again!";
@@ -597,6 +700,63 @@ function drawTouchButtons(ctx, game) {
   }
 }
 
+function drawGestureLine(ctx, game) {
+  const path = game.gesturePath;
+  if (!path || path.length === 0) return;
+
+  const snake = game.snake;
+
+  ctx.save();
+  ctx.lineCap = "round";
+  ctx.lineJoin = "round";
+
+  // Build line sequence starting from snake head position
+  ctx.beginPath();
+  ctx.moveTo(snake.x, snake.y);
+  for (const pt of path) {
+    ctx.lineTo(pt.x, pt.y);
+  }
+
+  // 1. Outer Neon Glow Line
+  ctx.lineWidth = 6;
+  ctx.strokeStyle = "rgba(79, 209, 232, 0.45)";
+  ctx.shadowColor = "#7fe8ff";
+  ctx.shadowBlur = 12;
+  ctx.stroke();
+
+  // 2. Inner Bright Core Line
+  ctx.shadowBlur = 0;
+  ctx.lineWidth = 2.5;
+  ctx.strokeStyle = "#7fe8ff";
+  ctx.stroke();
+
+  // 3. Draw small pulsing dots at waypoints along path
+  for (let i = 0; i < path.length; i++) {
+    const pt = path[i];
+    const isEnd = i === path.length - 1;
+    const r = isEnd ? 4 + Math.sin(game.time * 8) * 1 : 2;
+
+    if (isEnd) {
+      // Endpoint pulsing target ring
+      ctx.save();
+      ctx.fillStyle = "rgba(127, 232, 255, 0.9)";
+      ctx.shadowColor = "#7fe8ff";
+      ctx.shadowBlur = 10;
+      ctx.beginPath();
+      ctx.arc(pt.x, pt.y, r + 2, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+    } else {
+      ctx.fillStyle = "#ffffff";
+      ctx.beginPath();
+      ctx.arc(pt.x, pt.y, r, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  }
+
+  ctx.restore();
+}
+
 function drawHearts(ctx, game) {
   const size = 20;
   const maxHearts = game.maxHearts || MAX_HEARTS;
@@ -726,8 +886,13 @@ function drawOverlay(ctx, title, subtitle, game) {
 
   y += 32 * k;
   ctx.font = font(16);
-  const hint = TOUCH_MODE
-    ? "Drag to steer · hold the corner buttons to boost or slow"
-    : "Steer with the mouse · Esc pauses · M mutes · F fullscreen";
+  let hint;
+  if (TOUCH_MODE) {
+    hint = "Draw gestures to steer · hold corner buttons to boost or slow";
+  } else if (game.controlType === "keyboard" || game.controlType === "keyboard_wasd" || game.controlType === "keyboard_arrows") {
+    hint = "WASD / Arrows to steer · Space boost · Shift slow · Esc pauses";
+  } else {
+    hint = "Steer with the mouse · Esc pauses · M mutes · F fullscreen";
+  }
   ctx.fillText(hint, ARENA_W / 2, y);
 }

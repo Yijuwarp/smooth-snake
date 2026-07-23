@@ -7,6 +7,179 @@ html, body {
   overflow: hidden;
 }
 
+/* ================================================================
+   Splash Screen
+   ================================================================ */
+
+#splash-screen {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #05070b;
+  cursor: pointer;
+  /* Fade-out triggered by JS adding .splash-dismissed */
+  transition: opacity 0.55s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+#splash-screen.splash-dismissed {
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* Subtle animated dot grid */
+.splash-bg-grid {
+  position: absolute;
+  inset: 0;
+  background-image: radial-gradient(circle, rgba(79, 209, 232, 0.18) 1px, transparent 1px);
+  background-size: 36px 36px;
+  animation: splash-grid-drift 20s linear infinite;
+  opacity: 0;
+  animation: splash-grid-in 1.2s 0.3s ease both, splash-grid-drift 24s 1.5s linear infinite;
+}
+
+@keyframes splash-grid-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+@keyframes splash-grid-drift {
+  from { background-position: 0 0; }
+  to   { background-position: 36px 36px; }
+}
+
+/* Vignette over the grid */
+#splash-screen::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(ellipse 70% 70% at 50% 50%, transparent 30%, #05070b 100%);
+  pointer-events: none;
+}
+
+/* Centre content sits above the grid + vignette */
+.splash-content {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 20px;
+}
+
+/* ---- Logo ---- */
+.splash-logo {
+  font: 800 clamp(64px, 14vw, 120px)/1 'Outfit', sans-serif;
+  letter-spacing: 0.06em;
+  display: flex;
+  align-items: baseline;
+  gap: 0;
+  /* Whole logo fades + rises in */
+  animation: splash-logo-in 0.8s 0.1s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@keyframes splash-logo-in {
+  from { opacity: 0; transform: translateY(24px) scale(0.92); }
+  to   { opacity: 1; transform: none; }
+}
+
+.splash-s1 {
+  background: linear-gradient(135deg, #7fe8ff, #4fd1e8);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  filter: drop-shadow(0 0 22px rgba(79, 209, 232, 0.55));
+  animation: splash-s1-in 0.7s 0.15s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@keyframes splash-s1-in {
+  from { opacity: 0; transform: translateX(-16px); }
+  to   { opacity: 1; transform: none; }
+}
+
+.splash-s2 {
+  background: linear-gradient(135deg, #4fd1e8, #c792ff);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  animation: splash-s2-in 0.7s 0.28s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@keyframes splash-s2-in {
+  from { opacity: 0; transform: translateX(16px); }
+  to   { opacity: 1; transform: none; }
+}
+
+.splash-bang {
+  background: linear-gradient(135deg, #c792ff, #ff79c6);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  filter: drop-shadow(0 0 18px rgba(199, 146, 255, 0.6));
+  animation: splash-bang-in 0.6s 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+
+@keyframes splash-bang-in {
+  from { opacity: 0; transform: scale(0.5) rotate(-15deg); }
+  to   { opacity: 1; transform: none; }
+}
+
+/* ---- Snake trail SVG ---- */
+.splash-snake-line {
+  width: min(320px, 70vw);
+  opacity: 0;
+  animation: splash-trail-in 0.8s 0.7s ease both;
+}
+
+@keyframes splash-trail-in {
+  from { opacity: 0; transform: scaleX(0.6); }
+  to   { opacity: 1; transform: none; }
+}
+
+.splash-trail {
+  stroke-dasharray: 600;
+  stroke-dashoffset: 600;
+  animation: splash-trail-draw 1.2s 0.8s cubic-bezier(0.4, 0, 0.2, 1) forwards,
+             splash-trail-shimmer 3s 2.2s ease-in-out infinite;
+}
+
+@keyframes splash-trail-draw {
+  to { stroke-dashoffset: 0; }
+}
+
+@keyframes splash-trail-shimmer {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.55; }
+}
+
+/* ---- "Click anywhere" prompt ---- */
+.splash-prompt {
+  margin: 0;
+  font: 400 14px/1 'Outfit', sans-serif;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: #4a5f74;
+  animation: splash-prompt-in 0.6s 1.2s ease both,
+             splash-prompt-pulse 2.2s 2s ease-in-out infinite;
+}
+
+@keyframes splash-prompt-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+@keyframes splash-prompt-pulse {
+  0%, 100% { color: #4a5f74; }
+  50%       { color: #7fe8ff; }
+}
+
+/* Mobile: "Tap" instead of "Click" is set by JS; font scales down */
+@media (max-width: 480px) {
+  .splash-prompt { font-size: 12px; }
+}
+
+
 #game-canvas {
   display: block;
   width: 100vw;
@@ -474,3 +647,307 @@ html, body {
 #hs-cancel-btn:active {
   transform: translateY(0);
 }
+
+/* ================================================================
+   Start Menu — two-column panel
+   ================================================================ */
+
+#start-menu {
+  position: fixed;
+  inset: 0;
+  z-index: 30;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  backdrop-filter: blur(3px);
+  -webkit-backdrop-filter: blur(3px);
+}
+
+#start-menu[hidden] {
+  display: none;
+}
+
+/* The panel itself */
+.menu-panel {
+  display: grid;
+  grid-template-columns: 1fr 1px 1fr;
+  width: min(820px, 94vw);
+  max-height: 92vh;
+  overflow: hidden;
+  background: rgba(9, 13, 22, 0.88);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(79, 209, 232, 0.22);
+  border-radius: 24px;
+  box-shadow:
+    0 0 0 1px rgba(79, 209, 232, 0.06),
+    0 20px 60px rgba(0, 0, 0, 0.75),
+    0 0 80px rgba(79, 209, 232, 0.06);
+  animation: menu-panel-in 0.4s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@keyframes menu-panel-in {
+  from { opacity: 0; transform: translateY(20px) scale(0.97); }
+  to   { opacity: 1; transform: none; }
+}
+
+/* Columns */
+.menu-col {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 18px;
+  padding: 40px 36px;
+  min-height: 0;
+}
+
+/* Section label — "Controls" / "Top Scores" */
+.menu-section-label {
+  font: 600 11px/1 'Outfit', sans-serif;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: #4a5f74;
+  align-self: flex-start;
+}
+
+/* Thin gradient vertical divider */
+.menu-divider {
+  background: linear-gradient(to bottom,
+    transparent 0%,
+    rgba(79, 209, 232, 0.18) 20%,
+    rgba(79, 209, 232, 0.25) 50%,
+    rgba(79, 209, 232, 0.18) 80%,
+    transparent 100%);
+}
+
+/* SSNAKE wordmark inside the panel */
+.menu-wordmark {
+  font: 800 42px/1 'Outfit', sans-serif;
+  letter-spacing: 0.07em;
+  background: linear-gradient(135deg, #7fe8ff 0%, #4fd1e8 45%, #c792ff 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  filter: drop-shadow(0 0 14px rgba(79, 209, 232, 0.4));
+  margin-bottom: 4px;
+  align-self: flex-start;
+}
+
+/* ---- Control-type pill buttons ---- */
+
+.control-options {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.control-options--compact {
+  gap: 7px;
+  justify-content: center;
+}
+
+.ctrl-btn {
+  padding: 9px 22px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1.5px solid rgba(79, 209, 232, 0.18);
+  border-radius: 999px;
+  color: #7a96b0;
+  font: 600 14px 'Outfit', sans-serif;
+  cursor: pointer;
+  transition: all 0.18s cubic-bezier(0.4, 0, 0.2, 1);
+  white-space: nowrap;
+  letter-spacing: 0.03em;
+}
+
+.control-options--compact .ctrl-btn {
+  padding: 6px 14px;
+  font-size: 13px;
+}
+
+.ctrl-btn:hover {
+  border-color: rgba(79, 209, 232, 0.5);
+  color: #e8f0f8;
+  background: rgba(79, 209, 232, 0.07);
+  transform: translateY(-1px);
+}
+
+.ctrl-btn.ctrl-active {
+  background: rgba(79, 209, 232, 0.15);
+  border-color: #4fd1e8;
+  color: #7fe8ff;
+  box-shadow: 0 0 12px rgba(79, 209, 232, 0.22);
+}
+
+/* ---- Hint text under the control buttons ---- */
+
+.ctrl-hint {
+  margin: -4px 0 0;
+  min-height: 1.4em;
+  font: 400 12px/1.4 'Outfit', sans-serif;
+  color: #4a5f74;
+  letter-spacing: 0.02em;
+  align-self: flex-start;
+}
+
+/* ---- PLAY button ---- */
+
+.start-play-btn {
+  margin-top: 8px;
+  padding: 14px 64px;
+  background: linear-gradient(135deg, #4fd1e8, #6fb8ff);
+  border: none;
+  border-radius: 999px;
+  color: #070d18;
+  font: 800 17px/1 'Outfit', sans-serif;
+  letter-spacing: 0.16em;
+  cursor: pointer;
+  box-shadow: 0 6px 24px rgba(79, 209, 232, 0.38);
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  animation: play-pulse 2.4s ease-in-out infinite;
+  align-self: flex-start;
+}
+
+@keyframes play-pulse {
+  0%, 100% { box-shadow: 0 6px 24px rgba(79, 209, 232, 0.38), 0 0 0 0 rgba(79, 209, 232, 0.3); }
+  50%       { box-shadow: 0 8px 32px rgba(79, 209, 232, 0.55), 0 0 0 7px rgba(79, 209, 232, 0.0); }
+}
+
+.start-play-btn:hover {
+  transform: translateY(-3px) scale(1.04);
+  box-shadow: 0 10px 36px rgba(79, 209, 232, 0.55);
+  animation: none;
+}
+
+.start-play-btn:active {
+  transform: translateY(-1px) scale(1.01);
+}
+
+.start-footer {
+  margin-top: auto;
+  padding-top: 16px;
+  font: 400 11px 'Outfit', sans-serif;
+  color: #3a4f62;
+  letter-spacing: 0.05em;
+  align-self: flex-start;
+}
+
+/* ---- Embedded top-scores list ---- */
+
+.menu-col--scores {
+  overflow-y: auto;
+}
+
+.menu-lb-list {
+  width: 100%;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  counter-reset: rank;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.menu-lb-list li {
+  counter-increment: rank;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 12px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.028);
+  transition: background 0.15s;
+}
+
+.menu-lb-list li:hover {
+  background: rgba(79, 209, 232, 0.06);
+}
+
+/* Gold highlight for #1 */
+.menu-lb-list li:first-child {
+  background: rgba(255, 210, 87, 0.07);
+  border: 1px solid rgba(255, 210, 87, 0.15);
+}
+
+.menu-lb-list li::before {
+  content: counter(rank);
+  width: 20px;
+  flex: none;
+  font: 600 12px 'Share Tech Mono', monospace;
+  color: #3a4f62;
+  text-align: right;
+}
+
+.menu-lb-list li:first-child::before {
+  color: #ffd257;
+}
+
+.menu-lb-list .lb-name {
+  flex: 1;
+  font: 700 14px 'Share Tech Mono', monospace;
+  letter-spacing: 0.06em;
+  color: #4fd1e8;
+  text-shadow: 0 0 6px rgba(79, 209, 232, 0.2);
+}
+
+.menu-lb-list li:first-child .lb-name {
+  color: #ffd257;
+  text-shadow: 0 0 8px rgba(255, 210, 87, 0.25);
+}
+
+.menu-lb-list .lb-score {
+  font: 700 13px 'Share Tech Mono', monospace;
+  color: #6b8096;
+}
+
+.menu-lb-list li:first-child .lb-score {
+  color: #ffd257;
+}
+
+.menu-lb-list .lb-empty {
+  font: 400 13px 'Outfit', sans-serif;
+  color: #3a4f62;
+  text-align: center;
+  padding: 24px 0;
+  margin: 0;
+}
+
+/* ---- Pause menu: hide control row on touch devices ---- */
+#pause-ctrl-row[hidden] {
+  display: none;
+}
+
+/* Responsive: stack columns vertically on narrow screens */
+@media (max-width: 600px) {
+  .menu-panel {
+    grid-template-columns: 1fr;
+    grid-template-rows: auto 1px auto;
+    max-height: 88dvh;
+    overflow-y: auto;
+    border-radius: 18px;
+  }
+  .menu-col {
+    padding: 28px 24px;
+    align-items: center;
+  }
+  .menu-wordmark { align-self: center; font-size: 32px; }
+  .menu-section-label { align-self: center; }
+  .ctrl-hint { align-self: center; text-align: center; }
+  .start-play-btn { align-self: center; }
+  .start-footer { align-self: center; text-align: center; }
+  .menu-divider {
+    background: linear-gradient(to right,
+      transparent 0%,
+      rgba(79, 209, 232, 0.2) 20%,
+      rgba(79, 209, 232, 0.25) 50%,
+      rgba(79, 209, 232, 0.2) 80%,
+      transparent 100%);
+    height: 1px;
+    margin: 0 24px;
+  }
+  .start-play-btn {
+    padding: 12px 48px;
+    font-size: 16px;
+  }
+}
+

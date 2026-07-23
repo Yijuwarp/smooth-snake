@@ -1,7 +1,7 @@
 import { computeViewport } from "./render.js";
 import { toggleMute, isMuted } from "./audio.js";
 import { setMusicMuted } from "./music.js";
-import { TOUCH_MODE, getTouchButtons } from "./config.js";
+import { TOUCH_MODE, getTouchButtons, GESTURE_MIN_DIST } from "./config.js";
 
 // Converts a client-space point (mouse or touch) into logical arena coords,
 // accounting for DPR and the letterboxed viewport.
@@ -39,10 +39,8 @@ export function setupInput(game, canvas, { onActivate, onPause, onToggleFullscre
   });
   canvas.addEventListener("contextmenu", (e) => e.preventDefault());
 
-  // --- Touch: dragging anywhere steers (the snake keeps following the
-  // finger), while the on-screen corner buttons boost/slow for as long as
-  // they're held. Each active touch is tracked by identifier so a second
-  // finger on a button doesn't hijack the steering finger, and vice versa.
+  // --- Touch: drawing records a gesture path for the snake to follow, while
+  // on-screen corner buttons boost/slow for as long as they're held.
   const touchRoles = new Map(); // touch identifier -> "boost" | "slow" | "steer"
   const HIT_PAD = 14; // extra forgiveness around the button frame
   const inRect = (p, r) =>
@@ -62,13 +60,15 @@ export function setupInput(game, canvas, { onActivate, onPause, onToggleFullscre
           touchRoles.set(t.identifier, "slow");
           game.slowing = true;
         } else {
-          // A tap on the menu/gameover screen activates on release, not on
-          // touchstart — touchend counts as a user gesture for the
-          // auto-fullscreen inside onActivate, touchstart does not.
+          // A tap on the menu/gameover screen activates on release, not on touchstart
           const activates = game.state !== "playing" && game.state !== "paused";
           touchRoles.set(t.identifier, activates ? "activate" : "steer");
           game.mouse.x = p.x;
           game.mouse.y = p.y;
+          if (TOUCH_MODE && game.state === "playing") {
+            // New gesture swipe: clear old unconsumed path and start recording new line
+            game.gesturePath = [p];
+          }
         }
       }
     },
@@ -85,6 +85,13 @@ export function setupInput(game, canvas, { onActivate, onPause, onToggleFullscre
         const p = toArena(canvas, t.clientX, t.clientY);
         game.mouse.x = p.x;
         game.mouse.y = p.y;
+        if (TOUCH_MODE && game.state === "playing" && role === "steer") {
+          const path = game.gesturePath;
+          const lastP = path[path.length - 1];
+          if (!lastP || Math.hypot(p.x - lastP.x, p.y - lastP.y) >= GESTURE_MIN_DIST) {
+            path.push(p);
+          }
+        }
       }
     },
     { passive: false }
@@ -104,6 +111,12 @@ export function setupInput(game, canvas, { onActivate, onPause, onToggleFullscre
   window.addEventListener("touchend", endTouch);
   window.addEventListener("touchcancel", endTouch);
 
+  // Use e.code (not e.key) so that modifier keys like Shift never change what
+  // code is stored — e.g. Shift+W fires e.code="KeyW" on both keydown and
+  // keyup, so the Set entry is always correctly removed on release.
+  const STEER_CODES = new Set(["KeyW","KeyA","KeyS","KeyD","ArrowUp","ArrowDown","ArrowLeft","ArrowRight"]);
+  const SCROLL_PREVENT_CODES = new Set(["ArrowUp","ArrowDown","ArrowLeft","ArrowRight","Space"]);
+
   window.addEventListener("keydown", (e) => {
     // Typing a nickname into the highscore text input shouldn't also
     // restart the game, mute audio, or toggle fullscreen.
@@ -116,6 +129,31 @@ export function setupInput(game, canvas, { onActivate, onPause, onToggleFullscre
       setMusicMuted(m);
     }
     if (e.key === "f" || e.key === "F") onToggleFullscreen();
+
+    if (game.state === "playing") {
+      // Prevent browser scroll/zoom interference during gameplay.
+      if (SCROLL_PREVENT_CODES.has(e.code)) e.preventDefault();
+
+      // Track steering keys by code so modifier state never causes mismatches.
+      if (STEER_CODES.has(e.code)) game.keysPressed.add(e.code);
+
+      // Space = boost, Shift = slow — mirrors left/right mouse buttons.
+      if (e.code === "Space" && !e.repeat) game.boosting = true;
+      if (e.key === "Shift" && !e.repeat) game.slowing = true;
+    }
+  });
+
+  window.addEventListener("keyup", (e) => {
+    game.keysPressed.delete(e.code);
+    if (e.code === "Space") game.boosting = false;
+    if (e.key === "Shift") game.slowing = false;
+  });
+
+  // Clear all held keys if the window loses focus so keys don't get stuck.
+  window.addEventListener("blur", () => {
+    game.keysPressed.clear();
+    game.boosting = false;
+    game.slowing = false;
   });
 }
 

@@ -1,9 +1,9 @@
-import { MAX_DT, setArenaSize, setTouchMode } from "./config.js";
-import { createGame, resetGame, update, setDevMode, setTunable, devLaunchLevel } from "./game.js";
+import { MAX_DT, setArenaSize, setTouchMode, TOUCH_MODE } from "./config.js";
+import { createGame, resetGame, update, setDevMode, setTunable, getControlType, saveControlType } from "./game.js";
 import { render, resizeCanvas } from "./render.js";
 import { setupInput } from "./input.js";
 import { playStart, getSfxVolume, setSfxVolume, getSfxEnabled, setSfxEnabled } from "./audio.js";
-import { startMusic, getMusicVolume, setMusicVolume, getMusicEnabled, setMusicEnabled, currentTrackName } from "./music.js";
+import { startMusic, getMusicVolume, setMusicVolume, getMusicEnabled, setMusicEnabled, currentTrackName, playMenuMusic } from "./music.js";
 
 const canvas = document.getElementById("game-canvas");
 const ctx = canvas.getContext("2d");
@@ -17,12 +17,49 @@ resizeCanvas(canvas);
 setArenaSize(canvas.width, canvas.height);
 const game = createGame();
 
+// --- Splash Screen -------------------------------------------------------
+// The splash covers everything on load. One click/tap fades it out and
+// reveals the start menu (desktop) or the canvas tap-to-play (touch).
+// The click is also the first valid user-gesture for audio autoplay.
+(function setupSplashScreen() {
+  const splash = document.getElementById("splash-screen");
+  const prompt = splash.querySelector(".splash-prompt");
+
+  // Swap prompt copy for touch players.
+  if (TOUCH_MODE) prompt.textContent = "Tap anywhere to begin";
+
+  splash.addEventListener("click", () => {
+    // Start menu music immediately — this click IS the required user gesture.
+    playMenuMusic();
+
+    // Fade out the splash.
+    splash.classList.add("splash-dismissed");
+
+    // After the CSS transition finishes, remove the element and show what's next.
+    splash.addEventListener("transitionend", () => {
+      splash.remove();
+      // On desktop, setupStartMenu() already ran and hid #start-menu — un-hide it now.
+      if (!TOUCH_MODE) {
+        const startMenu = document.getElementById("start-menu");
+        if (startMenu) startMenu.hidden = false;
+      }
+    }, { once: true });
+  }, { once: true });
+})();
+
 let activating = false; // guards double-activation while fullscreen entry is pending
 
 async function activate() {
   if (!highscoreModal.hidden) return;
   if (activating || game.state === "playing" || game.state === "paused") return;
   activating = true;
+
+  // Hide the HTML start menu (desktop only — it is already hidden on touch).
+  const startMenu = document.getElementById("start-menu");
+  startMenu.hidden = true;
+
+  // Note: no need to call stopCurrentTrack() here — startMusic() below
+  // switches the audio element's src, which implicitly stops menu music.
 
   // Auto-enter fullscreen on start. Browsers only allow requestFullscreen
   // inside a user gesture, so page load is too early — the activation
@@ -81,23 +118,33 @@ let leaderboardScores = [];
 let leaderboardAvailable = false; // false until a fetch/submit actually succeeds
 
 function renderLeaderboard(scores, unavailable) {
-  leaderboardList.innerHTML = "";
-  if (!scores || scores.length === 0) {
-    const message = unavailable ? "Leaderboard unavailable" : "No scores yet";
-    leaderboardList.innerHTML = `<p class="lb-empty">${message}</p>`;
-    return;
+  const message = unavailable ? "Leaderboard unavailable" : "No scores yet";
+
+  // Helper: build li elements into any list element.
+  function fillList(listEl, useMenuStyles) {
+    listEl.innerHTML = "";
+    if (!scores || scores.length === 0) {
+      listEl.innerHTML = `<p class="lb-empty">${message}</p>`;
+      return;
+    }
+    for (const { nickname, score } of scores) {
+      const li = document.createElement("li");
+      const name = document.createElement("span");
+      name.className = "lb-name";
+      name.textContent = nickname;
+      const points = document.createElement("span");
+      points.className = "lb-score";
+      points.textContent = score;
+      li.append(name, points);
+      listEl.appendChild(li);
+    }
   }
-  for (const { nickname, score } of scores) {
-    const li = document.createElement("li");
-    const name = document.createElement("span");
-    name.className = "lb-name";
-    name.textContent = nickname;
-    const points = document.createElement("span");
-    points.className = "lb-score";
-    points.textContent = score;
-    li.append(name, points);
-    leaderboardList.appendChild(li);
-  }
+
+  // Floating panel (gameover state)
+  fillList(leaderboardList, false);
+  // Embedded panel inside the start menu
+  const menuList = document.getElementById("menu-leaderboard-list");
+  if (menuList) fillList(menuList, true);
 }
 
 function setLeaderboard(scores) {
@@ -137,7 +184,8 @@ function qualifiesForLeaderboard(score) {
 }
 
 function syncLeaderboardVisibility() {
-  leaderboardContainer.hidden = !(game.state === "menu" || game.state === "gameover");
+  // Floating panel: show only on gameover (menu has its own embedded list).
+  leaderboardContainer.hidden = game.state !== "gameover";
 }
 
 function showHighscoreModal(score) {
@@ -326,12 +374,85 @@ fullscreenToggle.addEventListener("change", () => {
 });
 devModeToggle.addEventListener("change", () => setDevMode(game, devModeToggle.checked));
 devImmortalToggle.addEventListener("change", () => setTunable(game, "immortal", devImmortalToggle.checked));
-document.getElementById("dev-launch-level").addEventListener("click", () => {
-  const level = Number(document.getElementById("dev-level-select").value);
-  devLaunchLevel(game, level);
-  menu.hidden = true;
-});
 document.getElementById("resume-btn").addEventListener("click", togglePause);
+
+// --- Start menu & control-type picker -----------------------------------
+
+// Hint text for each control scheme.
+const CTRL_HINTS = {
+  mouse:    "Steer with the cursor · left-click boost · right-click slow",
+  keyboard: "WASD or Arrow keys · Space to boost · Shift to slow",
+};
+
+function setupStartMenu() {
+  const startMenu   = document.getElementById("start-menu");
+  const playBtn     = document.getElementById("start-play-btn");
+  const ctrlHint    = document.getElementById("ctrl-hint");
+  const pauseCtrlRow = document.getElementById("pause-ctrl-row");
+
+  // On touch devices the HTML start menu is never needed.
+  if (TOUCH_MODE) {
+    startMenu.hidden = true;
+    pauseCtrlRow.hidden = true;
+    return;
+  }
+
+  // Keep the start menu hidden for now — the splash screen's transitionend
+  // handler reveals it once the fade-out finishes.
+  // (startMenu.hidden stays true until then.)
+  pauseCtrlRow.hidden = false;
+
+  // --- Sync active pill button across both pickers ---
+  function setControlType(type) {
+    game.controlType = type;
+    saveControlType(type);
+
+    // Update .ctrl-active on start-menu buttons.
+    document.querySelectorAll("#control-options .ctrl-btn").forEach((btn) => {
+      btn.classList.toggle("ctrl-active", btn.dataset.ctrl === type);
+    });
+    // Update .ctrl-active on pause-menu buttons.
+    document.querySelectorAll("#pause-control-options .ctrl-btn").forEach((btn) => {
+      btn.classList.toggle("ctrl-active", btn.dataset.ctrl === type);
+    });
+    // Update hint text in start menu.
+    if (ctrlHint) ctrlHint.textContent = CTRL_HINTS[type] || "";
+  }
+
+  // Initialise to the saved preference.
+  setControlType(getControlType());
+
+  // Wire start-menu control buttons.
+  let menuMusicStarted = false;
+  function startMenuMusic() {
+    if (!menuMusicStarted) {
+      menuMusicStarted = true;
+      playMenuMusic();
+    }
+  }
+
+  document.querySelectorAll("#control-options .ctrl-btn").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      startMenuMusic();
+      setControlType(btn.dataset.ctrl);
+    });
+  });
+
+  // Wire pause-menu control buttons (live-switch during a run).
+  document.querySelectorAll("#pause-control-options .ctrl-btn").forEach((btn) => {
+    btn.addEventListener("click", () => setControlType(btn.dataset.ctrl));
+  });
+
+  // PLAY button — start menu music first (first real user click), then begin the game.
+  // If the user clicks PLAY directly without first clicking a control option,
+  // music still starts here before activate() switches to the level track.
+  playBtn.addEventListener("click", () => {
+    startMenuMusic();
+    activate();
+  });
+}
+
+setupStartMenu();
 
 setupInput(game, canvas, { onActivate: activate, onPause: onEscapeKey, onToggleFullscreen: toggleFullscreen });
 

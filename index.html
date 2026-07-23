@@ -10,8 +10,70 @@
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
+  <!-- ============================================================
+       Splash Screen: shown before everything else.
+       Click/tap dismisses it, shows the start menu, starts music.
+       ============================================================ -->
+  <div id="splash-screen">
+    <div class="splash-bg-grid" aria-hidden="true"></div>
+    <div class="splash-content">
+      <div class="splash-logo">
+        <span class="splash-s1">SS</span><span class="splash-s2">NAKE</span><span class="splash-bang">!</span>
+      </div>
+      <div class="splash-snake-line" aria-hidden="true">
+        <svg viewBox="0 0 320 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path class="splash-trail" d="M0 12 Q40 0 80 12 Q120 24 160 12 Q200 0 240 12 Q280 24 320 12" stroke="url(#trailGrad)" stroke-width="3" stroke-linecap="round" fill="none"/>
+          <defs>
+            <linearGradient id="trailGrad" x1="0" y1="0" x2="320" y2="0" gradientUnits="userSpaceOnUse">
+              <stop offset="0%" stop-color="#4fd1e8" stop-opacity="0"/>
+              <stop offset="40%" stop-color="#4fd1e8"/>
+              <stop offset="70%" stop-color="#c792ff"/>
+              <stop offset="100%" stop-color="#c792ff" stop-opacity="0"/>
+            </linearGradient>
+          </defs>
+        </svg>
+      </div>
+      <p class="splash-prompt">Click anywhere to begin</p>
+    </div>
+  </div>
+
+  <!-- ============================================================
+       Start Menu: two-column panel — controls left, top scores right.
+       Hidden on mobile (TOUCH_MODE) and while splash is showing.
+       ============================================================ -->
+  <div id="start-menu" hidden>
+    <div class="menu-panel">
+
+      <!-- LEFT: Control picker + Play -->
+      <div class="menu-col menu-col--play">
+        <div class="menu-wordmark">SSNAKE</div>
+
+        <div class="menu-section-label">Controls</div>
+        <div class="control-options" id="control-options" role="group" aria-label="Control type">
+          <button class="ctrl-btn" id="ctrl-mouse"    data-ctrl="mouse"    type="button">🖱 Mouse</button>
+          <button class="ctrl-btn" id="ctrl-keyboard" data-ctrl="keyboard" type="button">⌨ Keyboard</button>
+        </div>
+        <p class="ctrl-hint" id="ctrl-hint"></p>
+
+        <button id="start-play-btn" type="button" class="start-play-btn">PLAY</button>
+        <p class="start-footer">Esc pauses · M mutes · F fullscreen</p>
+      </div>
+
+      <!-- DIVIDER -->
+      <div class="menu-divider" aria-hidden="true"></div>
+
+      <!-- RIGHT: Top scores -->
+      <div class="menu-col menu-col--scores">
+        <div class="menu-section-label">Top Scores</div>
+        <ol id="menu-leaderboard-list" class="menu-lb-list"></ol>
+      </div>
+
+    </div>
+  </div>
+
   <canvas id="game-canvas"></canvas>
 
+  <!-- Floating leaderboard — visible on gameover only (menu uses embedded list above) -->
   <div id="leaderboard-container" hidden>
     <h3>Top Scores</h3>
     <ol id="leaderboard-list"></ol>
@@ -46,6 +108,16 @@
       </div>
       <input id="sfx-vol" type="range" min="0" max="100" step="1" />
     </div>
+
+    <!-- Control type switcher — only visible on desktop (not TOUCH_MODE) -->
+    <div class="volume-control" id="pause-ctrl-row">
+      <div class="volume-title"><span>Controls</span></div>
+      <div class="control-options control-options--compact" id="pause-control-options" role="group" aria-label="Control type">
+        <button class="ctrl-btn" id="p-ctrl-mouse"    data-ctrl="mouse"    type="button">🖱 Mouse</button>
+        <button class="ctrl-btn" id="p-ctrl-keyboard" data-ctrl="keyboard" type="button">⌨ Keyboard</button>
+      </div>
+    </div>
+
     <label class="checkbox-row">
       <input id="fullscreen-toggle" type="checkbox" />
       Fullscreen

@@ -2,6 +2,7 @@ import { getSettings, saveSettings } from "./storage.js";
 
 // All CC0, see music/CREDITS.txt.
 const TRACKS = {
+  menu: { name: "Stage Select - Chiptune Adventures (Juhani Junkala)", file: "music/stage_select.ogg", loop: true },
   level1: { name: "Stage 1 - Chiptune Adventures (Juhani Junkala)", file: "music/stage1.ogg", loop: true },
   level2: { name: "Stage 2 - Chiptune Adventures (Juhani Junkala)", file: "music/stage2.ogg", loop: true },
   level3: { name: "Stage 3 - Boss Fight (Juhani Junkala)", file: "music/stage3.ogg", loop: true },
@@ -59,6 +60,21 @@ export function updateMusicForLevel(level) {
 export function startMusic(level = 1) {
   started = true;
   updateMusicForLevel(level);
+}
+
+// Play the menu/stage-select track — must be called from a user-gesture handler.
+export function playMenuMusic() {
+  started = true;
+  playTrack("menu");
+}
+
+// Pause and reset the current track (e.g. when stopping menu music before
+// the game music takes over via startMusic).
+export function stopCurrentTrack() {
+  if (el) {
+    el.pause();
+    el.currentTime = 0;
+  }
 }
 
 export function currentTrackName() {
