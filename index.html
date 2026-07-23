@@ -38,29 +38,42 @@
   </div>
 
   <!-- ============================================================
-       Start Menu: full-screen overlay shown on desktop before first play.
-       Hidden on mobile (TOUCH_MODE) via JS. Not shown during gameplay.
+       Start Menu: two-column panel — controls left, top scores right.
+       Hidden on mobile (TOUCH_MODE) and while splash is showing.
        ============================================================ -->
   <div id="start-menu" hidden>
-    <div class="start-card">
-      <h1 class="start-title">SSNAKE</h1>
-      <p class="start-tagline">Choose your controls</p>
+    <div class="menu-panel">
 
-      <div class="control-options" id="control-options" role="group" aria-label="Control type">
-        <button class="ctrl-btn" id="ctrl-mouse"    data-ctrl="mouse"    type="button">🖱 Mouse</button>
-        <button class="ctrl-btn" id="ctrl-keyboard" data-ctrl="keyboard" type="button">⌨ Keyboard</button>
+      <!-- LEFT: Control picker + Play -->
+      <div class="menu-col menu-col--play">
+        <div class="menu-wordmark">SSNAKE</div>
+
+        <div class="menu-section-label">Controls</div>
+        <div class="control-options" id="control-options" role="group" aria-label="Control type">
+          <button class="ctrl-btn" id="ctrl-mouse"    data-ctrl="mouse"    type="button">🖱 Mouse</button>
+          <button class="ctrl-btn" id="ctrl-keyboard" data-ctrl="keyboard" type="button">⌨ Keyboard</button>
+        </div>
+        <p class="ctrl-hint" id="ctrl-hint"></p>
+
+        <button id="start-play-btn" type="button" class="start-play-btn">PLAY</button>
+        <p class="start-footer">Esc pauses · M mutes · F fullscreen</p>
       </div>
 
-      <p class="ctrl-hint" id="ctrl-hint"></p>
+      <!-- DIVIDER -->
+      <div class="menu-divider" aria-hidden="true"></div>
 
-      <button id="start-play-btn" type="button" class="start-play-btn">PLAY</button>
+      <!-- RIGHT: Top scores -->
+      <div class="menu-col menu-col--scores">
+        <div class="menu-section-label">Top Scores</div>
+        <ol id="menu-leaderboard-list" class="menu-lb-list"></ol>
+      </div>
 
-      <p class="start-footer">Esc pauses · M mutes · F fullscreen</p>
     </div>
   </div>
 
   <canvas id="game-canvas"></canvas>
 
+  <!-- Floating leaderboard — visible on gameover only (menu uses embedded list above) -->
   <div id="leaderboard-container" hidden>
     <h3>Top Scores</h3>
     <ol id="leaderboard-list"></ol>

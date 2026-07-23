@@ -118,23 +118,33 @@ let leaderboardScores = [];
 let leaderboardAvailable = false; // false until a fetch/submit actually succeeds
 
 function renderLeaderboard(scores, unavailable) {
-  leaderboardList.innerHTML = "";
-  if (!scores || scores.length === 0) {
-    const message = unavailable ? "Leaderboard unavailable" : "No scores yet";
-    leaderboardList.innerHTML = `<p class="lb-empty">${message}</p>`;
-    return;
+  const message = unavailable ? "Leaderboard unavailable" : "No scores yet";
+
+  // Helper: build li elements into any list element.
+  function fillList(listEl, useMenuStyles) {
+    listEl.innerHTML = "";
+    if (!scores || scores.length === 0) {
+      listEl.innerHTML = `<p class="lb-empty">${message}</p>`;
+      return;
+    }
+    for (const { nickname, score } of scores) {
+      const li = document.createElement("li");
+      const name = document.createElement("span");
+      name.className = "lb-name";
+      name.textContent = nickname;
+      const points = document.createElement("span");
+      points.className = "lb-score";
+      points.textContent = score;
+      li.append(name, points);
+      listEl.appendChild(li);
+    }
   }
-  for (const { nickname, score } of scores) {
-    const li = document.createElement("li");
-    const name = document.createElement("span");
-    name.className = "lb-name";
-    name.textContent = nickname;
-    const points = document.createElement("span");
-    points.className = "lb-score";
-    points.textContent = score;
-    li.append(name, points);
-    leaderboardList.appendChild(li);
-  }
+
+  // Floating panel (gameover state)
+  fillList(leaderboardList, false);
+  // Embedded panel inside the start menu
+  const menuList = document.getElementById("menu-leaderboard-list");
+  if (menuList) fillList(menuList, true);
 }
 
 function setLeaderboard(scores) {
@@ -174,7 +184,8 @@ function qualifiesForLeaderboard(score) {
 }
 
 function syncLeaderboardVisibility() {
-  leaderboardContainer.hidden = !(game.state === "menu" || game.state === "gameover");
+  // Floating panel: show only on gameover (menu has its own embedded list).
+  leaderboardContainer.hidden = game.state !== "gameover";
 }
 
 function showHighscoreModal(score) {

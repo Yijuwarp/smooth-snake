@@ -649,7 +649,7 @@ html, body {
 }
 
 /* ================================================================
-   Start Menu Overlay
+   Start Menu — two-column panel
    ================================================================ */
 
 #start-menu {
@@ -659,59 +659,78 @@ html, body {
   display: flex;
   align-items: center;
   justify-content: center;
-  /* Slight blur behind the card so the live snake preview shows through softly */
-  backdrop-filter: blur(2px);
-  -webkit-backdrop-filter: blur(2px);
+  backdrop-filter: blur(3px);
+  -webkit-backdrop-filter: blur(3px);
 }
 
 #start-menu[hidden] {
   display: none;
 }
 
-.start-card {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 20px;
-  padding: 44px 48px 36px;
-  min-width: 340px;
-  max-width: 480px;
-  width: min(90vw, 480px);
-  background: rgba(10, 15, 24, 0.82);
-  backdrop-filter: blur(18px);
-  -webkit-backdrop-filter: blur(18px);
-  border: 1px solid rgba(79, 209, 232, 0.30);
-  border-radius: 22px;
+/* The panel itself */
+.menu-panel {
+  display: grid;
+  grid-template-columns: 1fr 1px 1fr;
+  width: min(820px, 94vw);
+  max-height: 92vh;
+  overflow: hidden;
+  background: rgba(9, 13, 22, 0.88);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(79, 209, 232, 0.22);
+  border-radius: 24px;
   box-shadow:
-    0 0 0 1px rgba(79, 209, 232, 0.08),
-    0 16px 56px rgba(0, 0, 0, 0.7),
-    0 0 60px rgba(79, 209, 232, 0.08);
-  text-align: center;
-  animation: start-card-in 0.45s cubic-bezier(0.22, 1, 0.36, 1) both;
+    0 0 0 1px rgba(79, 209, 232, 0.06),
+    0 20px 60px rgba(0, 0, 0, 0.75),
+    0 0 80px rgba(79, 209, 232, 0.06);
+  animation: menu-panel-in 0.4s cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 
-@keyframes start-card-in {
-  from { opacity: 0; transform: translateY(28px) scale(0.96); }
+@keyframes menu-panel-in {
+  from { opacity: 0; transform: translateY(20px) scale(0.97); }
   to   { opacity: 1; transform: none; }
 }
 
-.start-title {
-  margin: 0;
-  font: 800 58px/1 'Outfit', sans-serif;
-  letter-spacing: 0.06em;
+/* Columns */
+.menu-col {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 18px;
+  padding: 40px 36px;
+  min-height: 0;
+}
+
+/* Section label — "Controls" / "Top Scores" */
+.menu-section-label {
+  font: 600 11px/1 'Outfit', sans-serif;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: #4a5f74;
+  align-self: flex-start;
+}
+
+/* Thin gradient vertical divider */
+.menu-divider {
+  background: linear-gradient(to bottom,
+    transparent 0%,
+    rgba(79, 209, 232, 0.18) 20%,
+    rgba(79, 209, 232, 0.25) 50%,
+    rgba(79, 209, 232, 0.18) 80%,
+    transparent 100%);
+}
+
+/* SSNAKE wordmark inside the panel */
+.menu-wordmark {
+  font: 800 42px/1 'Outfit', sans-serif;
+  letter-spacing: 0.07em;
   background: linear-gradient(135deg, #7fe8ff 0%, #4fd1e8 45%, #c792ff 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
-  filter: drop-shadow(0 0 18px rgba(79, 209, 232, 0.45));
-}
-
-.start-tagline {
-  margin: 0;
-  font: 400 15px 'Outfit', sans-serif;
-  color: #9fb3c8;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
+  filter: drop-shadow(0 0 14px rgba(79, 209, 232, 0.4));
+  margin-bottom: 4px;
+  align-self: flex-start;
 }
 
 /* ---- Control-type pill buttons ---- */
@@ -720,19 +739,19 @@ html, body {
   display: flex;
   gap: 10px;
   flex-wrap: wrap;
-  justify-content: center;
 }
 
 .control-options--compact {
   gap: 7px;
+  justify-content: center;
 }
 
 .ctrl-btn {
-  padding: 9px 20px;
-  background: rgba(255, 255, 255, 0.05);
-  border: 1.5px solid rgba(79, 209, 232, 0.2);
+  padding: 9px 22px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1.5px solid rgba(79, 209, 232, 0.18);
   border-radius: 999px;
-  color: #9fb3c8;
+  color: #7a96b0;
   font: 600 14px 'Outfit', sans-serif;
   cursor: pointer;
   transition: all 0.18s cubic-bezier(0.4, 0, 0.2, 1);
@@ -746,51 +765,51 @@ html, body {
 }
 
 .ctrl-btn:hover {
-  border-color: rgba(79, 209, 232, 0.55);
+  border-color: rgba(79, 209, 232, 0.5);
   color: #e8f0f8;
-  background: rgba(79, 209, 232, 0.08);
+  background: rgba(79, 209, 232, 0.07);
   transform: translateY(-1px);
 }
 
 .ctrl-btn.ctrl-active {
-  background: rgba(79, 209, 232, 0.18);
+  background: rgba(79, 209, 232, 0.15);
   border-color: #4fd1e8;
   color: #7fe8ff;
-  box-shadow: 0 0 14px rgba(79, 209, 232, 0.25);
+  box-shadow: 0 0 12px rgba(79, 209, 232, 0.22);
 }
 
 /* ---- Hint text under the control buttons ---- */
 
 .ctrl-hint {
-  margin: -6px 0 0;
-  min-height: 1.3em;
-  font: 400 13px 'Outfit', sans-serif;
-  color: #6b8096;
+  margin: -4px 0 0;
+  min-height: 1.4em;
+  font: 400 12px/1.4 'Outfit', sans-serif;
+  color: #4a5f74;
   letter-spacing: 0.02em;
+  align-self: flex-start;
 }
 
 /* ---- PLAY button ---- */
 
 .start-play-btn {
-  margin-top: 4px;
-  padding: 14px 56px;
+  margin-top: 8px;
+  padding: 14px 64px;
   background: linear-gradient(135deg, #4fd1e8, #6fb8ff);
   border: none;
   border-radius: 999px;
   color: #070d18;
-  font: 800 18px/1 'Outfit', sans-serif;
-  letter-spacing: 0.14em;
+  font: 800 17px/1 'Outfit', sans-serif;
+  letter-spacing: 0.16em;
   cursor: pointer;
-  box-shadow:
-    0 6px 24px rgba(79, 209, 232, 0.40),
-    0 0 0 0 rgba(79, 209, 232, 0.35);
+  box-shadow: 0 6px 24px rgba(79, 209, 232, 0.38);
   transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
   animation: play-pulse 2.4s ease-in-out infinite;
+  align-self: flex-start;
 }
 
 @keyframes play-pulse {
-  0%, 100% { box-shadow: 0 6px 24px rgba(79, 209, 232, 0.40), 0 0 0 0 rgba(79, 209, 232, 0.35); }
-  50%       { box-shadow: 0 8px 32px rgba(79, 209, 232, 0.55), 0 0 0 8px rgba(79, 209, 232, 0.0); }
+  0%, 100% { box-shadow: 0 6px 24px rgba(79, 209, 232, 0.38), 0 0 0 0 rgba(79, 209, 232, 0.3); }
+  50%       { box-shadow: 0 8px 32px rgba(79, 209, 232, 0.55), 0 0 0 7px rgba(79, 209, 232, 0.0); }
 }
 
 .start-play-btn:hover {
@@ -804,10 +823,93 @@ html, body {
 }
 
 .start-footer {
+  margin-top: auto;
+  padding-top: 16px;
+  font: 400 11px 'Outfit', sans-serif;
+  color: #3a4f62;
+  letter-spacing: 0.05em;
+  align-self: flex-start;
+}
+
+/* ---- Embedded top-scores list ---- */
+
+.menu-col--scores {
+  overflow-y: auto;
+}
+
+.menu-lb-list {
+  width: 100%;
   margin: 0;
-  font: 400 12px 'Outfit', sans-serif;
-  color: #4a5f74;
-  letter-spacing: 0.04em;
+  padding: 0;
+  list-style: none;
+  counter-reset: rank;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.menu-lb-list li {
+  counter-increment: rank;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 12px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.028);
+  transition: background 0.15s;
+}
+
+.menu-lb-list li:hover {
+  background: rgba(79, 209, 232, 0.06);
+}
+
+/* Gold highlight for #1 */
+.menu-lb-list li:first-child {
+  background: rgba(255, 210, 87, 0.07);
+  border: 1px solid rgba(255, 210, 87, 0.15);
+}
+
+.menu-lb-list li::before {
+  content: counter(rank);
+  width: 20px;
+  flex: none;
+  font: 600 12px 'Share Tech Mono', monospace;
+  color: #3a4f62;
+  text-align: right;
+}
+
+.menu-lb-list li:first-child::before {
+  color: #ffd257;
+}
+
+.menu-lb-list .lb-name {
+  flex: 1;
+  font: 700 14px 'Share Tech Mono', monospace;
+  letter-spacing: 0.06em;
+  color: #4fd1e8;
+  text-shadow: 0 0 6px rgba(79, 209, 232, 0.2);
+}
+
+.menu-lb-list li:first-child .lb-name {
+  color: #ffd257;
+  text-shadow: 0 0 8px rgba(255, 210, 87, 0.25);
+}
+
+.menu-lb-list .lb-score {
+  font: 700 13px 'Share Tech Mono', monospace;
+  color: #6b8096;
+}
+
+.menu-lb-list li:first-child .lb-score {
+  color: #ffd257;
+}
+
+.menu-lb-list .lb-empty {
+  font: 400 13px 'Outfit', sans-serif;
+  color: #3a4f62;
+  text-align: center;
+  padding: 24px 0;
+  margin: 0;
 }
 
 /* ---- Pause menu: hide control row on touch devices ---- */
@@ -815,17 +917,37 @@ html, body {
   display: none;
 }
 
-/* Responsive: shrink start card on narrow screens */
-@media (max-width: 480px) {
-  .start-card {
-    padding: 32px 24px 28px;
-    gap: 16px;
+/* Responsive: stack columns vertically on narrow screens */
+@media (max-width: 600px) {
+  .menu-panel {
+    grid-template-columns: 1fr;
+    grid-template-rows: auto 1px auto;
+    max-height: 88dvh;
+    overflow-y: auto;
+    border-radius: 18px;
   }
-  .start-title {
-    font-size: 42px;
+  .menu-col {
+    padding: 28px 24px;
+    align-items: center;
+  }
+  .menu-wordmark { align-self: center; font-size: 32px; }
+  .menu-section-label { align-self: center; }
+  .ctrl-hint { align-self: center; text-align: center; }
+  .start-play-btn { align-self: center; }
+  .start-footer { align-self: center; text-align: center; }
+  .menu-divider {
+    background: linear-gradient(to right,
+      transparent 0%,
+      rgba(79, 209, 232, 0.2) 20%,
+      rgba(79, 209, 232, 0.25) 50%,
+      rgba(79, 209, 232, 0.2) 80%,
+      transparent 100%);
+    height: 1px;
+    margin: 0 24px;
   }
   .start-play-btn {
-    padding: 12px 44px;
+    padding: 12px 48px;
     font-size: 16px;
   }
 }
+
