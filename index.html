@@ -11,6 +11,33 @@
 </head>
 <body>
   <!-- ============================================================
+       Splash Screen: shown before everything else.
+       Click/tap dismisses it, shows the start menu, starts music.
+       ============================================================ -->
+  <div id="splash-screen">
+    <div class="splash-bg-grid" aria-hidden="true"></div>
+    <div class="splash-content">
+      <div class="splash-logo">
+        <span class="splash-s1">SS</span><span class="splash-s2">NAKE</span><span class="splash-bang">!</span>
+      </div>
+      <div class="splash-snake-line" aria-hidden="true">
+        <svg viewBox="0 0 320 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path class="splash-trail" d="M0 12 Q40 0 80 12 Q120 24 160 12 Q200 0 240 12 Q280 24 320 12" stroke="url(#trailGrad)" stroke-width="3" stroke-linecap="round" fill="none"/>
+          <defs>
+            <linearGradient id="trailGrad" x1="0" y1="0" x2="320" y2="0" gradientUnits="userSpaceOnUse">
+              <stop offset="0%" stop-color="#4fd1e8" stop-opacity="0"/>
+              <stop offset="40%" stop-color="#4fd1e8"/>
+              <stop offset="70%" stop-color="#c792ff"/>
+              <stop offset="100%" stop-color="#c792ff" stop-opacity="0"/>
+            </linearGradient>
+          </defs>
+        </svg>
+      </div>
+      <p class="splash-prompt">Click anywhere to begin</p>
+    </div>
+  </div>
+
+  <!-- ============================================================
        Start Menu: full-screen overlay shown on desktop before first play.
        Hidden on mobile (TOUCH_MODE) via JS. Not shown during gameplay.
        ============================================================ -->

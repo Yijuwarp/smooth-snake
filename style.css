@@ -7,6 +7,179 @@ html, body {
   overflow: hidden;
 }
 
+/* ================================================================
+   Splash Screen
+   ================================================================ */
+
+#splash-screen {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #05070b;
+  cursor: pointer;
+  /* Fade-out triggered by JS adding .splash-dismissed */
+  transition: opacity 0.55s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+#splash-screen.splash-dismissed {
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* Subtle animated dot grid */
+.splash-bg-grid {
+  position: absolute;
+  inset: 0;
+  background-image: radial-gradient(circle, rgba(79, 209, 232, 0.18) 1px, transparent 1px);
+  background-size: 36px 36px;
+  animation: splash-grid-drift 20s linear infinite;
+  opacity: 0;
+  animation: splash-grid-in 1.2s 0.3s ease both, splash-grid-drift 24s 1.5s linear infinite;
+}
+
+@keyframes splash-grid-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+@keyframes splash-grid-drift {
+  from { background-position: 0 0; }
+  to   { background-position: 36px 36px; }
+}
+
+/* Vignette over the grid */
+#splash-screen::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(ellipse 70% 70% at 50% 50%, transparent 30%, #05070b 100%);
+  pointer-events: none;
+}
+
+/* Centre content sits above the grid + vignette */
+.splash-content {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 20px;
+}
+
+/* ---- Logo ---- */
+.splash-logo {
+  font: 800 clamp(64px, 14vw, 120px)/1 'Outfit', sans-serif;
+  letter-spacing: 0.06em;
+  display: flex;
+  align-items: baseline;
+  gap: 0;
+  /* Whole logo fades + rises in */
+  animation: splash-logo-in 0.8s 0.1s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@keyframes splash-logo-in {
+  from { opacity: 0; transform: translateY(24px) scale(0.92); }
+  to   { opacity: 1; transform: none; }
+}
+
+.splash-s1 {
+  background: linear-gradient(135deg, #7fe8ff, #4fd1e8);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  filter: drop-shadow(0 0 22px rgba(79, 209, 232, 0.55));
+  animation: splash-s1-in 0.7s 0.15s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@keyframes splash-s1-in {
+  from { opacity: 0; transform: translateX(-16px); }
+  to   { opacity: 1; transform: none; }
+}
+
+.splash-s2 {
+  background: linear-gradient(135deg, #4fd1e8, #c792ff);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  animation: splash-s2-in 0.7s 0.28s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@keyframes splash-s2-in {
+  from { opacity: 0; transform: translateX(16px); }
+  to   { opacity: 1; transform: none; }
+}
+
+.splash-bang {
+  background: linear-gradient(135deg, #c792ff, #ff79c6);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  filter: drop-shadow(0 0 18px rgba(199, 146, 255, 0.6));
+  animation: splash-bang-in 0.6s 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+
+@keyframes splash-bang-in {
+  from { opacity: 0; transform: scale(0.5) rotate(-15deg); }
+  to   { opacity: 1; transform: none; }
+}
+
+/* ---- Snake trail SVG ---- */
+.splash-snake-line {
+  width: min(320px, 70vw);
+  opacity: 0;
+  animation: splash-trail-in 0.8s 0.7s ease both;
+}
+
+@keyframes splash-trail-in {
+  from { opacity: 0; transform: scaleX(0.6); }
+  to   { opacity: 1; transform: none; }
+}
+
+.splash-trail {
+  stroke-dasharray: 600;
+  stroke-dashoffset: 600;
+  animation: splash-trail-draw 1.2s 0.8s cubic-bezier(0.4, 0, 0.2, 1) forwards,
+             splash-trail-shimmer 3s 2.2s ease-in-out infinite;
+}
+
+@keyframes splash-trail-draw {
+  to { stroke-dashoffset: 0; }
+}
+
+@keyframes splash-trail-shimmer {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.55; }
+}
+
+/* ---- "Click anywhere" prompt ---- */
+.splash-prompt {
+  margin: 0;
+  font: 400 14px/1 'Outfit', sans-serif;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: #4a5f74;
+  animation: splash-prompt-in 0.6s 1.2s ease both,
+             splash-prompt-pulse 2.2s 2s ease-in-out infinite;
+}
+
+@keyframes splash-prompt-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+@keyframes splash-prompt-pulse {
+  0%, 100% { color: #4a5f74; }
+  50%       { color: #7fe8ff; }
+}
+
+/* Mobile: "Tap" instead of "Click" is set by JS; font scales down */
+@media (max-width: 480px) {
+  .splash-prompt { font-size: 12px; }
+}
+
+
 #game-canvas {
   display: block;
   width: 100vw;

@@ -17,6 +17,36 @@ resizeCanvas(canvas);
 setArenaSize(canvas.width, canvas.height);
 const game = createGame();
 
+// --- Splash Screen -------------------------------------------------------
+// The splash covers everything on load. One click/tap fades it out and
+// reveals the start menu (desktop) or the canvas tap-to-play (touch).
+// The click is also the first valid user-gesture for audio autoplay.
+(function setupSplashScreen() {
+  const splash = document.getElementById("splash-screen");
+  const prompt = splash.querySelector(".splash-prompt");
+
+  // Swap prompt copy for touch players.
+  if (TOUCH_MODE) prompt.textContent = "Tap anywhere to begin";
+
+  splash.addEventListener("click", () => {
+    // Start menu music immediately — this click IS the required user gesture.
+    playMenuMusic();
+
+    // Fade out the splash.
+    splash.classList.add("splash-dismissed");
+
+    // After the CSS transition finishes, remove the element and show what's next.
+    splash.addEventListener("transitionend", () => {
+      splash.remove();
+      // On desktop, setupStartMenu() already ran and hid #start-menu — un-hide it now.
+      if (!TOUCH_MODE) {
+        const startMenu = document.getElementById("start-menu");
+        if (startMenu) startMenu.hidden = false;
+      }
+    }, { once: true });
+  }, { once: true });
+})();
+
 let activating = false; // guards double-activation while fullscreen entry is pending
 
 async function activate() {
@@ -356,8 +386,9 @@ function setupStartMenu() {
     return;
   }
 
-  // Show the start menu overlay on desktop.
-  startMenu.hidden = false;
+  // Keep the start menu hidden for now — the splash screen's transitionend
+  // handler reveals it once the fade-out finishes.
+  // (startMenu.hidden stays true until then.)
   pauseCtrlRow.hidden = false;
 
   // --- Sync active pill button across both pickers ---
