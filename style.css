@@ -460,12 +460,65 @@ html, body {
 }
 
 #leaderboard-container h3 {
-  margin: 0 0 10px;
+  margin: 0;
   font-size: 15px;
   letter-spacing: 0.04em;
   text-transform: uppercase;
   color: #9fb3c8;
   text-align: center;
+}
+
+.menu-section-header, .lb-header-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+
+.lb-tabs {
+  display: flex;
+  gap: 3px;
+  background: rgba(255, 255, 255, 0.04);
+  padding: 3px;
+  border-radius: 999px;
+  border: 1px solid rgba(79, 209, 232, 0.15);
+}
+
+.lb-tab-btn {
+  padding: 3px 10px;
+  border: none;
+  border-radius: 999px;
+  background: transparent;
+  color: #7a96b0;
+  font: 600 11px 'Outfit', sans-serif;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.lb-tab-btn:hover {
+  color: #e8f0f8;
+  background: rgba(79, 209, 232, 0.08);
+}
+
+.lb-tab-btn.lb-tab-active {
+  background: rgba(79, 209, 232, 0.22);
+  color: #7fe8ff;
+  box-shadow: 0 0 8px rgba(79, 209, 232, 0.2);
+}
+
+.hs-platform-badge {
+  display: inline-block;
+  padding: 2px 8px;
+  margin-left: 6px;
+  border-radius: 999px;
+  background: rgba(79, 209, 232, 0.18);
+  color: #7fe8ff;
+  font: 600 12px 'Outfit', sans-serif;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  vertical-align: middle;
 }
 
 #leaderboard-list {

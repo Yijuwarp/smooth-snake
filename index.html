@@ -66,7 +66,13 @@
 
       <!-- RIGHT: Top scores -->
       <div class="menu-col menu-col--scores">
-        <div class="menu-section-label">Top Scores</div>
+        <div class="menu-section-header">
+          <div class="menu-section-label">Top Scores</div>
+          <div class="lb-tabs" role="group" aria-label="Leaderboard platform">
+            <button class="lb-tab-btn" data-platform="pc" type="button">💻 PC</button>
+            <button class="lb-tab-btn" data-platform="mobile" type="button">📱 Mobile</button>
+          </div>
+        </div>
         <ol id="menu-leaderboard-list" class="menu-lb-list"></ol>
       </div>
 
@@ -77,13 +83,19 @@
 
   <!-- Floating leaderboard — visible on gameover only (menu uses embedded list above) -->
   <div id="leaderboard-container" hidden>
-    <h3>Top Scores</h3>
+    <div class="lb-header-row">
+      <h3>Top Scores</h3>
+      <div class="lb-tabs" role="group" aria-label="Leaderboard platform">
+        <button class="lb-tab-btn" data-platform="pc" type="button">💻 PC</button>
+        <button class="lb-tab-btn" data-platform="mobile" type="button">📱 Mobile</button>
+      </div>
+    </div>
     <ol id="leaderboard-list"></ol>
   </div>
 
   <div id="highscore-submit-modal" hidden>
     <div class="modal-card">
-      <h2>New Score: <span id="hs-score-value">0</span></h2>
+      <h2>New Score: <span id="hs-score-value">0</span> <span id="hs-platform-badge" class="hs-platform-badge">PC</span></h2>
       <p>Enter your initials to join the leaderboard</p>
       <input id="hs-nickname-input" type="text" maxlength="6" autocomplete="off" spellcheck="false" placeholder="ABCDEF" />
       <p id="hs-error" class="hs-error" hidden></p>
