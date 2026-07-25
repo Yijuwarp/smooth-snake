@@ -648,6 +648,19 @@ html, body {
   transform: translateY(0);
 }
 
+.version-tag {
+  position: absolute;
+  bottom: 20px;
+  left: 24px;
+  font: 600 13px/1 'Share Tech Mono', monospace;
+  color: rgba(127, 232, 255, 0.45);
+  letter-spacing: 0.12em;
+  z-index: 40;
+  pointer-events: none;
+  text-shadow: 0 0 10px rgba(79, 209, 232, 0.25);
+  user-select: none;
+}
+
 /* ================================================================
    Start Menu — two-column panel
    ================================================================ */
