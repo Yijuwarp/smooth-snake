@@ -88,7 +88,7 @@ export const GROW_MAX_MULT = 4; // peak radius = 4x normal (a 300% increase)
 export const GROW_SPIN_SPEED = 6; // radians/sec of visual spin while active
 
 // Hearts & bounce.
-export const MAX_HEARTS = 6;
+export const MAX_HEARTS = 9;
 export const INVULN_TIME = 1.2; // seconds of no further heart loss after a bounce
 export const HIT_FLASH_DURATION = 0.35; // seconds the red screen-flash takes to fade
 export const EAT_FLASH_DURATION = 0.4; // seconds the "happy" eyes show after eating

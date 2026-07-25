@@ -262,7 +262,6 @@ function applyLevelUp(game, newLevel, trigger) {
   game.banner = { t: 0, title: bannerTitle(newLevel), subtitle: bannerSubtitle(newLevel) };
   game.levelTimer = 0;
   game.pelletsSinceLevel = 0;
-  game.hearts = Math.min(game.maxHearts || MAX_HEARTS, game.hearts + 1);
   if (trigger === "pellets") game.speedBonusCount++;
 
   // Reset all spikes to default static state on any level transition
