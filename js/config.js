@@ -36,6 +36,7 @@ export const TOUCH_BUTTON_MARGIN = 18;
 // Gesture path constants for mobile / Android touch steering
 export const GESTURE_MIN_DIST = 10;
 export const WAYPOINT_REACH_RADIUS = 18;
+export const MAX_GESTURE_PATH_LENGTH = 80;
 
 export function getTouchButtons() {
   const s = TOUCH_BUTTON_SIZE, m = TOUCH_BUTTON_MARGIN;

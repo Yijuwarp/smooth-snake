@@ -352,8 +352,15 @@ export function update(game, dt) {
         const forwardY = Math.sin(snake.theta);
         const dot = (dx * forwardX + dy * forwardY) / (dist || 1);
 
-        // Waypoint reached if snake head is within radius or overshoots point
-        if (dist < WAYPOINT_REACH_RADIUS || (dist < 30 && dot < 0)) {
+        if (dot > 0) {
+          target._approached = true;
+        }
+
+        // Waypoint reached if head is within radius, or if the waypoint was missed / overshot
+        const reached = dist < WAYPOINT_REACH_RADIUS;
+        const missed = dot < 0 && (game.gesturePath.length > 1 || target._approached);
+
+        if (reached || missed) {
           game.gesturePath.shift();
         } else {
           break;
