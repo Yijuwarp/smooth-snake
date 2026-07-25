@@ -896,6 +896,6 @@ function drawOverlay(ctx, title, subtitle, game) {
     ctx.fillStyle = "rgba(127, 232, 255, 0.45)";
     ctx.textAlign = "left";
     ctx.textBaseline = "bottom";
-    ctx.fillText("v2.0", 18, ARENA_H - 16);
+    ctx.fillText("v2.1", 18, ARENA_H - 16);
   }
 }
