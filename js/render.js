@@ -717,42 +717,37 @@ function drawGestureLine(ctx, game) {
     ctx.lineTo(pt.x, pt.y);
   }
 
-  // 1. Outer Neon Glow Line
-  ctx.lineWidth = 6;
-  ctx.strokeStyle = "rgba(79, 209, 232, 0.45)";
-  ctx.shadowColor = "#7fe8ff";
-  ctx.shadowBlur = 12;
+  // 1. Outer Neon Glow Line (wide semi-transparent stroke without expensive GPU/CPU shadowBlur)
+  ctx.lineWidth = 8;
+  ctx.strokeStyle = "rgba(79, 209, 232, 0.35)";
   ctx.stroke();
 
   // 2. Inner Bright Core Line
-  ctx.shadowBlur = 0;
   ctx.lineWidth = 2.5;
   ctx.strokeStyle = "#7fe8ff";
   ctx.stroke();
 
-  // 3. Draw small pulsing dots at waypoints along path
-  for (let i = 0; i < path.length; i++) {
-    const pt = path[i];
-    const isEnd = i === path.length - 1;
-    const r = isEnd ? 4 + Math.sin(game.time * 8) * 1 : 2;
-
-    if (isEnd) {
-      // Endpoint pulsing target ring
-      ctx.save();
-      ctx.fillStyle = "rgba(127, 232, 255, 0.9)";
-      ctx.shadowColor = "#7fe8ff";
-      ctx.shadowBlur = 10;
-      ctx.beginPath();
-      ctx.arc(pt.x, pt.y, r + 2, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.restore();
-    } else {
-      ctx.fillStyle = "#ffffff";
-      ctx.beginPath();
-      ctx.arc(pt.x, pt.y, r, 0, Math.PI * 2);
-      ctx.fill();
+  // 3. Batch draw intermediate white waypoint dots in a single fill call
+  if (path.length > 1) {
+    ctx.fillStyle = "#ffffff";
+    ctx.beginPath();
+    for (let i = 0; i < path.length - 1; i++) {
+      const pt = path[i];
+      ctx.moveTo(pt.x + 2, pt.y);
+      ctx.arc(pt.x, pt.y, 2, 0, Math.PI * 2);
     }
+    ctx.fill();
   }
+
+  // 4. Endpoint pulsing target ring (shadowBlur isolated to single end point)
+  const lastPt = path[path.length - 1];
+  const r = 4 + Math.sin(game.time * 8) * 1;
+  ctx.fillStyle = "rgba(127, 232, 255, 0.9)";
+  ctx.shadowColor = "#7fe8ff";
+  ctx.shadowBlur = 10;
+  ctx.beginPath();
+  ctx.arc(lastPt.x, lastPt.y, r + 2, 0, Math.PI * 2);
+  ctx.fill();
 
   ctx.restore();
 }

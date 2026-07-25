@@ -1,7 +1,7 @@
 import { computeViewport } from "./render.js";
 import { toggleMute, isMuted } from "./audio.js";
 import { setMusicMuted } from "./music.js";
-import { TOUCH_MODE, getTouchButtons, GESTURE_MIN_DIST } from "./config.js";
+import { TOUCH_MODE, getTouchButtons, GESTURE_MIN_DIST, MAX_GESTURE_PATH_LENGTH } from "./config.js";
 
 // Converts a client-space point (mouse or touch) into logical arena coords,
 // accounting for DPR and the letterboxed viewport.
@@ -89,7 +89,29 @@ export function setupInput(game, canvas, { onActivate, onPause, onToggleFullscre
           const path = game.gesturePath;
           const lastP = path[path.length - 1];
           if (!lastP || Math.hypot(p.x - lastP.x, p.y - lastP.y) >= GESTURE_MIN_DIST) {
-            path.push(p);
+            // Simplify roughly collinear points along a straight stroke to save memory & rendering
+            if (path.length >= 2) {
+              const prevP = path[path.length - 2];
+              const dx1 = lastP.x - prevP.x;
+              const dy1 = lastP.y - prevP.y;
+              const dx2 = p.x - lastP.x;
+              const dy2 = p.y - lastP.y;
+              const len1 = Math.hypot(dx1, dy1);
+              const len2 = Math.hypot(dx2, dy2);
+              const cross = Math.abs(dx1 * dy2 - dy1 * dx2);
+              if (len1 > 0 && len2 > 0 && cross / (len1 * len2) < 0.08) {
+                lastP.x = p.x;
+                lastP.y = p.y;
+              } else {
+                path.push(p);
+              }
+            } else {
+              path.push(p);
+            }
+            // Cap maximum gesture path length to prevent huge unconsumed path backlog
+            if (path.length > MAX_GESTURE_PATH_LENGTH) {
+              path.splice(0, path.length - MAX_GESTURE_PATH_LENGTH);
+            }
           }
         }
       }
