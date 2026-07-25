@@ -99,7 +99,7 @@ async function activate() {
   activating = false;
 }
 
-// --- Highscore leaderboard ---------------------------------------------
+// --- Highscore leaderboard (separated for PC and Mobile) -----------------
 
 const leaderboardContainer = document.getElementById("leaderboard-container");
 const leaderboardList = document.getElementById("leaderboard-list");
@@ -111,17 +111,25 @@ const hsSubmitBtn = document.getElementById("hs-submit-btn");
 const hsCancelBtn = document.getElementById("hs-cancel-btn");
 
 let pendingScore = 0;
+let leaderboardData = { pc: [], mobile: [] };
+let activeLeaderboardTab = TOUCH_MODE ? "mobile" : "pc";
+let leaderboardAvailable = false;
 
-// Last known top-10 snapshot, used both to render the panel and to decide
-// whether a finished run is even worth prompting a submission for.
-let leaderboardScores = [];
-let leaderboardAvailable = false; // false until a fetch/submit actually succeeds
+function currentPlatform() {
+  return TOUCH_MODE ? "mobile" : "pc";
+}
 
-function renderLeaderboard(scores, unavailable) {
-  const message = unavailable ? "Leaderboard unavailable" : "No scores yet";
+function renderLeaderboard() {
+  const message = leaderboardAvailable ? "No scores yet" : "Leaderboard unavailable";
+  const scores = leaderboardData[activeLeaderboardTab] || [];
 
-  // Helper: build li elements into any list element.
-  function fillList(listEl, useMenuStyles) {
+  // Update tab button UI active states across all tab bars
+  document.querySelectorAll(".lb-tab-btn").forEach((btn) => {
+    btn.classList.toggle("lb-tab-active", btn.dataset.platform === activeLeaderboardTab);
+  });
+
+  function fillList(listEl) {
+    if (!listEl) return;
     listEl.innerHTML = "";
     if (!scores || scores.length === 0) {
       listEl.innerHTML = `<p class="lb-empty">${message}</p>`;
@@ -140,47 +148,46 @@ function renderLeaderboard(scores, unavailable) {
     }
   }
 
-  // Floating panel (gameover state)
-  fillList(leaderboardList, false);
-  // Embedded panel inside the start menu
+  fillList(leaderboardList);
   const menuList = document.getElementById("menu-leaderboard-list");
-  if (menuList) fillList(menuList, true);
+  fillList(menuList);
 }
 
-function setLeaderboard(scores) {
-  leaderboardScores = scores || [];
-  leaderboardAvailable = true;
-  renderLeaderboard(leaderboardScores, false);
-}
-
-function setLeaderboardUnavailable() {
-  leaderboardAvailable = false;
-  renderLeaderboard([], true);
-}
+// Wire platform tab buttons
+document.querySelectorAll(".lb-tab-btn").forEach((btn) => {
+  btn.addEventListener("click", (e) => {
+    e.stopPropagation();
+    activeLeaderboardTab = btn.dataset.platform;
+    renderLeaderboard();
+  });
+});
 
 async function fetchLeaderboard() {
   try {
-    const res = await fetch("/api/highscore");
+    const res = await fetch("/api/highscore?platform=all");
     if (!res.ok) {
-      setLeaderboardUnavailable();
+      leaderboardAvailable = false;
+      renderLeaderboard();
       return;
     }
     const data = await res.json();
-    setLeaderboard(data.scores);
+    leaderboardData.pc = data.pc || [];
+    leaderboardData.mobile = data.mobile || [];
+    leaderboardAvailable = true;
+    renderLeaderboard();
   } catch {
-    // offline or the KV backend isn't configured yet
-    setLeaderboardUnavailable();
+    leaderboardAvailable = false;
+    renderLeaderboard();
   }
 }
 
 // A run only earns a submission prompt if it would actually crack the top
-// 10 against the last known leaderboard snapshot. If the leaderboard is
-// unreachable we can't judge rank (and a POST would likely fail anyway), so
-// no prompt. A tie with the current #10 doesn't bump it — must beat it.
+// 10 against the active platform's leaderboard snapshot.
 function qualifiesForLeaderboard(score) {
   if (!leaderboardAvailable) return false;
-  if (leaderboardScores.length < 10) return true;
-  return score > leaderboardScores[9].score;
+  const platformScores = leaderboardData[currentPlatform()] || [];
+  if (platformScores.length < 10) return true;
+  return score > platformScores[platformScores.length - 1].score;
 }
 
 function syncLeaderboardVisibility() {
@@ -191,6 +198,8 @@ function syncLeaderboardVisibility() {
 function showHighscoreModal(score) {
   pendingScore = score;
   hsScoreValue.textContent = score;
+  const badge = document.getElementById("hs-platform-badge");
+  if (badge) badge.textContent = currentPlatform() === "mobile" ? "Mobile" : "PC";
   hsNicknameInput.value = "";
   hsError.hidden = true;
   highscoreModal.hidden = false;
@@ -209,17 +218,21 @@ async function submitHighscore() {
     return;
   }
 
+  const platform = currentPlatform();
   hsSubmitBtn.disabled = true;
   hsSubmitBtn.textContent = "Saving…";
   try {
     const res = await fetch("/api/highscore", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ nickname, score: pendingScore }),
+      body: JSON.stringify({ nickname, score: pendingScore, platform }),
     });
     if (!res.ok) throw new Error("request failed");
     const data = await res.json();
-    setLeaderboard(data.scores);
+    leaderboardData[platform] = data.scores || [];
+    activeLeaderboardTab = platform;
+    leaderboardAvailable = true;
+    renderLeaderboard();
     closeHighscoreModal();
   } catch {
     hsError.textContent = "Couldn't save score — try again";
