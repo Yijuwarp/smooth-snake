@@ -172,6 +172,11 @@ export function createGame() {
   };
 }
 
+function getMaxSpeed(game) {
+  const rawMax = game.devMode ? game.tunables.maxSpeed : MAX_SPEED;
+  return TOUCH_MODE ? rawMax * 0.7 : rawMax;
+}
+
 export function resetGame(game) {
   game.snake = createSnake();
   game.gesturePath = [];
@@ -203,7 +208,7 @@ export function resetGame(game) {
   game.finalBreakdown = null;
   game.particles = [];
   game.screenShake = 0;
-  updateGrowthAndSpeed(game.snake, 0, game.devMode ? game.tunables.maxSpeed : MAX_SPEED);
+  updateGrowthAndSpeed(game.snake, 0, getMaxSpeed(game));
   game.food = spawnFood([], game.snake.segments);
   game.spikes = generateSpikes({ x: game.snake.x, y: game.snake.y }, game.food);
   game.state = "playing";
@@ -228,8 +233,7 @@ export function devLaunchLevel(game, level) {
   game.pelletsSinceLevel = 0;
 
   // 3. Scale size of snake
-  const maxSpeed = game.devMode ? game.tunables.maxSpeed : MAX_SPEED;
-  updateGrowthAndSpeed(game.snake, game.eaten, maxSpeed);
+  updateGrowthAndSpeed(game.snake, game.eaten, getMaxSpeed(game));
 
   // Instantly grow/shrink snake segments to match scaled targetLength
   const snake = game.snake;
@@ -322,7 +326,7 @@ export function update(game, dt) {
   // While devMode is off these are byte-for-byte the normal config constants;
   // the dev-panel sliders only take effect once devMode is enabled.
   const turnRate = game.devMode ? game.tunables.turnRate : TURN_RATE;
-  const maxSpeed = game.devMode ? game.tunables.maxSpeed : MAX_SPEED;
+  const maxSpeed = getMaxSpeed(game);
   const boostMult = game.devMode ? game.tunables.boostMult : BOOST_SPEED_MULT;
   const slowMult = game.devMode ? game.tunables.slowMult : SLOW_SPEED_MULT;
 

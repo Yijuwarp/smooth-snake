@@ -20,6 +20,7 @@ import {
   GROW_MAX_MULT,
   GROW_SPIN_SPEED,
   getUiSafeZones,
+  TOUCH_MODE,
 } from "./config.js";
 import { clearOfUiZones } from "./collision.js";
 
@@ -166,7 +167,7 @@ function clearOfOthers(s, spikes) {
 
 function targetSnakeDirection(s, snake) {
   const angle = Math.atan2(snake.y - s.y, snake.x - s.x);
-  const speed = 240; // Hunter speed is 240 px/s
+  const speed = 240 * (TOUCH_MODE ? 0.7 : 1.0); // Hunter speed is 240 px/s (168 px/s on mobile)
   s.vx = Math.cos(angle) * speed;
   s.vy = Math.sin(angle) * speed;
 }
@@ -266,12 +267,13 @@ export function updateSpikes(game, dt, rng = Math.random) {
       if (drone.stopTimer === undefined) drone.stopTimer = 0;
       if (drone.hitPlayerTimer === undefined) drone.hitPlayerTimer = 0;
 
-      // Drone speed scales from 180 to 300 px/s over 10.0 seconds
+      // Drone speed scales from 180 to 300 px/s over 10.0 seconds (reduced by 30% on mobile)
       // Resets to 0 (180 px/s) on hitting player or other spikes
       if (drone.stopTimer <= 0) {
         drone.speedTimer = Math.min(10.0, drone.speedTimer + dt);
       }
-      const speed = 180 + (drone.speedTimer / 10.0) * 120;
+      const droneSpeedMult = TOUCH_MODE ? 0.7 : 1.0;
+      const speed = (180 + (drone.speedTimer / 10.0) * 120) * droneSpeedMult;
 
       // Decrement hit-player flash timer
       if (drone.hitPlayerTimer > 0) drone.hitPlayerTimer -= dt;
@@ -324,7 +326,7 @@ export function updateSpikes(game, dt, rng = Math.random) {
             if (drone.stopTimer <= 0) {
               // Reset speed to minimum on spike collision
               drone.speedTimer = 0;
-              const resetSpeed = 180;
+              const resetSpeed = 180 * (TOUCH_MODE ? 0.7 : 1.0);
               drone.vx = Math.cos(angle) * resetSpeed;
               drone.vy = Math.sin(angle) * resetSpeed;
               drone.bounceTimer = 0.8;
