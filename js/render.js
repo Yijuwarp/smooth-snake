@@ -890,4 +890,12 @@ function drawOverlay(ctx, title, subtitle, game) {
     hint = "Steer with the mouse · Esc pauses · M mutes · F fullscreen";
   }
   ctx.fillText(hint, ARENA_W / 2, y);
+
+  if (game.state === "menu") {
+    ctx.font = "13px 'Share Tech Mono', monospace";
+    ctx.fillStyle = "rgba(127, 232, 255, 0.45)";
+    ctx.textAlign = "left";
+    ctx.textBaseline = "bottom";
+    ctx.fillText("v2.0", 18, ARENA_H - 16);
+  }
 }
