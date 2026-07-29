@@ -1,0 +1,1109 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Smooth Snake — Interactive Expansion Specification</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&family=Space+Mono:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --ss-bg: #0d0f12;
+    --ss-surface: #16191f;
+    --ss-surface-hover: #1e232d;
+    --ss-ink: #f0f2f5;
+    --ss-muted: #8b95a5;
+    --ss-line: #282d37;
+    --ss-accent: #4fd1e8;
+    --ss-accent-soft: rgba(79, 209, 232, 0.12);
+    --ss-accent-glow: rgba(79, 209, 232, 0.35);
+    --ss-purple: #c792ff;
+    --ss-purple-soft: rgba(199, 146, 255, 0.12);
+    --ss-gold: #ffd257;
+    --ss-gold-soft: rgba(255, 210, 87, 0.12);
+    --ss-red: #ff5277;
+    --ss-red-soft: rgba(255, 82, 119, 0.12);
+    --ss-green: #4ee08a;
+    --ss-green-soft: rgba(78, 224, 138, 0.12);
+    --ss-radius: 12px;
+    --ss-radius-sm: 8px;
+    --ss-font-main: 'Outfit', -apple-system, BlinkMacSystemFont, sans-serif;
+    --ss-font-mono: 'Space Mono', Consolas, monospace;
+  }
+
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--ss-bg);
+    color: var(--ss-ink);
+    font-family: var(--ss-font-main);
+    font-size: 15px;
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .ss-container {
+    max-width: 1040px;
+    margin: 0 auto;
+    padding: 32px 24px 80px;
+  }
+
+  /* Header Header */
+  .ss-header {
+    background: linear-gradient(135deg, rgba(22, 25, 31, 0.9), rgba(30, 35, 45, 0.95));
+    border: 1px solid var(--ss-line);
+    border-radius: var(--ss-radius);
+    padding: 32px;
+    margin-bottom: 28px;
+    position: relative;
+    overflow: hidden;
+    box-shadow: 0 12px 40px rgba(0,0,0,0.4);
+  }
+
+  .ss-header::before {
+    content: '';
+    position: absolute;
+    top: -50%;
+    right: -20%;
+    width: 350px;
+    height: 350px;
+    background: radial-gradient(circle, var(--ss-accent-glow) 0%, transparent 70%);
+    pointer-events: none;
+    opacity: 0.6;
+  }
+
+  .ss-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: var(--ss-accent-soft);
+    color: var(--ss-accent);
+    border: 1px solid rgba(79, 209, 232, 0.3);
+    border-radius: 20px;
+    padding: 4px 12px;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+    margin-bottom: 12px;
+  }
+
+  .ss-header h1 {
+    font-size: 34px;
+    font-weight: 800;
+    letter-spacing: -0.5px;
+    margin: 0 0 10px;
+    background: linear-gradient(135deg, #ffffff 0%, #c4cfde 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+
+  .ss-header p {
+    color: var(--ss-muted);
+    font-size: 16px;
+    margin: 0 0 20px;
+    max-width: 780px;
+  }
+
+  /* Navigation Tabs */
+  .ss-nav {
+    display: flex;
+    gap: 8px;
+    overflow-x: auto;
+    padding-bottom: 4px;
+    border-bottom: 1px solid var(--ss-line);
+    margin-bottom: 28px;
+    position: sticky;
+    top: 0;
+    background: rgba(13, 15, 18, 0.92);
+    backdrop-filter: blur(10px);
+    z-index: 100;
+    padding-top: 10px;
+  }
+
+  .ss-nav-btn {
+    background: transparent;
+    border: none;
+    color: var(--ss-muted);
+    font-family: var(--ss-font-main);
+    font-size: 14px;
+    font-weight: 600;
+    padding: 10px 16px;
+    border-radius: var(--ss-radius-sm);
+    cursor: pointer;
+    white-space: nowrap;
+    transition: all 0.2s ease;
+  }
+
+  .ss-nav-btn:hover {
+    color: var(--ss-ink);
+    background: var(--ss-surface-hover);
+  }
+
+  .ss-nav-btn.active {
+    color: var(--ss-accent);
+    background: var(--ss-accent-soft);
+    border: 1px solid rgba(79, 209, 232, 0.25);
+  }
+
+  /* Sections */
+  .ss-section {
+    display: none;
+    animation: fadeIn 0.3s ease-in-out forwards;
+  }
+  .ss-section.active { display: block; }
+
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(6px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  h2 {
+    font-size: 22px;
+    font-weight: 700;
+    margin: 32px 0 16px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  h2 .ss-icon {
+    color: var(--ss-accent);
+  }
+
+  .ss-card-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(310px, 1fr));
+    gap: 18px;
+    margin: 20px 0;
+  }
+
+  .ss-card {
+    background: var(--ss-surface);
+    border: 1px solid var(--ss-line);
+    border-radius: var(--ss-radius);
+    padding: 20px;
+    transition: transform 0.2s ease, border-color 0.2s ease;
+  }
+
+  .ss-card:hover {
+    border-color: rgba(255,255,255,0.15);
+    transform: translateY(-2px);
+  }
+
+  .ss-card-tag {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 8px;
+  }
+  .tag-enemy { background: var(--ss-red-soft); color: var(--ss-red); border: 1px solid rgba(ff,52,119,0.3); }
+  .tag-power { background: var(--ss-gold-soft); color: var(--ss-gold); border: 1px solid rgba(255,210,87,0.3); }
+  .tag-level { background: var(--ss-purple-soft); color: var(--ss-purple); border: 1px solid rgba(199,146,255,0.3); }
+  .tag-core { background: var(--ss-green-soft); color: var(--ss-green); border: 1px solid rgba(78,224,138,0.3); }
+
+  .ss-card h3 {
+    font-size: 18px;
+    font-weight: 700;
+    margin: 0 0 8px;
+    color: var(--ss-ink);
+  }
+
+  .ss-card p {
+    color: var(--ss-muted);
+    font-size: 14px;
+    margin: 0 0 14px;
+  }
+
+  .ss-specs-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    font-size: 13px;
+    border-top: 1px dashed var(--ss-line);
+    padding-top: 10px;
+  }
+
+  .ss-specs-list li {
+    display: flex;
+    justify-content: space-between;
+    padding: 4px 0;
+    color: var(--ss-muted);
+  }
+
+  .ss-specs-list li span:last-child {
+    color: var(--ss-ink);
+    font-weight: 600;
+    font-family: var(--ss-font-mono);
+  }
+
+  /* Interactive Demos / Simulators */
+  .ss-demo-box {
+    background: var(--ss-surface);
+    border: 1px solid var(--ss-line);
+    border-radius: var(--ss-radius);
+    padding: 20px;
+    margin: 24px 0;
+  }
+
+  .ss-demo-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 14px;
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+
+  .ss-demo-header h3 {
+    margin: 0;
+    font-size: 17px;
+    font-weight: 700;
+  }
+
+  .ss-canvas-wrapper {
+    position: relative;
+    width: 100%;
+    height: 320px;
+    background: #08090b;
+    border: 1px solid var(--ss-line);
+    border-radius: var(--ss-radius-sm);
+    overflow: hidden;
+    cursor: crosshair;
+  }
+
+  canvas.ss-sim-canvas {
+    width: 100%;
+    height: 100%;
+    display: block;
+  }
+
+  .ss-controls-bar {
+    display: flex;
+    gap: 16px;
+    align-items: center;
+    margin-top: 14px;
+    flex-wrap: wrap;
+    background: rgba(0,0,0,0.2);
+    padding: 10px 14px;
+    border-radius: var(--ss-radius-sm);
+  }
+
+  .ss-control-group {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 13px;
+    color: var(--ss-muted);
+  }
+
+  .ss-control-group label {
+    font-weight: 600;
+
+  }
+
+  input[type="range"] {
+    accent-color: var(--ss-accent);
+    cursor: pointer;
+  }
+
+  .ss-btn {
+    background: var(--ss-accent);
+    color: #08090b;
+    border: none;
+    border-radius: 6px;
+    padding: 6px 14px;
+    font-family: var(--ss-font-main);
+    font-weight: 700;
+    font-size: 13px;
+    cursor: pointer;
+    transition: opacity 0.2s;
+  }
+  .ss-btn:hover { opacity: 0.9; }
+
+  /* Code Block & Tables */
+  pre, code {
+    font-family: var(--ss-font-mono);
+    font-size: 13px;
+  }
+
+  pre {
+    background: #090a0d;
+    border: 1px solid var(--ss-line);
+    border-radius: var(--ss-radius-sm);
+    padding: 14px;
+    overflow-x: auto;
+    color: #d1d9e6;
+  }
+
+  table.ss-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 16px 0;
+    font-size: 14px;
+    background: var(--ss-surface);
+    border-radius: var(--ss-radius);
+    overflow: hidden;
+    border: 1px solid var(--ss-line);
+  }
+
+  .ss-table th, .ss-table td {
+    padding: 10px 16px;
+    text-align: left;
+    border-bottom: 1px solid var(--ss-line);
+  }
+
+  .ss-table th {
+    background: rgba(0,0,0,0.3);
+    color: var(--ss-muted);
+    font-weight: 700;
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+
+  .ss-table tr:last-child td { border-bottom: none; }
+
+  /* Callout alert */
+  .ss-alert {
+    background: var(--ss-accent-soft);
+    border-left: 4px solid var(--ss-accent);
+    border-radius: var(--ss-radius-sm);
+    padding: 14px 18px;
+    margin: 16px 0;
+    font-size: 14px;
+  }
+  .ss-alert strong { color: var(--ss-accent); }
+
+  .ss-alert.purple {
+    background: var(--ss-purple-soft);
+    border-left-color: var(--ss-purple);
+  }
+  .ss-alert.purple strong { color: var(--ss-purple); }
+
+  /* Diagrams */
+  .ss-diagram {
+    background: var(--ss-surface);
+    border: 1px solid var(--ss-line);
+    border-radius: var(--ss-radius);
+    padding: 20px;
+    margin: 20px 0;
+    text-align: center;
+  }
+
+  /* Footer */
+  .ss-footer {
+    text-align: center;
+    color: var(--ss-muted);
+    font-size: 13px;
+    margin-top: 40px;
+    padding-top: 20px;
+    border-top: 1px solid var(--ss-line);
+  }
+</style>
+</head>
+<body>
+
+<div class="ss-container">
+
+  <!-- Header -->
+  <header class="ss-header">
+    <div class="ss-badge">✦ Interactive Expansion Spec</div>
+    <h1>Smooth Snake — Next-Gen Mechanics & Content</h1>
+    <p>
+      Comprehensive research, design, and interactive prototype specifications for proposed new
+      <strong>Enemies & Hazards</strong>, <strong>Power-Up Abilities</strong>, and <strong>Stages (Levels 6–9)</strong> for Smooth Snake.
+    </p>
+  </header>
+
+  <!-- Navigation Bar -->
+  <nav class="ss-nav">
+    <button class="ss-nav-btn active" onclick="showSection('overview')">1. Baseline & Vision</button>
+    <button class="ss-nav-btn" onclick="showSection('enemies')">2. New Hazards & Enemies</button>
+    <button class="ss-nav-btn" onclick="showSection('powers')">3. New Power-Ups</button>
+    <button class="ss-nav-btn" onclick="showSection('levels')">4. Level Progression (6–9)</button>
+    <button class="ss-nav-btn" onclick="showSection('demos')">5. Live Interactive Demos</button>
+    <button class="ss-nav-btn" onclick="showSection('architecture')">6. Modular Integration Plan</button>
+  </nav>
+
+  <!-- SECTION 1: OVERVIEW -->
+  <section id="sec-overview" class="ss-section active">
+    <h2><span class="ss-icon">⚡</span> Executive Summary & Gameplay Philosophy</h2>
+    <p>
+      Smooth Snake's core appeal lies in its continuous steering math, physics-based arc-length body trailing, sublinear growth curve, and tight corridor navigation against hazards. 
+      This specification builds upon those foundations by introducing high-skill spatial hazards and high-satisfaction powers that scale naturally with combo multipliers.
+    </p>
+
+    <div class="ss-alert">
+      <strong>Core Design Rule:</strong> Every proposed hazard must maintain <em>threadable clearance guarantees</em> via flood-fill grid validation (as defined in <code>js/spikes.js</code>), and every power must synergize with steering momentum rather than replacing it.
+    </div>
+
+    <h3>Current Baseline vs Proposed Expansion</h3>
+    <table class="ss-table">
+      <thead>
+        <tr>
+          <th>Category</th>
+          <th>Existing Baseline (v1.0)</th>
+          <th>Proposed Expansion (v2.0 Spec)</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><strong>Levels</strong></td>
+          <td>Levels 1–5 (Static spikes, Wandering spikes, Swelling spikes, Hunter Drone, Final Stage)</td>
+          <td>Levels 6–9 (Laser Cyber Grid, Singularity Void, Mirror Realm, Multi-Phase Boss Core)</td>
+        </tr>
+        <tr>
+          <td><strong>Powers</strong></td>
+          <td>Boost (2.0× speed) & Precision Slow (0.25× speed, tight turning radius)</td>
+          <td>Phase Shift (Ghost pass), Magnet Core (Attraction field), Chrono Dilator (Slow-mo time), Plasma Tail Cannon</td>
+        </tr>
+        <tr>
+          <td><strong>Enemies</strong></td>
+          <td>Static Spikes, Wandering Spikes, Swelling Spikes, Seeker Hunter Drone</td>
+          <td>Pulse Sentry (Telegraphed laser), Gravity Well (Black hole pull), Sawblade Cutter (Perimeter trimmer), Shadow Mimic (Ghost trail)</td>
+        </tr>
+      </tbody>
+    </table>
+  </section>
+
+  <!-- SECTION 2: ENEMIES -->
+  <section id="sec-enemies" class="ss-section">
+    <h2><span class="ss-icon">👾</span> Proposed New Enemies & Hazards</h2>
+    <p>New hazards test spatial awareness, reaction timing, and momentum control.</p>
+
+    <div class="ss-card-grid">
+      <!-- Enemy 1 -->
+      <div class="ss-card">
+        <span class="ss-card-tag tag-enemy">Hazard #1</span>
+        <h3>Pulse Sentry (Telegraphed Laser)</h3>
+        <p>Stationary crystal beacon that charges up over 2.0s with a visible laser sightline before firing a high-speed lethal laser beam across the corridor.</p>
+        <ul class="ss-specs-list">
+          <li><span>Charge Warning</span> <span>2.0 sec</span></li>
+          <li><span>Beam Duration</span> <span>0.6 sec</span></li>
+          <li><span>Cooldown</span> <span>3.5 sec</span></li>
+          <li><span>Dodge Tactic</span> <span>Boost past laser path during charge</span></li>
+        </ul>
+      </div>
+
+      <!-- Enemy 2 -->
+      <div class="ss-card">
+        <span class="ss-card-tag tag-enemy">Hazard #2</span>
+        <h3>Gravity Well (Singularity Void)</h3>
+        <p>A swirling vortex anomaly that exerts radial gravitational acceleration on the snake's head and body segments, pulling nearby food into orbit.</p>
+        <ul class="ss-specs-list">
+          <li><span>Pull Radius</span> <span>180 px</span></li>
+          <li><span>Max Pull Force</span> <span>140 px/s²</span></li>
+          <li><span>Physics Model</span> <span>F = G / (dist + r)²</span></li>
+          <li><span>Interaction</span> <span>Slingshot steering or boost out</span></li>
+        </ul>
+      </div>
+
+      <!-- Enemy 3 -->
+      <div class="ss-card">
+        <span class="ss-card-tag tag-enemy">Hazard #3</span>
+        <h3>Sawblade Cutter (Perimeter Hazard)</h3>
+        <p>A high-speed spinning saw blade that glides back and forth along arena walls. If hit, it trims 25% of your tail length (converting segments into bonus pellets) instead of dealing heart damage!</p>
+        <ul class="ss-specs-list">
+          <li><span>Speed</span> <span>160 px/s</span></li>
+          <li><span>Patrol Path</span> <span>Outer perimeter</span></li>
+          <li><span>Tail Trim Effect</span> <span>-25% segments → +Points</span></li>
+          <li><span>Risk / Reward</span> <span>Trade length for speed & space</span></li>
+        </ul>
+      </div>
+
+      <!-- Enemy 4 -->
+      <div class="ss-card">
+        <span class="ss-card-tag tag-enemy">Hazard #4</span>
+        <h3>Shadow Mimic (Phantom Trail)</h3>
+        <p>An ethereal ghost snake that replays your exact position and heading from 1.8 seconds ago! You must avoid intersecting your own ghostly past shadow.</p>
+        <ul class="ss-specs-list">
+          <li><span>Time Offset</span> <span>1.8 sec delay</span></li>
+          <li><span>Ring Buffer Size</span> <span>120 history samples</span></li>
+          <li><span>Collision</span> <span>Head vs Shadow segments</span></li>
+          <li><span>Tactical Challenge</span> <span>No tight 180° loopbacks!</span></li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- SECTION 3: POWERS -->
+  <section id="sec-powers" class="ss-section">
+    <h2><span class="ss-icon">🔮</span> Proposed New Power-Up Abilities</h2>
+    <p>Special pickups that spawn periodically to grant tactical advantages.</p>
+
+    <div class="ss-card-grid">
+      <!-- Power 1 -->
+      <div class="ss-card">
+        <span class="ss-card-tag tag-power">Power #1</span>
+        <h3>Phase Shift (Ghost Form)</h3>
+        <p>Renders snake head and body completely phase-shifted for 3.5 seconds. Pass straight through spikes, wall margins, and your own tail with zero damage!</p>
+        <ul class="ss-specs-list">
+          <li><span>Duration</span> <span>3.5 sec</span></li>
+          <li><span>Visuals</span> <span>Cyan translucency + particle aura</span></li>
+          <li><span>Invulnerability</span> <span>Spikes + Walls + Self</span></li>
+        </ul>
+      </div>
+
+      <!-- Power 2 -->
+      <div class="ss-card">
+        <span class="ss-card-tag tag-power">Power #2</span>
+        <h3>Magnet Core (Attraction Field)</h3>
+        <p>Generates an intense magnetic field pulling all food pellets and power-ups directly into the head from across a 220px radius.</p>
+        <ul class="ss-specs-list">
+          <li><span>Duration</span> <span>6.0 sec</span></li>
+          <li><span>Attraction Speed</span> <span>250 px/s</span></li>
+          <li><span>Combo Synergy</span> <span>Extremely easy combo stacking</span></li>
+        </ul>
+      </div>
+
+      <!-- Power 3 -->
+      <div class="ss-card">
+        <span class="ss-card-tag tag-power">Power #3</span>
+        <h3>Chrono Dilator (Slow-Motion)</h3>
+        <p>Slows down world physics and enemy movements by 65% while keeping snake turn rate and speed at 100%. Precision navigation made effortless.</p>
+        <ul class="ss-specs-list">
+          <li><span>Time Scale</span> <span>0.35x world speed</span></li>
+          <li><span>Duration</span> <span>4.5 sec real-time</span></li>
+          <li><span>Audio Effect</span> <span>Pitch-shifted slow-mo sound</span></li>
+        </ul>
+      </div>
+
+      <!-- Power 4 -->
+      <div class="ss-card">
+        <span class="ss-card-tag tag-power">Power #4</span>
+        <h3>Plasma Tail Cannon</h3>
+        <p>Converts tail length energy into high-speed energy bolts fired straight out from the head every time boost is tapped, shattering static spikes!</p>
+        <ul class="ss-specs-list">
+          <li><span>Shots</span> <span>3 Plasma Bolts</span></li>
+          <li><span>Spike Impact</span> <span>Destroys static spikes</span></li>
+          <li><span>Cost</span> <span>-1 segment per shot</span></li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- SECTION 4: LEVELS -->
+  <section id="sec-levels" class="ss-section">
+    <h2><span class="ss-icon">🗺️</span> Proposed Level Progression (Levels 6–9)</h2>
+    <p>Escalating challenges building toward a climactic Boss Core battle.</p>
+
+    <div class="ss-card-grid">
+      <div class="ss-card">
+        <span class="ss-card-tag tag-level">Stage 6</span>
+        <h3>Level 6 — Cyber Grid</h3>
+        <p><strong>Mechanic:</strong> 4 Pulse Sentries guarding corridor intersections. Pickups now worth ×12 points.</p>
+        <ul class="ss-specs-list">
+          <li><span>Primary Hazard</span> <span>Telegraphed Lasers</span></li>
+          <li><span>Target Pellets</span> <span>12 pickups to clear</span></li>
+        </ul>
+      </div>
+
+      <div class="ss-card">
+        <span class="ss-card-tag tag-level">Stage 7</span>
+        <h3>Level 7 — Singularity Void</h3>
+        <p><strong>Mechanic:</strong> 2 Gravitational Black Holes pull food pellets into orbital paths. Pickup worth ×15 points.</p>
+        <ul class="ss-specs-list">
+          <li><span>Primary Hazard</span> <span>Black Hole Gravity Wells</span></li>
+          <li><span>Target Pellets</span> <span>15 pickups to clear</span></li>
+        </ul>
+      </div>
+
+      <div class="ss-card">
+        <span class="ss-card-tag tag-level">Stage 8</span>
+        <h3>Level 8 — Mirror Realm</h3>
+        <p><strong>Mechanic:</strong> Shadow Mimic snake trails 1.8s behind you while Swelling Spikes block open lanes. Pickup worth ×20 points.</p>
+        <ul class="ss-specs-list">
+          <li><span>Primary Hazard</span> <span>Shadow Mimic + Swelling Spikes</span></li>
+          <li><span>Target Pellets</span> <span>15 pickups to clear</span></li>
+        </ul>
+      </div>
+
+      <div class="ss-card">
+        <span class="ss-card-tag tag-level">Stage 9</span>
+        <h3>Level 9 — Leviathan Boss Core</h3>
+        <p><strong>Mechanic:</strong> Multi-phase boss battle in central arena! Giant Core protected by revolving energy shields. Collect Plasma Orbs to fire charges and break the core shields!</p>
+        <ul class="ss-specs-list">
+          <li><span>Phase 1</span> <span>Break Outer Shield (3 hits)</span></li>
+          <li><span>Phase 2</span> <span>Avoid Core Pulse + Seeker Drones</span></li>
+          <li><span>Phase 3</span> <span>Collect Victory Super Star</span></li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- SECTION 5: DEMOS -->
+  <section id="sec-demos" class="ss-section">
+    <h2><span class="ss-icon">🎮</span> Live Interactive Prototype Simulators</h2>
+    <p>Test and interact with live mathematical simulations of the proposed mechanics right here!</p>
+
+    <!-- Simulator 1: Gravity Well -->
+    <div class="ss-demo-box">
+      <div class="ss-demo-header">
+        <h3>Simulator #1: Gravitational Void Physics</h3>
+        <span class="ss-card-tag tag-enemy">Interactive Test</span>
+      </div>
+      <p style="color:var(--ss-muted); font-size:13px;">
+        Move your mouse inside the box to steer the snake. Notice how the central Black Hole (gravity well) pulls both the snake head and nearby orbiting food pellets!
+      </p>
+      <div class="ss-canvas-wrapper">
+        <canvas id="sim-gravity-canvas"></canvas>
+      </div>
+      <div class="ss-controls-bar">
+        <div class="ss-control-group">
+          <label>Pull Strength:</label>
+          <input type="range" id="sim-grav-pull" min="50" max="300" value="150" oninput="updateGravSim()">
+          <span id="grav-pull-val" style="font-family:var(--ss-font-mono);">150</span>
+        </div>
+        <button class="ss-btn" onclick="resetGravSim()">Reset Simulation</button>
+      </div>
+    </div>
+
+    <!-- Simulator 2: Pulse Laser Sentry -->
+    <div class="ss-demo-box">
+      <div class="ss-demo-header">
+        <h3>Simulator #2: Telegraphed Pulse Laser Sentry</h3>
+        <span class="ss-card-tag tag-enemy">Interactive Test</span>
+      </div>
+      <p style="color:var(--ss-muted); font-size:13px;">
+        The turret charges a laser beam (flashing line warning) before firing. Steer the snake away from the red beam corridor before it discharges!
+      </p>
+      <div class="ss-canvas-wrapper">
+        <canvas id="sim-laser-canvas"></canvas>
+      </div>
+      <div class="ss-controls-bar">
+        <div class="ss-control-group">
+          <label>Charge Time (s):</label>
+          <input type="range" id="sim-laser-charge" min="0.8" max="3.0" step="0.2" value="1.8" oninput="updateLaserSim()">
+          <span id="laser-charge-val" style="font-family:var(--ss-font-mono);">1.8s</span>
+        </div>
+        <button class="ss-btn" onclick="resetLaserSim()">Reset Turret</button>
+      </div>
+    </div>
+
+    <!-- Simulator 3: Magnet Core -->
+    <div class="ss-demo-box">
+      <div class="ss-demo-header">
+        <h3>Simulator #3: Magnet Core Attraction Field</h3>
+        <span class="ss-card-tag tag-power">Interactive Test</span>
+      </div>
+      <p style="color:var(--ss-muted); font-size:13px;">
+        Move your snake near food pellets. When Magnet Core is active, pellets dynamically curve toward your snake head.
+      </p>
+      <div class="ss-canvas-wrapper">
+        <canvas id="sim-magnet-canvas"></canvas>
+      </div>
+      <div class="ss-controls-bar">
+        <div class="ss-control-group">
+          <label>Magnet Radius (px):</label>
+          <input type="range" id="sim-mag-rad" min="100" max="350" value="220" oninput="updateMagSim()">
+          <span id="mag-rad-val" style="font-family:var(--ss-font-mono);">220px</span>
+        </div>
+        <button class="ss-btn" onclick="toggleMagnetPower()">Toggle Magnet Core</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- SECTION 6: ARCHITECTURE -->
+  <section id="sec-architecture" class="ss-section">
+    <h2><span class="ss-icon">🛠️</span> Modular Integration & Code Plan</h2>
+    <p>How the expansion integrates into Smooth Snake's zero-dependency architecture.</p>
+
+    <div class="ss-alert purple">
+      <strong>Zero Dependency Constraint Maintained:</strong> All proposed mechanics use vanilla JS, Math functions, Web Audio synth hooks, and canvas 2D rendering — zero extra libraries!
+    </div>
+
+    <h3>File Layout Extensions</h3>
+    <pre><code>js/
+  config.js       --> Add parameters for Laser Sentry, Gravity Well, Magnet Core, Phase Shift
+  game.js         --> Update update() and level state machine for Levels 6-9
+  spikes.js       --> Add updateGravityWells(), updatePulseSentries(), updateShadowMimic()
+  powerup.js      --> Add Phase Shift, Magnet Core, Chrono Dilator power-up types
+  render.js       --> Add laser sightlines, gravity vortex particle rings, magnet aura
+  audio.js        --> Add synth SFX for Laser Charge, Magnet Pull, Chrono Slow-mo</code></pre>
+
+    <h3>Data Structure Extensions</h3>
+    <pre><code>// Gravity Well Entity Schema
+{
+  x: number, y: number,
+  pullRadius: 180,
+  pullForce: 150,
+  rotation: 0
+}
+
+// Pulse Sentry Laser Entity Schema
+{
+  x: number, y: number,
+  angle: number,
+  state: 'charging' | 'firing' | 'cooldown',
+  timer: number,
+  chargeDuration: 1.8,
+  beamDuration: 0.5
+}</code></pre>
+  </section>
+
+  <footer class="ss-footer">
+    <p>Smooth Snake v2.0 Expansion Specification · Generated for Pair Programming UAT & Development</p>
+  </footer>
+
+</div>
+
+<!-- INTERACTIVE SIMULATION SCRIPTS -->
+<script>
+  function showSection(id) {
+    document.querySelectorAll('.ss-section').forEach(s => s.classList.remove('active'));
+    document.querySelectorAll('.ss-nav-btn').forEach(b => b.classList.remove('active'));
+    
+    document.getElementById('sec-' + id).classList.add('active');
+    event.currentTarget.classList.add('active');
+
+    if (id === 'demos') {
+      initSimulators();
+    }
+  }
+
+  // --- SIMULATOR 1: GRAVITY WELL ---
+  let gravCanvas, gravCtx;
+  let gravSnake = { x: 100, y: 160, vx: 0, vy: 0, theta: 0, history: [] };
+  let gravWell = { x: 250, y: 160, r: 25, pull: 150 };
+  let gravMouse = { x: 100, y: 160 };
+  let gravPellets = [];
+
+  function initGravSim() {
+    gravCanvas = document.getElementById('sim-gravity-canvas');
+    if (!gravCanvas) return;
+    gravCanvas.width = gravCanvas.parentElement.clientWidth;
+    gravCanvas.height = 320;
+    gravCtx = gravCanvas.getContext('2d');
+    gravWell.x = gravCanvas.width / 2;
+    gravWell.y = gravCanvas.height / 2;
+
+    gravPellets = [];
+    for (let i = 0; i < 6; i++) {
+      gravPellets.push({
+        x: gravWell.x + (Math.random() - 0.5) * 200,
+        y: gravWell.y + (Math.random() - 0.5) * 200,
+        vx: (Math.random() - 0.5) * 40,
+        vy: (Math.random() - 0.5) * 40
+      });
+    }
+
+    gravCanvas.onmousemove = (e) => {
+      const rect = gravCanvas.getBoundingClientRect();
+      gravMouse.x = e.clientX - rect.left;
+      gravMouse.y = e.clientY - rect.top;
+    };
+  }
+
+  function updateGravSim() {
+    gravWell.pull = parseFloat(document.getElementById('sim-grav-pull').value);
+    document.getElementById('grav-pull-val').textContent = gravWell.pull;
+  }
+
+  function resetGravSim() {
+    gravSnake.x = 80;
+    gravSnake.y = 80;
+    initGravSim();
+  }
+
+  function loopGravSim() {
+    if (!gravCtx) return;
+    gravCtx.fillStyle = '#08090b';
+    gravCtx.fillRect(0, 0, gravCanvas.width, gravCanvas.height);
+
+    // Update snake position & angle toward mouse
+    const dx = gravMouse.x - gravSnake.x;
+    const dy = gravMouse.y - gravSnake.y;
+    const targetAngle = Math.atan2(dy, dx);
+    gravSnake.theta += (targetAngle - gravSnake.theta) * 0.1;
+    
+    let speed = 120;
+    let moveX = Math.cos(gravSnake.theta) * speed;
+    let moveY = Math.sin(gravSnake.theta) * speed;
+
+    // Apply gravity well force
+    const gdx = gravWell.x - gravSnake.x;
+    const gdy = gravWell.y - gravSnake.y;
+    const gdist = Math.hypot(gdx, gdy) || 1;
+    if (gdist < 220) {
+      const force = (gravWell.pull * 2000) / (gdist * gdist);
+      moveX += (gdx / gdist) * force;
+      moveY += (gdy / gdist) * force;
+    }
+
+    gravSnake.x += moveX * 0.016;
+    gravSnake.y += moveY * 0.016;
+
+    // Record trail
+    gravSnake.history.unshift({ x: gravSnake.x, y: gravSnake.y });
+    if (gravSnake.history.length > 25) gravSnake.history.pop();
+
+    // Draw Gravity Well Vortex
+    gravCtx.save();
+    gravCtx.translate(gravWell.x, gravWell.y);
+    const time = Date.now() * 0.003;
+    gravCtx.rotate(time);
+    
+    // Outer gravitational aura
+    const grad = gravCtx.createRadialGradient(0, 0, 10, 0, 0, 140);
+    grad.addColorStop(0, 'rgba(199, 146, 255, 0.6)');
+    grad.addColorStop(0.5, 'rgba(199, 146, 255, 0.15)');
+    grad.addColorStop(1, 'transparent');
+    gravCtx.fillStyle = grad;
+    gravCtx.beginPath();
+    gravCtx.arc(0, 0, 140, 0, Math.PI * 2);
+    gravCtx.fill();
+
+    // Core black hole
+    gravCtx.fillStyle = '#10061e';
+    gravCtx.strokeStyle = '#c792ff';
+    gravCtx.lineWidth = 3;
+    gravCtx.beginPath();
+    gravCtx.arc(0, 0, 22, 0, Math.PI * 2);
+    gravCtx.fill();
+    gravCtx.stroke();
+    gravCtx.restore();
+
+    // Update & draw orbiting pellets
+    for (const p of gravPellets) {
+      const pdx = gravWell.x - p.x;
+      const pdy = gravWell.y - p.y;
+      const pdist = Math.hypot(pdx, pdy) || 1;
+      if (pdist < 220) {
+        const pforce = (gravWell.pull * 1200) / (pdist * pdist);
+        p.vx += (pdx / pdist) * pforce * 0.016;
+        p.vy += (pdy / pdist) * pforce * 0.016;
+      }
+      p.x += p.vx * 0.016;
+      p.y += p.vy * 0.016;
+
+      gravCtx.fillStyle = '#4ee08a';
+      gravCtx.beginPath();
+      gravCtx.arc(p.x, p.y, 6, 0, Math.PI * 2);
+      gravCtx.fill();
+    }
+
+    // Draw Snake Trail
+    gravCtx.strokeStyle = '#4fd1e8';
+    gravCtx.lineWidth = 14;
+    gravCtx.lineCap = 'round';
+    gravCtx.beginPath();
+    for (let i = 0; i < gravSnake.history.length; i++) {
+      const pt = gravSnake.history[i];
+      if (i === 0) gravCtx.moveTo(pt.x, pt.y);
+      else gravCtx.lineTo(pt.x, pt.y);
+    }
+    gravCtx.stroke();
+
+    // Head
+    gravCtx.fillStyle = '#ffffff';
+    gravCtx.beginPath();
+    gravCtx.arc(gravSnake.x, gravSnake.y, 9, 0, Math.PI * 2);
+    gravCtx.fill();
+  }
+
+  // --- SIMULATOR 2: PULSE LASER ---
+  let laserCanvas, laserCtx;
+  let laserTurret = { x: 0, y: 0, state: 'charging', timer: 0, chargeTime: 1.8, beamTime: 0.6 };
+  let laserSnake = { x: 80, y: 160 };
+
+  function initLaserSim() {
+    laserCanvas = document.getElementById('sim-laser-canvas');
+    if (!laserCanvas) return;
+    laserCanvas.width = laserCanvas.parentElement.clientWidth;
+    laserCanvas.height = 320;
+    laserCtx = laserCanvas.getContext('2d');
+    laserTurret.x = laserCanvas.width / 2;
+    laserTurret.y = laserCanvas.height / 2;
+
+    laserCanvas.onmousemove = (e) => {
+      const rect = laserCanvas.getBoundingClientRect();
+      laserSnake.x = e.clientX - rect.left;
+      laserSnake.y = e.clientY - rect.top;
+    };
+  }
+
+  function updateLaserSim() {
+    laserTurret.chargeTime = parseFloat(document.getElementById('sim-laser-charge').value);
+    document.getElementById('laser-charge-val').textContent = laserTurret.chargeTime + 's';
+  }
+
+  function resetLaserSim() {
+    laserTurret.state = 'charging';
+    laserTurret.timer = 0;
+  }
+
+  function loopLaserSim() {
+    if (!laserCtx) return;
+    laserCtx.fillStyle = '#08090b';
+    laserCtx.fillRect(0, 0, laserCanvas.width, laserCanvas.height);
+
+    laserTurret.timer += 0.016;
+
+    if (laserTurret.state === 'charging') {
+      if (laserTurret.timer >= laserTurret.chargeTime) {
+        laserTurret.state = 'firing';
+        laserTurret.timer = 0;
+      }
+    } else if (laserTurret.state === 'firing') {
+      if (laserTurret.timer >= laserTurret.beamTime) {
+        laserTurret.state = 'cooldown';
+        laserTurret.timer = 0;
+      }
+    } else if (laserTurret.state === 'cooldown') {
+      if (laserTurret.timer >= 1.5) {
+        laserTurret.state = 'charging';
+        laserTurret.timer = 0;
+      }
+    }
+
+    // Draw Laser Path
+    if (laserTurret.state === 'charging') {
+      const alpha = (laserTurret.timer / laserTurret.chargeTime);
+      laserCtx.strokeStyle = `rgba(255, 82, 119, ${0.2 + alpha * 0.6})`;
+      laserCtx.lineWidth = 2 + alpha * 4;
+      laserCtx.setLineDash([8, 8]);
+      laserCtx.beginPath();
+      laserCtx.moveTo(0, laserTurret.y);
+      laserCtx.lineTo(laserCanvas.width, laserTurret.y);
+      laserCtx.stroke();
+      laserCtx.setLineDash([]);
+    } else if (laserTurret.state === 'firing') {
+      // Intense Laser Beam
+      laserCtx.shadowColor = '#ff5277';
+      laserCtx.shadowBlur = 20;
+      laserCtx.strokeStyle = '#ff5277';
+      laserCtx.lineWidth = 18;
+      laserCtx.beginPath();
+      laserCtx.moveTo(0, laserTurret.y);
+      laserCtx.lineTo(laserCanvas.width, laserTurret.y);
+      laserCtx.stroke();
+
+      // Core white beam
+      laserCtx.strokeStyle = '#ffffff';
+      laserCtx.lineWidth = 6;
+      laserCtx.stroke();
+      laserCtx.shadowBlur = 0;
+    }
+
+    // Turret Body
+    laserCtx.fillStyle = laserTurret.state === 'firing' ? '#ff5277' : '#282d37';
+    laserCtx.strokeStyle = '#ff5277';
+    laserCtx.lineWidth = 3;
+    laserCtx.beginPath();
+    laserCtx.arc(laserTurret.x, laserTurret.y, 16, 0, Math.PI * 2);
+    laserCtx.fill();
+    laserCtx.stroke();
+
+    // Snake
+    laserCtx.fillStyle = '#4fd1e8';
+    laserCtx.beginPath();
+    laserCtx.arc(laserSnake.x, laserSnake.y, 10, 0, Math.PI * 2);
+    laserCtx.fill();
+  }
+
+  // --- SIMULATOR 3: MAGNET POWER ---
+  let magCanvas, magCtx;
+  let magSnake = { x: 100, y: 160 };
+  let magActive = true;
+  let magRadius = 220;
+  let magFood = [];
+
+  function initMagSim() {
+    magCanvas = document.getElementById('sim-magnet-canvas');
+    if (!magCanvas) return;
+    magCanvas.width = magCanvas.parentElement.clientWidth;
+    magCanvas.height = 320;
+    magCtx = magCanvas.getContext('2d');
+
+    magFood = [];
+    for (let i = 0; i < 8; i++) {
+      magFood.push({
+        x: 80 + Math.random() * (magCanvas.width - 160),
+        y: 60 + Math.random() * (magCanvas.height - 120)
+      });
+    }
+
+    magCanvas.onmousemove = (e) => {
+      const rect = magCanvas.getBoundingClientRect();
+      magSnake.x = e.clientX - rect.left;
+      magSnake.y = e.clientY - rect.top;
+    };
+  }
+
+  function updateMagSim() {
+    magRadius = parseFloat(document.getElementById('sim-mag-rad').value);
+    document.getElementById('mag-rad-val').textContent = magRadius + 'px';
+  }
+
+  function toggleMagnetPower() {
+    magActive = !magActive;
+  }
+
+  function loopMagSim() {
+    if (!magCtx) return;
+    magCtx.fillStyle = '#08090b';
+    magCtx.fillRect(0, 0, magCanvas.width, magCanvas.height);
+
+    // Draw Magnet Aura around snake
+    if (magActive) {
+      const auraGrad = magCtx.createRadialGradient(magSnake.x, magSnake.y, 10, magSnake.x, magSnake.y, magRadius);
+      auraGrad.addColorStop(0, 'rgba(255, 210, 87, 0.35)');
+      auraGrad.addColorStop(1, 'transparent');
+      magCtx.fillStyle = auraGrad;
+      magCtx.beginPath();
+      magCtx.arc(magSnake.x, magSnake.y, magRadius, 0, Math.PI * 2);
+      magCtx.fill();
+    }
+
+    // Update food pellet magnetic attraction
+    for (const f of magFood) {
+      const dx = magSnake.x - f.x;
+      const dy = magSnake.y - f.y;
+      const dist = Math.hypot(dx, dy);
+
+      if (magActive && dist < magRadius && dist > 10) {
+        f.x += (dx / dist) * 220 * 0.016;
+        f.y += (dy / dist) * 220 * 0.016;
+      }
+
+      magCtx.fillStyle = '#ffd257';
+      magCtx.beginPath();
+      magCtx.arc(f.x, f.y, 7, 0, Math.PI * 2);
+      magCtx.fill();
+    }
+
+    // Snake Head
+    magCtx.fillStyle = '#ffffff';
+    magCtx.beginPath();
+    magCtx.arc(magSnake.x, magSnake.y, 11, 0, Math.PI * 2);
+    magCtx.fill();
+  }
+
+  function initSimulators() {
+    initGravSim();
+    initLaserSim();
+    initMagSim();
+  }
+
+  // Animation Loop
+  function masterLoop() {
+    loopGravSim();
+    loopLaserSim();
+    loopMagSim();
+    requestAnimationFrame(masterLoop);
+  }
+
+  window.onload = () => {
+    initSimulators();
+    masterLoop();
+  };
+</script>
+
+</body>
+</html>

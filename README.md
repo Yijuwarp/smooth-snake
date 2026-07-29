@@ -29,7 +29,7 @@ python -m http.server 8341
 
 - Each pickup is worth its current multiplier in points.
 - Reach the next pickup within 5 seconds and the multiplier climbs; miss the window and it resets to ×1.
-- Levels at 50 / 200 / 500 points. From level 2, pickups are worth 3 base points and up to two spikes at a time wake up, shake, and wander.
+- 6 levels of escalating mechanics: wandering spikes (L2), swelling spikes (L3), Tether Rotators with string physics (L4), Hunter Seeker Drone (L5), and the continuous-gliding True Final Stage (L6). Pickup base values increase with each stage up to ×10.
 - Your personal high score persists in `localStorage`. See below for the shared leaderboard.
 
 ## Leaderboard

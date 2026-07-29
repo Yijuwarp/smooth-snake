@@ -7,6 +7,7 @@ import {
   STAR_RADIUS,
   SPIKE_RADIUS,
   POWER_UP_RADIUS,
+  ROTATOR_RADIUS,
   COMBO_WINDOW,
   LEVEL_BANNER_DURATION,
   MAX_HEARTS,
@@ -179,6 +180,10 @@ export function render(game, ctx, canvas) {
   drawArena(ctx);
   drawParticles(ctx, game);
 
+  if (game.level === 4 && game.rotators) {
+    drawTetherRotators(ctx, game);
+  }
+
   if (game.food) {
     if (game.food.isStar) drawStar(ctx, game.food, game.time);
     else drawFood(ctx, game.food, game.time);
@@ -297,6 +302,113 @@ function drawWallTeeth(ctx) {
     ctx.lineTo(ARENA_W - TOOTH_DEPTH, y);
   }
   ctx.fill();
+}
+
+function drawTetherRotators(ctx, game) {
+  if (!game.rotators) return;
+
+  const time = game.time;
+
+  // 1. Draw 30% coverage area fields for each rotator
+  for (let idx = 0; idx < game.rotators.length; idx++) {
+    const r = game.rotators[idx];
+    const isLeft = idx === 0;
+
+    ctx.save();
+    ctx.fillStyle = isLeft ? "rgba(199, 146, 255, 0.03)" : "rgba(79, 209, 232, 0.03)";
+    ctx.strokeStyle = isLeft ? "rgba(199, 146, 255, 0.25)" : "rgba(79, 209, 232, 0.25)";
+    ctx.lineWidth = 1.5;
+    ctx.setLineDash([6, 6]);
+    ctx.beginPath();
+    ctx.arc(r.x, r.y, ROTATOR_RADIUS, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.restore();
+  }
+
+  // 2. Draw tether strings to linked spikes
+  for (const s of game.spikes) {
+    if (s.tetheredTo) {
+      const r = s.tetheredTo;
+      ctx.save();
+      ctx.strokeStyle = "rgba(79, 209, 232, 0.65)";
+      ctx.lineWidth = 1.8;
+
+      const midX = (r.x + s.x) / 2;
+      const midY = (r.y + s.y) / 2;
+      const wave = Math.sin(time * 10 + (s.tetherDist || 0) * 0.05) * 3;
+      const perpX = -(s.y - r.y) * 0.03 * wave;
+      const perpY = (s.x - r.x) * 0.03 * wave;
+
+      ctx.beginPath();
+      ctx.moveTo(r.x, r.y);
+      ctx.quadraticCurveTo(midX + perpX, midY + perpY, s.x, s.y);
+      ctx.stroke();
+      ctx.restore();
+    }
+  }
+
+  // 3. Draw tether string to food pickup if linked
+  if (game.food && game.food.linkedRotator) {
+    const r = game.food.linkedRotator;
+    ctx.save();
+    ctx.strokeStyle = "rgba(78, 224, 138, 0.75)";
+    ctx.lineWidth = 2.0;
+    ctx.beginPath();
+    ctx.moveTo(r.x, r.y);
+    ctx.lineTo(game.food.x, game.food.y);
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  // 4. Draw tether string to power-up if linked
+  if (game.powerUp && game.powerUp.linkedRotator) {
+    const r = game.powerUp.linkedRotator;
+    ctx.save();
+    ctx.strokeStyle = "rgba(255, 210, 87, 0.75)";
+    ctx.lineWidth = 2.0;
+    ctx.beginPath();
+    ctx.moveTo(r.x, r.y);
+    ctx.lineTo(game.powerUp.x, game.powerUp.y);
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  // 5. Draw rotator anchor core nodes
+  for (let idx = 0; idx < game.rotators.length; idx++) {
+    const r = game.rotators[idx];
+    const isLeft = idx === 0;
+
+    ctx.save();
+    ctx.translate(r.x, r.y);
+    ctx.rotate(r.angle);
+
+    // Outer gear spokes
+    ctx.strokeStyle = isLeft ? "#c792ff" : "#4fd1e8";
+    ctx.lineWidth = 3;
+    for (let a = 0; a < Math.PI * 2; a += Math.PI / 2) {
+      ctx.beginPath();
+      ctx.moveTo(Math.cos(a) * 8, Math.sin(a) * 8);
+      ctx.lineTo(Math.cos(a) * 26, Math.sin(a) * 26);
+      ctx.stroke();
+    }
+
+    // Core orb
+    ctx.fillStyle = isLeft ? "#c792ff" : "#4fd1e8";
+    ctx.shadowColor = isLeft ? "#c792ff" : "#4fd1e8";
+    ctx.shadowBlur = 12;
+    ctx.beginPath();
+    ctx.arc(0, 0, 12, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Center reflection
+    ctx.fillStyle = "#ffffff";
+    ctx.beginPath();
+    ctx.arc(0, 0, 4, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+  }
 }
 
 function drawFood(ctx, food, time) {

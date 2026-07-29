@@ -1,0 +1,557 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Smooth Snake — Tether Rotators Prototype</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700;800&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0b0d10;
+    --surface: #14181f;
+    --line: #242b36;
+    --ink: #f0f4f8;
+    --muted: #828e9e;
+    --cyan: #4fd1e8;
+    --gold: #ffd257;
+    --red: #ff5277;
+    --purple: #c792ff;
+    --green: #4ee08a;
+  }
+
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--ink);
+    font-family: 'Outfit', sans-serif;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    min-height: 100vh;
+    padding: 20px;
+  }
+
+  header {
+    text-align: center;
+    max-width: 800px;
+    margin-bottom: 16px;
+  }
+
+  h1 {
+    font-size: 28px;
+    font-weight: 800;
+    margin: 0 0 6px;
+    background: linear-gradient(135deg, #fff, var(--cyan));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+
+  p {
+    color: var(--muted);
+    font-size: 14px;
+    margin: 0;
+  }
+
+  .badge {
+    display: inline-block;
+    background: rgba(79, 209, 232, 0.15);
+    color: var(--cyan);
+    border: 1px solid rgba(79, 209, 232, 0.3);
+    padding: 3px 10px;
+    border-radius: 12px;
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    margin-bottom: 8px;
+  }
+
+  .canvas-card {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    padding: 16px;
+    box-shadow: 0 12px 36px rgba(0,0,0,0.5);
+    position: relative;
+    max-width: 932px;
+    width: 100%;
+  }
+
+  .canvas-wrapper {
+    position: relative;
+    width: 900px;
+    height: 600px;
+    margin: 0 auto;
+    background: #060709;
+    border-radius: 10px;
+    overflow: hidden;
+    cursor: crosshair;
+  }
+
+  canvas {
+    display: block;
+    width: 100%;
+    height: 100%;
+  }
+
+  .controls-bar {
+    display: flex;
+    gap: 20px;
+    align-items: center;
+    justify-content: space-between;
+    margin-top: 14px;
+    background: rgba(0,0,0,0.3);
+    padding: 12px 18px;
+    border-radius: 10px;
+    flex-wrap: wrap;
+  }
+
+  .control-group {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 13px;
+    color: var(--muted);
+  }
+
+  .control-group label {
+    font-weight: 600;
+    color: var(--ink);
+  }
+
+  input[type="range"] {
+    accent-color: var(--cyan);
+    cursor: pointer;
+  }
+
+  .val {
+    font-family: 'Space Mono', monospace;
+    color: var(--cyan);
+    font-weight: 700;
+  }
+
+  .btn {
+    background: var(--cyan);
+    color: #060709;
+    border: none;
+    border-radius: 6px;
+    padding: 8px 16px;
+    font-family: 'Outfit', sans-serif;
+    font-weight: 700;
+    font-size: 13px;
+    cursor: pointer;
+    transition: opacity 0.2s;
+  }
+  .btn:hover { opacity: 0.9; }
+
+  .legend {
+    display: flex;
+    gap: 16px;
+    font-size: 12px;
+    color: var(--muted);
+    justify-content: center;
+    margin-top: 12px;
+  }
+
+  .legend-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+  }
+
+  .hud-stats {
+    position: absolute;
+    top: 26px;
+    right: 26px;
+    background: rgba(11, 13, 16, 0.85);
+    border: 1px solid var(--line);
+    padding: 8px 14px;
+    border-radius: 8px;
+    font-family: 'Space Mono', monospace;
+    font-size: 12px;
+    color: var(--gold);
+    pointer-events: none;
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="badge">Level 3 Prototype Mechanics</div>
+  <h1>Tether Rotators — Interactive Physics Demo</h1>
+  <p>
+    Two rotators anchor on the arena map (~30% coverage each). Objects (spikes, food pickups, power-ups) 
+    that enter their field become linked via dynamic physics strings and revolve in orbit at constant speed!
+  </p>
+</header>
+
+<div class="canvas-card">
+  <div class="canvas-wrapper">
+    <canvas id="canvas" width="900" height="600"></canvas>
+    <div class="hud-stats" id="hud">Score: 0 | Pickups: x5 Base</div>
+  </div>
+
+  <div class="controls-bar">
+    <div class="control-group">
+      <label>Rotation Speed:</label>
+      <input type="range" id="spin-speed" min="0.2" max="2.5" step="0.1" value="0.9" oninput="updateParams()">
+      <span class="val" id="spin-val">0.9 rad/s</span>
+    </div>
+
+    <div class="control-group">
+      <label>Coverage Radius:</label>
+      <input type="range" id="tether-radius" min="120" max="260" step="10" value="190" oninput="updateParams()">
+      <span class="val" id="rad-val">190 px (~30%)</span>
+    </div>
+
+    <button class="btn" onclick="resetDemo()">Reset Entities</button>
+  </div>
+
+  <div class="legend">
+    <div class="legend-item"><div class="dot" style="background:var(--purple)"></div> Rotator Core</div>
+    <div class="legend-item"><div class="dot" style="background:var(--cyan)"></div> Tether String</div>
+    <div class="legend-item"><div class="dot" style="background:var(--red)"></div> Orbiting Spike</div>
+    <div class="legend-item"><div class="dot" style="background:var(--green)"></div> Orbiting Pickup (x5)</div>
+    <div class="legend-item"><div class="dot" style="background:var(--gold)"></div> Power-Up</div>
+  </div>
+</div>
+
+<script>
+  const canvas = document.getElementById('canvas');
+  const ctx = canvas.getContext('2d');
+
+  let spinSpeed = 0.9;
+  let tetherRadius = 190;
+  let score = 0;
+
+  // Mouse & Snake
+  const mouse = { x: 450, y: 300 };
+  const snake = {
+    x: 150,
+    y: 300,
+    theta: 0,
+    speed: 160,
+    turnRate: 4.5,
+    history: [],
+    targetLength: 20
+  };
+
+  // Two Rotators spaced apart (Left & Right halves)
+  const rotators = [
+    { x: 270, y: 300, angle: 0, dir: 1 },
+    { x: 630, y: 300, angle: 0, dir: -1 }
+  ];
+
+  // Entities: Spikes, Food, Power-ups
+  let spikes = [];
+  let food = { x: 450, y: 150 };
+  let powerUp = { x: 450, y: 450 };
+
+  function initEntities() {
+    spikes = [];
+    // Place spikes across arena
+    const spikePositions = [
+      { x: 200, y: 200 },
+      { x: 340, y: 380 },
+      { x: 220, y: 420 },
+      { x: 180, y: 280 },
+      { x: 700, y: 200 },
+      { x: 560, y: 380 },
+      { x: 680, y: 420 },
+      { x: 720, y: 280 },
+      { x: 450, y: 100 },
+      { x: 450, y: 500 },
+      { x: 100, y: 100 },
+      { x: 800, y: 500 }
+    ];
+
+    spikes = spikePositions.map(p => ({
+      x: p.x,
+      y: p.y,
+      baseX: p.x,
+      baseY: p.y,
+      radius: 12,
+      tetheredTo: null
+    }));
+
+    score = 0;
+    updateHud();
+  }
+
+  function updateParams() {
+    spinSpeed = parseFloat(document.getElementById('spin-speed').value);
+    tetherRadius = parseFloat(document.getElementById('tether-radius').value);
+    document.getElementById('spin-val').textContent = spinSpeed.toFixed(1) + ' rad/s';
+    document.getElementById('rad-val').textContent = tetherRadius + ' px (~30%)';
+  }
+
+  function resetDemo() {
+    snake.x = 100;
+    snake.y = 300;
+    snake.history = [];
+    initEntities();
+  }
+
+  function updateHud() {
+    document.getElementById('hud').textContent = `Score: ${score} | Pickups: ×5 Base (Level 3)`;
+  }
+
+  canvas.addEventListener('mousemove', (e) => {
+    const rect = canvas.getBoundingClientRect();
+    mouse.x = e.clientX - rect.left;
+    mouse.y = e.clientY - rect.top;
+  });
+
+  function update(dt) {
+    // 1. Steer & move snake
+    const dx = mouse.x - snake.x;
+    const dy = mouse.y - snake.y;
+    const targetTheta = Math.atan2(dy, dx);
+    let diff = targetTheta - snake.theta;
+    while (diff < -Math.PI) diff += Math.PI * 2;
+    while (diff > Math.PI) diff -= Math.PI * 2;
+    const turn = Math.max(-snake.turnRate * dt, Math.min(snake.turnRate * dt, diff));
+    snake.theta += turn;
+
+    snake.x += Math.cos(snake.theta) * snake.speed * dt;
+    snake.y += Math.sin(snake.theta) * snake.speed * dt;
+
+    // Record trail history
+    snake.history.unshift({ x: snake.x, y: snake.y });
+    if (snake.history.length > snake.targetLength) {
+      snake.history.pop();
+    }
+
+    // 2. Update Rotator Angles
+    for (const r of rotators) {
+      r.angle += spinSpeed * r.dir * dt;
+    }
+
+    // 3. Process Tether Physics for Spikes
+    for (const s of spikes) {
+      // Find closest rotator within tetherRadius
+      let closestRotator = null;
+      let minDist = tetherRadius;
+
+      for (const r of rotators) {
+        const d = Math.hypot(s.x - r.x, s.y - r.y);
+        if (d < minDist) {
+          minDist = d;
+          closestRotator = r;
+        }
+      }
+
+      if (closestRotator) {
+        if (!s.tetheredTo) {
+          // Initialize tether attachment angle & distance
+          s.tetheredTo = closestRotator;
+          s.tetherDist = Math.hypot(s.x - closestRotator.x, s.y - closestRotator.y);
+          s.tetherAngle = Math.atan2(s.y - closestRotator.y, s.x - closestRotator.x);
+        }
+        // Orbit update around rotator core
+        s.tetherAngle += spinSpeed * closestRotator.dir * dt;
+        s.x = closestRotator.x + Math.cos(s.tetherAngle) * s.tetherDist;
+        s.y = closestRotator.y + Math.sin(s.tetherAngle) * s.tetherDist;
+      } else {
+        s.tetheredTo = null;
+      }
+    }
+
+    // 4. Process Tether Physics for Food Pickup
+    let foodRotator = null;
+    let minFoodDist = tetherRadius;
+    for (const r of rotators) {
+      const d = Math.hypot(food.x - r.x, food.y - r.y);
+      if (d < minFoodDist) {
+        minFoodDist = d;
+        foodRotator = r;
+      }
+    }
+    if (foodRotator) {
+      if (!food.tetherAngle) {
+        food.tetherDist = Math.hypot(food.x - foodRotator.x, food.y - foodRotator.y);
+        food.tetherAngle = Math.atan2(food.y - foodRotator.y, food.x - foodRotator.x);
+      }
+      food.tetherAngle += spinSpeed * foodRotator.dir * dt;
+      food.x = foodRotator.x + Math.cos(food.tetherAngle) * food.tetherDist;
+      food.y = foodRotator.y + Math.sin(food.tetherAngle) * food.tetherDist;
+      food.linkedRotator = foodRotator;
+    } else {
+      food.linkedRotator = null;
+      food.tetherAngle = undefined;
+    }
+
+    // 5. Check Snake vs Food Collision
+    if (Math.hypot(snake.x - food.x, snake.y - food.y) < 18) {
+      score += 5; // Level 3 pickups worth x5 points!
+      snake.targetLength += 3;
+      updateHud();
+
+      // Respawn food
+      food.x = 100 + Math.random() * 700;
+      food.y = 100 + Math.random() * 400;
+      food.tetherAngle = undefined;
+    }
+
+    // 6. Check Snake vs Spike Collision
+    for (const s of spikes) {
+      if (Math.hypot(snake.x - s.x, snake.y - s.y) < 18) {
+        // Bounce feedback
+        const pushAngle = Math.atan2(snake.y - s.y, snake.x - s.x);
+        snake.x += Math.cos(pushAngle) * 20;
+        snake.y += Math.sin(pushAngle) * 20;
+      }
+    }
+  }
+
+  function render() {
+    ctx.fillStyle = '#060709';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    // Draw Subtle Grid
+    ctx.strokeStyle = '#12161f';
+    ctx.lineWidth = 1;
+    for (let x = 0; x < canvas.width; x += 40) {
+      ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, canvas.height); ctx.stroke();
+    }
+    for (let y = 0; y < canvas.height; y += 40) {
+      ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(canvas.width, y); ctx.stroke();
+    }
+
+    // Render Rotator Influence Fields & Tether Strings
+    rotators.forEach((r, idx) => {
+      // 30% Coverage Field Circle
+      ctx.fillStyle = idx === 0 ? 'rgba(199, 146, 255, 0.04)' : 'rgba(79, 209, 232, 0.04)';
+      ctx.strokeStyle = idx === 0 ? 'rgba(199, 146, 255, 0.25)' : 'rgba(79, 209, 232, 0.25)';
+      ctx.lineWidth = 1.5;
+      ctx.setLineDash([6, 6]);
+      ctx.beginPath();
+      ctx.arc(r.x, r.y, tetherRadius, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.stroke();
+      ctx.setLineDash([]);
+
+      // Rotator Central Anchor Node
+      ctx.save();
+      ctx.translate(r.x, r.y);
+      ctx.rotate(r.angle);
+
+      // Outer spinning gear blades
+      ctx.strokeStyle = idx === 0 ? '#c792ff' : '#4fd1e8';
+      ctx.lineWidth = 3;
+      for (let a = 0; a < Math.PI * 2; a += Math.PI / 2) {
+        ctx.beginPath();
+        ctx.moveTo(Math.cos(a) * 8, Math.sin(a) * 8);
+        ctx.lineTo(Math.cos(a) * 26, Math.sin(a) * 26);
+        ctx.stroke();
+      }
+
+      // Core orb
+      ctx.fillStyle = idx === 0 ? '#c792ff' : '#4fd1e8';
+      ctx.beginPath();
+      ctx.arc(0, 0, 12, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.fillStyle = '#ffffff';
+      ctx.beginPath();
+      ctx.arc(0, 0, 4, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+    });
+
+    // Render Tether Strings for Linked Spikes
+    for (const s of spikes) {
+      if (s.tetheredTo) {
+        const r = s.tetheredTo;
+        // Dynamic string waveform line
+        ctx.strokeStyle = 'rgba(79, 209, 232, 0.6)';
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        ctx.moveTo(r.x, r.y);
+
+        // Subtle vibrating sine string simulation
+        const midX = (r.x + s.x) / 2;
+        const midY = (r.y + s.y) / 2;
+        const perpX = -(s.y - r.y) * 0.05 * Math.sin(r.angle * 4);
+        const perpY = (s.x - r.x) * 0.05 * Math.sin(r.angle * 4);
+        ctx.quadraticCurveTo(midX + perpX, midY + perpY, s.x, s.y);
+        ctx.stroke();
+      }
+
+      // Draw Spike
+      ctx.fillStyle = s.tetheredTo ? '#ff3050' : '#8b95a5';
+      ctx.beginPath();
+      ctx.arc(s.x, s.y, s.radius, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Spike spikes
+      ctx.strokeStyle = '#ffffff';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.arc(s.x, s.y, s.radius + 3, 0, Math.PI * 2);
+      ctx.stroke();
+    }
+
+    // Render Tether String for Food Pickup if linked
+    if (food.linkedRotator) {
+      ctx.strokeStyle = 'rgba(78, 224, 138, 0.7)';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(food.linkedRotator.x, food.linkedRotator.y);
+      ctx.lineTo(food.x, food.y);
+      ctx.stroke();
+    }
+
+    // Draw Food Pickup (x5)
+    ctx.fillStyle = '#4ee08a';
+    ctx.shadowColor = '#4ee08a';
+    ctx.shadowBlur = 12;
+    ctx.beginPath();
+    ctx.arc(food.x, food.y, 9, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.shadowBlur = 0;
+
+    // Draw Snake Trail
+    if (snake.history.length > 0) {
+      ctx.strokeStyle = '#4fd1e8';
+      ctx.lineWidth = 16;
+      ctx.lineCap = 'round';
+      ctx.lineJoin = 'round';
+      ctx.beginPath();
+      for (let i = 0; i < snake.history.length; i++) {
+        const pt = snake.history[i];
+        if (i === 0) ctx.moveTo(pt.x, pt.y);
+        else ctx.lineTo(pt.x, pt.y);
+      }
+      ctx.stroke();
+
+      // Snake Head
+      ctx.fillStyle = '#ffffff';
+      ctx.beginPath();
+      ctx.arc(snake.x, snake.y, 10, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  }
+
+  let lastTime = performance.now();
+  function gameLoop(now) {
+    const dt = Math.min((now - lastTime) / 1000, 1 / 30);
+    lastTime = now;
+    update(dt);
+    render();
+    requestAnimationFrame(gameLoop);
+  }
+
+  initEntities();
+  requestAnimationFrame(gameLoop);
+</script>
+</body>
+</html>

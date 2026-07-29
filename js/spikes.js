@@ -19,6 +19,9 @@ import {
   GROW_CYCLE_TIME,
   GROW_MAX_MULT,
   GROW_SPIN_SPEED,
+  ROTATOR_COUNT,
+  ROTATOR_RADIUS,
+  ROTATOR_SPIN_SPEED,
   getUiSafeZones,
   TOUCH_MODE,
 } from "./config.js";
@@ -236,6 +239,110 @@ function updateGrowingSpikes(game, dt, rng) {
   }
 }
 
+// --- Tether Rotators (level 4) -------------------------------------------
+// 2 rotator cores anchor in opposite halves of the arena map (spaced far
+// apart). Objects (spikes, food pickups, power-ups) entering their field
+// radius (~190px, ~30% coverage area) attach via dynamic string tethers
+// and orbit around rotator cores at a constant angular speed ROTATOR_SPIN_SPEED.
+function updateTetherRotators(game, dt, rng) {
+  if (!game.rotators) {
+    game.rotators = [
+      { x: ARENA_W * 0.3, y: ARENA_H * 0.5, angle: 0, dir: 1 },
+      { x: ARENA_W * 0.7, y: ARENA_H * 0.5, angle: 0, dir: -1 },
+    ];
+  }
+
+  for (const r of game.rotators) {
+    r.angle += ROTATOR_SPIN_SPEED * r.dir * dt;
+  }
+
+  // Update spike tether attachments & orbit positions
+  for (const s of game.spikes) {
+    if (s.baseX === undefined) {
+      s.baseX = s.x;
+      s.baseY = s.y;
+    }
+
+    let closestRotator = null;
+    let minDist = ROTATOR_RADIUS;
+
+    for (const r of game.rotators) {
+      const d = dist(s.x, s.y, r.x, r.y);
+      if (d < minDist) {
+        minDist = d;
+        closestRotator = r;
+      }
+    }
+
+    if (closestRotator) {
+      if (!s.tetheredTo) {
+        s.tetheredTo = closestRotator;
+        s.tetherDist = Math.hypot(s.x - closestRotator.x, s.y - closestRotator.y);
+        s.tetherAngle = Math.atan2(s.y - closestRotator.y, s.x - closestRotator.x);
+      }
+      s.tetherAngle += ROTATOR_SPIN_SPEED * closestRotator.dir * dt;
+      s.x = closestRotator.x + Math.cos(s.tetherAngle) * s.tetherDist;
+      s.y = closestRotator.y + Math.sin(s.tetherAngle) * s.tetherDist;
+    } else {
+      s.tetheredTo = null;
+    }
+  }
+
+  // Update food tether attachment & orbit position if present
+  if (game.food && !game.food.isStar) {
+    const f = game.food;
+    let foodRotator = null;
+    let minFoodDist = ROTATOR_RADIUS;
+    for (const r of game.rotators) {
+      const d = dist(f.x, f.y, r.x, r.y);
+      if (d < minFoodDist) {
+        minFoodDist = d;
+        foodRotator = r;
+      }
+    }
+    if (foodRotator) {
+      if (!f.tetherAngle) {
+        f.tetherDist = Math.hypot(f.x - foodRotator.x, f.y - foodRotator.y);
+        f.tetherAngle = Math.atan2(f.y - foodRotator.y, f.x - foodRotator.x);
+      }
+      f.tetherAngle += ROTATOR_SPIN_SPEED * foodRotator.dir * dt;
+      f.x = foodRotator.x + Math.cos(f.tetherAngle) * f.tetherDist;
+      f.y = foodRotator.y + Math.sin(f.tetherAngle) * f.tetherDist;
+      f.linkedRotator = foodRotator;
+    } else {
+      f.linkedRotator = null;
+      f.tetherAngle = undefined;
+    }
+  }
+
+  // Update powerup tether attachment & orbit position if present
+  if (game.powerUp) {
+    const p = game.powerUp;
+    let powerRotator = null;
+    let minPowerDist = ROTATOR_RADIUS;
+    for (const r of game.rotators) {
+      const d = dist(p.x, p.y, r.x, r.y);
+      if (d < minPowerDist) {
+        minPowerDist = d;
+        powerRotator = r;
+      }
+    }
+    if (powerRotator) {
+      if (!p.tetherAngle) {
+        p.tetherDist = Math.hypot(p.x - powerRotator.x, p.y - powerRotator.y);
+        p.tetherAngle = Math.atan2(p.y - powerRotator.y, p.x - powerRotator.x);
+      }
+      p.tetherAngle += ROTATOR_SPIN_SPEED * powerRotator.dir * dt;
+      p.x = powerRotator.x + Math.cos(p.tetherAngle) * p.tetherDist;
+      p.y = powerRotator.y + Math.sin(p.tetherAngle) * p.tetherDist;
+      p.linkedRotator = powerRotator;
+    } else {
+      p.linkedRotator = null;
+      p.tetherAngle = undefined;
+    }
+  }
+}
+
 export function updateSpikes(game, dt, rng = Math.random) {
   if (game.level < 2) return;
 
@@ -244,9 +351,14 @@ export function updateSpikes(game, dt, rng = Math.random) {
     return;
   }
 
+  if (game.level === 4) {
+    updateTetherRotators(game, dt, rng);
+    return;
+  }
+
   const final = game.level >= FINAL_LEVEL;
 
-  if (game.level === 4) {
+  if (game.level === 5) {
     // Find or initialize the drone
     let drone = game.spikes.find((s) => s.isDrone);
     if (!drone && game.spikes.length > 0) {
