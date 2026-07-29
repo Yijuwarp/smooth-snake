@@ -63,13 +63,21 @@ export const COMBO_WINDOW = 5; // seconds to reach the next food before the mult
 
 export const LEVEL_PELLETS_REQUIRED = 10; // pellets eaten since the last level-up forces a transition
 export const LEVEL_TIME_REQUIRED = 30; // seconds since the last level-up forces a transition, whichever comes first
-export const FINAL_LEVEL = 5;
+export const FINAL_LEVEL = 6;
 export const SURVIVAL_TIME = 10; // seconds to survive at the final level, after its banner clears, before the star appears
 export const LEVEL_BANNER_DURATION = 2.2; // seconds of slow-motion banner
 export const TUTORIAL_BANNER_DURATION = 3; // longer banner for the one-time power-up explainer
 export const LEVEL_TIME_SCALE = 0.05; // gameplay speed during a banner
 export const FOOD_VALUE_LEVEL2 = 3; // points per pickup (before multiplier) from level 2 on
 export const FOOD_VALUE_LEVEL3 = 5; // points per pickup (before multiplier) from level 3 on
+export const FOOD_VALUE_LEVEL4 = 7; // points per pickup from level 4 on (Tether Rotators)
+export const FOOD_VALUE_LEVEL5 = 8; // points per pickup from level 5 on (Hunter Drone)
+
+// Tether Rotators (level 4): 2 anchor cores spin in opposite halves of the
+// arena with dynamic string physics, tethering spikes, food, and powerups within 190px (~30% area).
+export const ROTATOR_COUNT = 2;
+export const ROTATOR_RADIUS = 190;
+export const ROTATOR_SPIN_SPEED = 0.9; // rad/sec angular rotation speed
 
 // Wandering spikes (level 2, and every spike at the final level): how many
 // can be awake (shaking or moving) at once.

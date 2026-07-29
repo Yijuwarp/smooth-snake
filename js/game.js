@@ -52,7 +52,8 @@ export function saveControlType(type) {
 }
 
 function foodValueForLevel(level) {
-  if (level >= 5) return 10;
+  if (level >= 6) return 10;
+  if (level >= 5) return 8;
   if (level >= 4) return 7;
   if (level >= 3) return 5;
   if (level >= 2) return 3;
@@ -60,7 +61,7 @@ function foodValueForLevel(level) {
 }
 
 function bannerTitle(level) {
-  if (level === 5) return "TRUE FINAL STAGE";
+  if (level === 6) return "TRUE FINAL STAGE";
   return level >= FINAL_LEVEL ? "FINAL LEVEL" : `LEVEL ${level}`;
 }
 
@@ -71,8 +72,10 @@ function bannerSubtitle(level) {
     case 3:
       return "Watch for swelling spikes · pickups now worth ×5";
     case 4:
+      return "Tether Rotators active · pickups now worth ×7";
+    case 5:
       return "Hunter drone tracks you · eat 10 pellets to level up!";
-    case 5: // FINAL_LEVEL
+    case 6: // FINAL_LEVEL
       return `Every spike is loose — survive ${SURVIVAL_TIME}s before the star appears!`;
     default:
       return "";
@@ -276,9 +279,17 @@ function applyLevelUp(game, newLevel, trigger) {
     s.sizeMult = 1;
     s.isDrone = false;
     s.bounceTimer = 0;
+    s.tetheredTo = null;
+    s.tetherAngle = undefined;
+    s.tetherDist = undefined;
+    if (s.baseX !== undefined) {
+      s.x = s.baseX;
+      s.y = s.baseY;
+    }
   }
   game.spikeTimer = 0;
   game.hunterQueue = [];
+  game.rotators = null;
 
   if (newLevel === FINAL_LEVEL) {
     // No more pellets at the final level — just survive a countdown (shown
