@@ -1189,22 +1189,18 @@ function drawCardPick(ctx, game) {
     ctx.roundRect(r.x, r.y, r.w, 38, { upperLeft: 14, upperRight: 14, lowerLeft: 0, lowerRight: 0 });
     ctx.fill();
 
-    // Icon
-    const iconY = r.y + 58;
-    ctx.font = "42px serif";
-    ctx.textAlign = "center";
-    ctx.textBaseline = "middle";
-    ctx.fillText(CARD_ICONS[card.id] || "✦", cx, iconY);
+    // Vector Icon
+    drawCardIcon(ctx, card.id, cx, r.y + 60, t, rc, hovered);
 
     // Name
     ctx.font = "bold 17px 'Outfit', sans-serif";
     ctx.fillStyle = "#e8f0f8";
-    ctx.fillText(card.name, cx, r.y + 104);
+    ctx.fillText(card.name, cx, r.y + 110);
 
     // Rarity label
     ctx.font = "11px 'Outfit', sans-serif";
     ctx.fillStyle = rc.label;
-    ctx.fillText(card.rarity.toUpperCase(), cx, r.y + 122);
+    ctx.fillText(card.rarity.toUpperCase(), cx, r.y + 128);
 
     // Description — word-wrap at ~24 chars
     ctx.font = "12px 'Outfit', sans-serif";
@@ -1212,7 +1208,8 @@ function drawCardPick(ctx, game) {
     ctx.textBaseline = "top";
     const words = card.desc.split(" ");
     const maxW = r.w - 24;
-    let line = "", lineY = r.y + 142;
+    let line = "", lineY = r.y + 148;
+
     for (const word of words) {
       const test = line ? line + " " + word : word;
       if (ctx.measureText(test).width > maxW && line) {
@@ -1241,3 +1238,281 @@ function drawCardPick(ctx, game) {
     ctx.restore();
   }
 }
+
+function drawCardIcon(ctx, id, cx, cy, time, rc, hovered) {
+  ctx.save();
+  ctx.translate(cx, cy);
+
+  // Background emblem badge circle
+  const r = 26;
+  const pulse = hovered ? 1 + Math.sin(time * 5) * 0.06 : 1;
+  ctx.scale(pulse, pulse);
+
+  // Emblem background gradient
+  const bg = ctx.createRadialGradient(0, 0, 4, 0, 0, r);
+  bg.addColorStop(0, "rgba(22, 32, 50, 0.95)");
+  bg.addColorStop(1, "rgba(10, 16, 26, 0.98)");
+  ctx.fillStyle = bg;
+  ctx.beginPath();
+  ctx.arc(0, 0, r, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Emblem border ring
+  ctx.strokeStyle = rc.border;
+  ctx.lineWidth = hovered ? 2.5 : 1.5;
+  ctx.shadowColor = rc.border;
+  ctx.shadowBlur = hovered ? 14 : 6;
+  ctx.beginPath();
+  ctx.arc(0, 0, r, 0, Math.PI * 2);
+  ctx.stroke();
+  ctx.shadowBlur = 0;
+
+  ctx.lineCap = "round";
+  ctx.lineJoin = "round";
+
+  switch (id) {
+    case "dynamo": {
+      // Lightning bolt
+      ctx.fillStyle = "#ffd257";
+      ctx.shadowColor = "#ffd257";
+      ctx.shadowBlur = 10;
+      ctx.beginPath();
+      ctx.moveTo(3, -15);
+      ctx.lineTo(-9, 1);
+      ctx.lineTo(-1, 1);
+      ctx.lineTo(-4, 15);
+      ctx.lineTo(9, -1);
+      ctx.lineTo(1, -1);
+      ctx.closePath();
+      ctx.fill();
+      break;
+    }
+
+    case "slim": {
+      // Sleek narrow body contour with inward squeeze arrows
+      ctx.strokeStyle = "#4fd1e8";
+      ctx.lineWidth = 3;
+      ctx.shadowColor = "#4fd1e8";
+      ctx.shadowBlur = 8;
+      ctx.beginPath();
+      ctx.moveTo(-14, 0);
+      ctx.bezierCurveTo(-7, -12, 7, 12, 14, 0);
+      ctx.stroke();
+
+      // Inward arrows
+      ctx.strokeStyle = "#ffffff";
+      ctx.lineWidth = 1.8;
+      ctx.beginPath();
+      ctx.moveTo(-4, -11); ctx.lineTo(0, -6); ctx.lineTo(4, -11);
+      ctx.moveTo(-4, 11);  ctx.lineTo(0, 6);  ctx.lineTo(4, 11);
+      ctx.stroke();
+      break;
+    }
+
+    case "agility": {
+      // Circular motion arrow
+      ctx.strokeStyle = "#7fe8ff";
+      ctx.lineWidth = 3;
+      ctx.shadowColor = "#7fe8ff";
+      ctx.shadowBlur = 8;
+      ctx.beginPath();
+      ctx.arc(0, 0, 13, -Math.PI * 0.75, Math.PI * 0.75);
+      ctx.stroke();
+
+      // Arrow head
+      ctx.fillStyle = "#7fe8ff";
+      ctx.beginPath();
+      ctx.moveTo(9, 12);
+      ctx.lineTo(15, 4);
+      ctx.lineTo(2, 5);
+      ctx.closePath();
+      ctx.fill();
+      break;
+    }
+
+    case "compressor": {
+      // Coiled spring / compressed body rings
+      ctx.strokeStyle = "#4ee08a";
+      ctx.lineWidth = 2.8;
+      ctx.shadowColor = "#4ee08a";
+      ctx.shadowBlur = 8;
+      for (const offset of [-8, -2, 4, 10]) {
+        ctx.beginPath();
+        ctx.ellipse(0, offset - 2, 12, 4, 0, 0, Math.PI * 2);
+        ctx.stroke();
+      }
+      break;
+    }
+
+    case "regen": {
+      // Heart with healing glow + cross
+      ctx.fillStyle = "#4ee08a";
+      ctx.shadowColor = "#4ee08a";
+      ctx.shadowBlur = 10;
+      drawHeartShape(ctx, 0, -11, 14);
+      ctx.fill();
+      // White cross inside
+      ctx.fillStyle = "#ffffff";
+      ctx.fillRect(-1.5, -6, 3, 9);
+      ctx.fillRect(-4.5, -3, 9, 3);
+      break;
+    }
+
+    case "spikeguard": {
+      // Shield with diamond scale emblem
+      ctx.fillStyle = "#c8e8ff";
+      ctx.strokeStyle = "#7fb8ff";
+      ctx.lineWidth = 2;
+      ctx.shadowColor = "#7fb8ff";
+      ctx.shadowBlur = 10;
+      ctx.beginPath();
+      ctx.moveTo(0, -14);
+      ctx.lineTo(12, -8);
+      ctx.lineTo(10, 5);
+      ctx.lineTo(0, 14);
+      ctx.lineTo(-10, 5);
+      ctx.lineTo(-12, -8);
+      ctx.closePath();
+      ctx.fill();
+      ctx.stroke();
+
+      // Inner scale mark
+      ctx.fillStyle = "#ffffff";
+      ctx.beginPath();
+      ctx.moveTo(0, -5); ctx.lineTo(4, 0); ctx.lineTo(0, 5); ctx.lineTo(-4, 0);
+      ctx.closePath();
+      ctx.fill();
+      break;
+    }
+
+    case "wraparound": {
+      // Portal swirl rings
+      ctx.save();
+      ctx.rotate(time * 2);
+      ctx.strokeStyle = "#c792ff";
+      ctx.lineWidth = 3;
+      ctx.shadowColor = "#c792ff";
+      ctx.shadowBlur = 10;
+      ctx.beginPath();
+      ctx.arc(0, 0, 13, 0, Math.PI * 1.4);
+      ctx.stroke();
+
+      ctx.strokeStyle = "#7fb8ff";
+      ctx.beginPath();
+      ctx.arc(0, 0, 7, Math.PI, Math.PI * 2.4);
+      ctx.stroke();
+      ctx.restore();
+      break;
+    }
+
+    case "magnet": {
+      // Horseshoe magnet
+      ctx.fillStyle = "#ff6b6b";
+      ctx.shadowColor = "#ff6b6b";
+      ctx.shadowBlur = 8;
+      ctx.beginPath();
+      ctx.arc(0, -3, 11, Math.PI, 0, false);
+      ctx.lineTo(11, 7);
+      ctx.lineTo(6, 7);
+      ctx.lineTo(6, -3);
+      ctx.arc(0, -3, 6, 0, Math.PI, true);
+      ctx.lineTo(-6, 7);
+      ctx.lineTo(-11, 7);
+      ctx.closePath();
+      ctx.fill();
+
+      // Silver tips
+      ctx.fillStyle = "#ffffff";
+      ctx.fillRect(-11, 4, 5, 3);
+      ctx.fillRect(6, 4, 5, 3);
+      break;
+    }
+
+    case "phantom": {
+      // Ghost silhouette
+      ctx.fillStyle = "#c792ff";
+      ctx.shadowColor = "#c792ff";
+      ctx.shadowBlur = 10;
+      ctx.beginPath();
+      ctx.arc(0, -3, 11, Math.PI, 0, false);
+      ctx.lineTo(11, 10);
+      ctx.lineTo(6, 6);
+      ctx.lineTo(0, 10);
+      ctx.lineTo(-6, 6);
+      ctx.lineTo(-11, 10);
+      ctx.closePath();
+      ctx.fill();
+
+      // Dark eyes
+      ctx.fillStyle = "#0c121e";
+      ctx.beginPath();
+      ctx.arc(-4, -3, 2.5, 0, Math.PI * 2);
+      ctx.arc(4, -3, 2.5, 0, Math.PI * 2);
+      ctx.fill();
+      break;
+    }
+
+    case "ghost": {
+      // Phased dash silhouette
+      ctx.strokeStyle = "rgba(127, 232, 255, 0.4)";
+      ctx.lineWidth = 2.5;
+      ctx.beginPath();
+      ctx.moveTo(-15, 3); ctx.lineTo(4, 3);
+      ctx.moveTo(-11, -5); ctx.lineTo(8, -5);
+      ctx.stroke();
+
+      ctx.fillStyle = "#7fe8ff";
+      ctx.shadowColor = "#7fe8ff";
+      ctx.shadowBlur = 10;
+      ctx.beginPath();
+      ctx.arc(6, 0, 8.5, 0, Math.PI * 2);
+      ctx.fill();
+      break;
+    }
+
+    case "freeze": {
+      // Snowflake / ice crystal
+      ctx.strokeStyle = "#7dd8ff";
+      ctx.lineWidth = 2.2;
+      ctx.shadowColor = "#7dd8ff";
+      ctx.shadowBlur = 10;
+      for (let a = 0; a < Math.PI * 2; a += Math.PI / 3) {
+        ctx.beginPath();
+        ctx.moveTo(0, 0);
+        ctx.lineTo(Math.cos(a) * 13, Math.sin(a) * 13);
+        ctx.stroke();
+      }
+      break;
+    }
+
+    case "heal":
+    default: {
+      // Heart with specular shine
+      ctx.fillStyle = "#ff4f73";
+      ctx.shadowColor = "#ff4f73";
+      ctx.shadowBlur = 12;
+      drawHeartShape(ctx, 0, -12, 15);
+      ctx.fill();
+
+      ctx.fillStyle = "#ffffff";
+      ctx.beginPath();
+      ctx.arc(-3, -7, 2.5, 0, Math.PI * 2);
+      ctx.fill();
+      break;
+    }
+  }
+
+  ctx.restore();
+}
+
+function drawHeartShape(ctx, x, y, size) {
+  ctx.beginPath();
+  const topCurveHeight = size * 0.3;
+  ctx.moveTo(x, y + topCurveHeight);
+  ctx.bezierCurveTo(x, y, x - size / 2, y, x - size / 2, y + topCurveHeight);
+  ctx.bezierCurveTo(x - size / 2, y + (size + topCurveHeight) / 2, x, y + size, x, y + size * 1.05);
+  ctx.bezierCurveTo(x, y + size, x + size / 2, y + (size + topCurveHeight) / 2, x + size / 2, y + topCurveHeight);
+  ctx.bezierCurveTo(x + size / 2, y, x, y, x, y + topCurveHeight);
+  ctx.closePath();
+}
+
