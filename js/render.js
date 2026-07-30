@@ -34,132 +34,258 @@ function loadButtonSprites(kind) {
 const BTN_SPRITES = { boost: loadButtonSprites("boost"), slow: loadButtonSprites("slow") };
 
 // ---- Animated menu background ------------------------------------------
-// Three snakes trace Lissajous curves at different speeds/colors.
-// Purely time-driven — no external state needed.
+// Shows our main snake (larger scale, with eyes and tongue) gliding along
+// a figure-8 (Infinity) lemniscate curve, accompanied by a sleek secondary echo snake.
 let menuAnimTime = 0;
 
-const MENU_SNAKES_CFG = [
-  // { a, b, delta, speed, trailLen, outerR, innerR, rgb }
-  { a: 3.1, b: 2.0, delta: 0.9,  speed: 0.48, trail: 260, outerR: 18, innerR: 7,  rgb: "79,209,232"   }, // cyan
-  { a: 2.0, b: 3.0, delta: 2.1,  speed: 0.34, trail: 200, outerR: 14, innerR: 5,  rgb: "199,146,255"  }, // purple
-  { a: 5.0, b: 4.0, delta: 1.55, speed: 0.22, trail: 150, outerR: 10, innerR: 4,  rgb: "111,184,255"  }, // blue
-];
+function drawFigure8Snake(ctx, uHead, sr, segCount, rx, ry, cx, cy, isMainSnake, time) {
+  const pts = [];
+  const fineStep = 0.005;
+  const targetSpacing = sr * 0.85;
+
+  let currentU = uHead;
+  let prevX = cx + rx * Math.sin(currentU);
+  let prevY = cy + ry * Math.sin(2 * currentU);
+
+  pts.push({ x: prevX, y: prevY, u: currentU });
+
+  let accumulatedDist = 0;
+
+  while (pts.length < segCount && currentU > uHead - Math.PI * 4) {
+    currentU -= fineStep;
+    const curX = cx + rx * Math.sin(currentU);
+    const curY = cy + ry * Math.sin(2 * currentU);
+    const dist = Math.hypot(curX - prevX, curY - prevY);
+    accumulatedDist += dist;
+
+    if (accumulatedDist >= targetSpacing) {
+      pts.push({ x: curX, y: curY, u: currentU });
+      accumulatedDist = 0;
+    }
+    prevX = curX;
+    prevY = curY;
+  }
+
+  const actualSegCount = pts.length;
+  if (actualSegCount < 2) return;
+
+  const headDx = rx * Math.cos(uHead);
+  const headDy = ry * 2 * Math.cos(2 * uHead);
+  const headTheta = Math.atan2(headDy, headDx);
+
+  const glowColor = isMainSnake ? "rgba(79, 209, 232, 0.22)" : "rgba(199, 146, 255, 0.18)";
+  const headColor = isMainSnake ? COLOR_SNAKE_HEAD : "#d8a6ff";
+
+  // 1. Outer glow
+  ctx.fillStyle = glowColor;
+  ctx.beginPath();
+  for (let i = actualSegCount - 1; i >= 0; i--) {
+    const p = pts[i];
+    const frac = i / (actualSegCount - 1);
+    const r = sr * (1.0 - frac * 0.42) * 1.4;
+    ctx.moveTo(p.x + r, p.y);
+    ctx.arc(p.x, p.y, r, 0, Math.PI * 2);
+  }
+  ctx.fill();
+
+  // 2. Body segments (tail to head)
+  for (let i = actualSegCount - 1; i >= 0; i--) {
+    const p = pts[i];
+    const frac = i / (actualSegCount - 1);
+    const r = sr * (1.0 - frac * 0.42);
+
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, r, 0, Math.PI * 2);
+    ctx.fillStyle = isMainSnake ? COLOR_SNAKE_BODY : `rgba(180, 130, 255, ${0.85 - frac * 0.4})`;
+    ctx.fill();
+
+    // 3D highlight sheen on top-left of segment
+    ctx.beginPath();
+    ctx.arc(p.x - r * 0.28, p.y - r * 0.28, r * 0.48, 0, Math.PI * 2);
+    ctx.fillStyle = "rgba(255, 255, 255, 0.22)";
+    ctx.fill();
+  }
+
+  // 3. Head
+  const head = pts[0];
+  const headRadius = sr * 1.22;
+
+  // Head Glow
+  ctx.fillStyle = isMainSnake ? "rgba(127, 232, 255, 0.40)" : "rgba(216, 166, 255, 0.35)";
+  ctx.beginPath();
+  ctx.arc(head.x, head.y, headRadius * 1.45, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Head Base
+  ctx.fillStyle = headColor;
+  ctx.beginPath();
+  ctx.arc(head.x, head.y, headRadius, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Head Sheen
+  ctx.fillStyle = "rgba(255, 255, 255, 0.32)";
+  ctx.beginPath();
+  ctx.arc(head.x - headRadius * 0.3, head.y - headRadius * 0.3, headRadius * 0.45, 0, Math.PI * 2);
+  ctx.fill();
+
+  // 4. Tongue (for main snake)
+  if (isMainSnake) {
+    const tongueCycle = time % 2.4;
+    if (tongueCycle < 0.38) {
+      ctx.save();
+      ctx.strokeStyle = "#ff4f73";
+      ctx.lineWidth = Math.max(2.5, sr * 0.12);
+      ctx.lineCap = "round";
+      ctx.lineJoin = "round";
+
+      const progress = tongueCycle / 0.38;
+      const len = sr * 1.2 * Math.sin(progress * Math.PI);
+
+      const hx = head.x + Math.cos(headTheta) * headRadius * 0.95;
+      const hy = head.y + Math.sin(headTheta) * headRadius * 0.95;
+      const tx = hx + Math.cos(headTheta) * len;
+      const ty = hy + Math.sin(headTheta) * len;
+
+      const forkAngle = 0.45;
+      const forkLen = len * 0.35;
+      const fx1 = tx + Math.cos(headTheta + forkAngle) * forkLen;
+      const fy1 = ty + Math.sin(headTheta + forkAngle) * forkLen;
+      const fx2 = tx + Math.cos(headTheta - forkAngle) * forkLen;
+      const fy2 = ty + Math.sin(headTheta - forkAngle) * forkLen;
+
+      ctx.beginPath();
+      ctx.moveTo(hx, hy);
+      ctx.lineTo(tx, ty);
+      ctx.moveTo(tx, ty);
+      ctx.lineTo(fx1, fy1);
+      ctx.moveTo(tx, ty);
+      ctx.lineTo(fx2, fy2);
+      ctx.stroke();
+      ctx.restore();
+    }
+  }
+
+  // 5. Eyes (using our drawEye function)
+  const eyeOffset = sr * 0.65;
+  const eyeForward = sr * 0.72;
+  const perp = headTheta + Math.PI / 2;
+  const eyeR = Math.max(4.5, sr * 0.22);
+
+  const blink = (time % 4.0) < 0.15;
+  const expression = blink ? "happy" : "default";
+
+  for (const sign of [-1, 1]) {
+    const ex = head.x + Math.cos(headTheta) * eyeForward + Math.cos(perp) * eyeOffset * sign;
+    const ey = head.y + Math.sin(headTheta) * eyeForward + Math.sin(perp) * eyeOffset * sign;
+    drawEye(ctx, ex, ey, eyeR, expression, sign);
+  }
+}
 
 function drawMenuBackground(ctx, canvas) {
   const W = canvas.width, H = canvas.height;
 
-  // Solid dark background.
+  // Solid dark space background.
   ctx.fillStyle = "#05070b";
   ctx.fillRect(0, 0, W, H);
 
-  // Subtle dot-grid (mirrors splash screen feel).
+  const t = menuAnimTime;
+  const cx = W / 2, cy = H / 2;
+
+  // Figure-8 bounds
+  const rx = Math.min(W * 0.38, 520);
+  const ry = Math.min(H * 0.30, 270);
+
+  // Soft ambient radial glows behind figure-8 lobes
   ctx.save();
-  ctx.fillStyle = "rgba(79,209,232,0.055)";
+  const leftGlow = ctx.createRadialGradient(cx - rx * 0.65, cy, 10, cx - rx * 0.65, cy, rx * 1.1);
+  leftGlow.addColorStop(0, "rgba(79, 209, 232, 0.08)");
+  leftGlow.addColorStop(1, "rgba(79, 209, 232, 0)");
+  ctx.fillStyle = leftGlow;
+  ctx.fillRect(0, 0, W, H);
+
+  const rightGlow = ctx.createRadialGradient(cx + rx * 0.65, cy, 10, cx + rx * 0.65, cy, rx * 1.1);
+  rightGlow.addColorStop(0, "rgba(199, 146, 255, 0.07)");
+  rightGlow.addColorStop(1, "rgba(199, 146, 255, 0)");
+  ctx.fillStyle = rightGlow;
+  ctx.fillRect(0, 0, W, H);
+
+  // Subtle dot grid background
+  ctx.fillStyle = "rgba(79, 209, 232, 0.045)";
   const gs = Math.round(36 * (W / 1200 || 1));
-  for (let gx = gs / 2; gx < W; gx += gs)
+  for (let gx = gs / 2; gx < W; gx += gs) {
     for (let gy = gs / 2; gy < H; gy += gs) {
       ctx.beginPath();
       ctx.arc(gx, gy, 1, 0, Math.PI * 2);
       ctx.fill();
     }
-  ctx.restore();
+  }
 
-  const t = menuAnimTime;
-  const cx = W / 2, cy = H / 2;
-  const rx = W * 0.40, ry = H * 0.38;
-  const BANDS = 12; // draw calls per snake per layer
+  // Draw faint glowing figure-8 guide track
+  ctx.beginPath();
+  const TRACK_SAMPLES = 140;
+  for (let i = 0; i <= TRACK_SAMPLES; i++) {
+    const u = (i / TRACK_SAMPLES) * Math.PI * 2;
+    const tx = cx + rx * Math.sin(u);
+    const ty = cy + ry * Math.sin(2 * u);
+    if (i === 0) ctx.moveTo(tx, ty);
+    else ctx.lineTo(tx, ty);
+  }
+  ctx.strokeStyle = "rgba(79, 209, 232, 0.09)";
+  ctx.lineWidth = 6;
+  ctx.stroke();
 
+  // Animated glowing dash pulse along figure-8 track
   ctx.save();
-  ctx.lineCap = "round";
-  ctx.lineJoin = "round";
+  ctx.strokeStyle = "rgba(127, 232, 255, 0.20)";
+  ctx.lineWidth = 2.5;
+  ctx.setLineDash([18, 42]);
+  ctx.lineDashOffset = -t * 45;
+  ctx.stroke();
+  ctx.restore();
 
-  for (const s of MENU_SNAKES_CFG) {
-    // Build point array: head at index 0, tail at index trail-1.
-    const pts = [];
-    const step = 0.012;
-    for (let i = 0; i < s.trail; i++) {
-      const ti = t * s.speed - i * step;
-      pts.push({
-        x: cx + rx * Math.sin(s.a * ti + s.delta),
-        y: cy + ry * Math.sin(s.b * ti),
-      });
-    }
+  // Floating food Orbs along figure-8 track
+  const foodCount = 6;
+  for (let i = 0; i < foodCount; i++) {
+    const fu = (i / foodCount) * Math.PI * 2 + t * 0.06;
+    const fx = cx + (rx * 0.92) * Math.sin(fu);
+    const fy = cy + (ry * 0.88) * Math.sin(2 * fu);
+    const fr = Math.sin(t * 3 + i) * 1.5 + 4.5;
 
-    // Draw in bands from tail→head so head is on top.
-    for (let band = BANDS - 1; band >= 0; band--) {
-      const start = Math.floor(band * s.trail / BANDS);
-      const end   = Math.min(Math.floor((band + 1) * s.trail / BANDS) + 1, s.trail);
-      const frac  = 1 - band / BANDS; // 1 = head band, 0 = tail
-
-      if (end - start < 2) continue;
-      ctx.beginPath();
-      ctx.moveTo(pts[start].x, pts[start].y);
-      for (let i = start + 1; i < end; i++) ctx.lineTo(pts[i].x, pts[i].y);
-
-      // Outer glow layer.
-      ctx.lineWidth = s.outerR * (0.2 + frac * 0.8) * 2;
-      ctx.strokeStyle = `rgba(${s.rgb},${frac * 0.12})`;
-      ctx.stroke();
-
-      // Inner bright core.
-      ctx.lineWidth = s.innerR * (0.15 + frac * 0.85) * 2;
-      ctx.strokeStyle = `rgba(${s.rgb},${frac * 0.65})`;
-      ctx.stroke();
-    }
-
-    // Bright head dot.
-    const h = pts[0];
+    ctx.save();
+    ctx.shadowColor = COLOR_FOOD;
+    ctx.shadowBlur = 10;
+    ctx.fillStyle = COLOR_FOOD;
     ctx.beginPath();
-    ctx.arc(h.x, h.y, s.innerR * 1.5, 0, Math.PI * 2);
-    ctx.fillStyle = `rgba(${s.rgb},0.9)`;
+    ctx.arc(fx, fy, Math.max(3, fr), 0, Math.PI * 2);
     ctx.fill();
+    ctx.restore();
   }
+
+  // Draw secondary partner snake first (behind main snake)
+  const sr2 = Math.max(15, Math.min(W, H) * 0.022);
+  drawFigure8Snake(ctx, t * 0.38 + Math.PI, sr2, 34, rx, ry, cx, cy, false, t);
+
+  // Draw our main snake (larger, iconic cyan snake with eyes and tongue)
+  const sr1 = Math.max(24, Math.min(W, H) * 0.036);
+  drawFigure8Snake(ctx, t * 0.38, sr1, 52, rx, ry, cx, cy, true, t);
 
   ctx.restore();
-}
-
-
-const COLOR_BG = "#0f1520";
-const COLOR_BORDER = "#3a4a63";
-const COLOR_FOOD = "#4ee08a";
-const COLOR_SPIKE_BASE = "#b0472f";
-const COLOR_SPIKE_TIP = "#ff8c4a";
-const COLOR_SNAKE_BODY = "#4fd1e8";
-const COLOR_SNAKE_HEAD = "#7fe8ff";
-const COLOR_EYE = "#0f1520";
-const COLOR_POWER_UP = "#fff44d";
-
-// Computes the scale/offset that letterboxes the logical arena, centered,
-// inside the current canvas backing-store size.
-export function computeViewport(canvas) {
-  const scale = Math.min(canvas.width / ARENA_W, canvas.height / ARENA_H);
-  const offsetX = (canvas.width - ARENA_W * scale) / 2;
-  const offsetY = (canvas.height - ARENA_H * scale) / 2;
-  return { scale, offsetX, offsetY };
-}
-
-// Setting width/height clears the canvas, so only touch them when the CSS
-// size actually changed; cheap enough to call every frame.
-export function resizeCanvas(canvas) {
-  const dpr = window.devicePixelRatio || 1;
-  const rect = canvas.getBoundingClientRect();
-  const w = Math.round(rect.width * dpr);
-  const h = Math.round(rect.height * dpr);
-  if (canvas.width !== w || canvas.height !== h) {
-    canvas.width = w;
-    canvas.height = h;
-  }
 }
 
 export function render(game, ctx, canvas) {
-  // Desktop menu state: skip the game board entirely and draw the animated
-  // snake background. The HTML #start-menu overlay sits on top.
-  if (!TOUCH_MODE && game.state === "menu") {
+  // Menu state (desktop & touch): draw figure-8 snake background.
+  if (game.state === "menu") {
     const now = performance.now() / 1000;
-    menuAnimTime = now; // use wall-clock time directly — no accumulation needed
+    menuAnimTime = now;
     ctx.save();
     ctx.setTransform(1, 0, 0, 1, 0, 0);
     drawMenuBackground(ctx, canvas);
+    if (TOUCH_MODE) {
+      const { scale, offsetX, offsetY } = computeViewport(canvas);
+      ctx.translate(offsetX, offsetY);
+      ctx.scale(scale, scale);
+      drawOverlay(ctx, "SSNAKE", "Tap to Play!", game);
+    }
     ctx.restore();
     return;
   }
@@ -231,10 +357,6 @@ export function render(game, ctx, canvas) {
     ctx.restore();
   }
 
-  if (game.state === "menu") {
-    // Touch-only: HTML overlay not available, use canvas title card.
-    drawOverlay(ctx, "SSNAKE", "Tap to Play!", game);
-  }
   if (game.state === "gameover") {
     const again = TOUCH_MODE ? "Tap to Play Again!" : "Click to Play Again!";
     drawOverlay(ctx, game.won ? "You Win!" : "Game Over", again, game);
