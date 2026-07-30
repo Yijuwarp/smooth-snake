@@ -416,86 +416,95 @@ export function render(game, ctx, canvas) {
   ctx.restore();
 }
 
+let spaceBgCanvas = null;
+let spaceBgCtx = null;
+
+function getSpaceBgCanvas() {
+  if (!spaceBgCanvas || spaceBgCanvas.width !== ARENA_W || spaceBgCanvas.height !== ARENA_H) {
+    spaceBgCanvas = document.createElement("canvas");
+    spaceBgCanvas.width = ARENA_W;
+    spaceBgCanvas.height = ARENA_H;
+    spaceBgCtx = spaceBgCanvas.getContext("2d");
+
+    // 1. Deep Space Void Base
+    spaceBgCtx.fillStyle = COLOR_BG;
+    spaceBgCtx.fillRect(0, 0, ARENA_W, ARENA_H);
+
+    // 2. Pre-rendered Radial Nebulae
+    const nx1 = ARENA_W * 0.3, ny1 = ARENA_H * 0.35;
+    const neb1 = spaceBgCtx.createRadialGradient(nx1, ny1, 20, nx1, ny1, 440);
+    neb1.addColorStop(0, "rgba(199, 146, 255, 0.16)");
+    neb1.addColorStop(0.6, "rgba(125, 80, 200, 0.05)");
+    neb1.addColorStop(1, "rgba(3, 4, 8, 0)");
+    spaceBgCtx.fillStyle = neb1;
+    spaceBgCtx.fillRect(0, 0, ARENA_W, ARENA_H);
+
+    const nx2 = ARENA_W * 0.75, ny2 = ARENA_H * 0.65;
+    const neb2 = spaceBgCtx.createRadialGradient(nx2, ny2, 30, nx2, ny2, 480);
+    neb2.addColorStop(0, "rgba(79, 209, 232, 0.16)");
+    neb2.addColorStop(0.6, "rgba(40, 140, 180, 0.05)");
+    neb2.addColorStop(1, "rgba(3, 4, 8, 0)");
+    spaceBgCtx.fillStyle = neb2;
+    spaceBgCtx.fillRect(0, 0, ARENA_W, ARENA_H);
+
+    // 3. Faint Constellation Positioning Grid
+    spaceBgCtx.strokeStyle = "rgba(199, 146, 255, 0.04)";
+    spaceBgCtx.lineWidth = 1;
+    const gridSpacing = 40;
+    spaceBgCtx.beginPath();
+    for (let x = 0; x < ARENA_W; x += gridSpacing) {
+      spaceBgCtx.moveTo(x, 0);
+      spaceBgCtx.lineTo(x, ARENA_H);
+    }
+    for (let y = 0; y < ARENA_H; y += gridSpacing) {
+      spaceBgCtx.moveTo(0, y);
+      spaceBgCtx.lineTo(ARENA_W, y);
+    }
+    spaceBgCtx.stroke();
+
+    // Faint intersection dots
+    spaceBgCtx.fillStyle = "rgba(199, 146, 255, 0.15)";
+    for (let x = gridSpacing; x < ARENA_W; x += gridSpacing) {
+      for (let y = gridSpacing; y < ARENA_H; y += gridSpacing) {
+        spaceBgCtx.fillRect(x - 1, y - 1, 2, 2);
+      }
+    }
+
+    // 4. Pre-render background stars into offscreen canvas
+    for (let i = 0; i < SPACE_STARS.length; i++) {
+      const s = SPACE_STARS[i];
+      spaceBgCtx.fillStyle = s.hue === 200 ? "rgba(125, 211, 252, 0.55)" : (s.hue === 270 ? "rgba(199, 146, 255, 0.55)" : "rgba(255, 210, 87, 0.55)");
+      spaceBgCtx.beginPath();
+      spaceBgCtx.arc(s.x, s.y, s.size, 0, Math.PI * 2);
+      spaceBgCtx.fill();
+    }
+  }
+  return spaceBgCanvas;
+}
+
 function drawArena(ctx, game) {
   const time = game ? game.time : 0;
 
-  // 1. Deep Space Void Background
-  ctx.fillStyle = COLOR_BG;
-  ctx.fillRect(0, 0, ARENA_W, ARENA_H);
+  // 1. Draw ultra-fast pre-rendered Deep Space background canvas (1 single drawImage call)
+  const bgCanvas = getSpaceBgCanvas();
+  ctx.drawImage(bgCanvas, 0, 0);
 
-  // 2. Procedural Floating Nebulae Clouds
+  // 2. Efficiently animate a small subset (~20) twinkling near-stars
   ctx.save();
-  // Purple Nebula (top-left / center drifting)
-  const nx1 = ARENA_W * 0.3 + Math.sin(time * 0.3) * 25;
-  const ny1 = ARENA_H * 0.35 + Math.cos(time * 0.2) * 20;
-  const neb1 = ctx.createRadialGradient(nx1, ny1, 20, nx1, ny1, 440);
-  neb1.addColorStop(0, "rgba(199, 146, 255, 0.15)");
-  neb1.addColorStop(0.6, "rgba(125, 80, 200, 0.05)");
-  neb1.addColorStop(1, "rgba(3, 4, 8, 0)");
-  ctx.fillStyle = neb1;
-  ctx.fillRect(0, 0, ARENA_W, ARENA_H);
-
-  // Cyan Nebula (bottom-right / center drifting)
-  const nx2 = ARENA_W * 0.75 + Math.cos(time * 0.25) * 30;
-  const ny2 = ARENA_H * 0.65 + Math.sin(time * 0.35) * 25;
-  const neb2 = ctx.createRadialGradient(nx2, ny2, 30, nx2, ny2, 480);
-  neb2.addColorStop(0, "rgba(79, 209, 232, 0.16)");
-  neb2.addColorStop(0.6, "rgba(40, 140, 180, 0.05)");
-  neb2.addColorStop(1, "rgba(3, 4, 8, 0)");
-  ctx.fillStyle = neb2;
-  ctx.fillRect(0, 0, ARENA_W, ARENA_H);
-  ctx.restore();
-
-  // 3. Multi-Layer Parallax Starfield
-  ctx.save();
-  for (const s of SPACE_STARS) {
-    const sx = (s.x + time * s.layer * 3) % ARENA_W;
-    const sy = s.y;
-    const alpha = 0.35 + Math.sin(time * s.twinkleSpeed + s.x) * 0.45;
-
-    ctx.fillStyle = `hsla(${s.hue}, 90%, 80%, ${Math.max(0.1, alpha)})`;
-    ctx.beginPath();
-    ctx.arc(sx, sy, s.size, 0, Math.PI * 2);
-    ctx.fill();
-
-    // Cross flare for large twinkling near stars
-    if (s.size > 1.8 && alpha > 0.55) {
-      ctx.strokeStyle = `hsla(${s.hue}, 90%, 85%, ${alpha * 0.5})`;
-      ctx.lineWidth = 0.8;
+  ctx.fillStyle = "rgba(255, 255, 255, 0.85)";
+  for (let i = 0; i < 24; i++) {
+    const s = SPACE_STARS[i];
+    const alpha = 0.3 + Math.sin(time * s.twinkleSpeed * 2.5 + s.x) * 0.5;
+    if (alpha > 0.45) {
+      ctx.globalAlpha = alpha;
       ctx.beginPath();
-      ctx.moveTo(sx - 4, sy); ctx.lineTo(sx + 4, sy);
-      ctx.moveTo(sx, sy - 4); ctx.lineTo(sx, sy + 4);
-      ctx.stroke();
+      ctx.arc(s.x, s.y, s.size * 1.1, 0, Math.PI * 2);
+      ctx.fill();
     }
   }
   ctx.restore();
 
-  // 4. Subtle Constellation Positioning Grid
-  ctx.save();
-  ctx.strokeStyle = "rgba(199, 146, 255, 0.035)";
-  ctx.lineWidth = 1;
-  const gridSpacing = 40;
-  ctx.beginPath();
-  for (let x = 0; x < ARENA_W; x += gridSpacing) {
-    ctx.moveTo(x, 0);
-    ctx.lineTo(x, ARENA_H);
-  }
-  for (let y = 0; y < ARENA_H; y += gridSpacing) {
-    ctx.moveTo(0, y);
-    ctx.lineTo(ARENA_W, y);
-  }
-  ctx.stroke();
-
-  // Faint intersection dots
-  ctx.fillStyle = "rgba(199, 146, 255, 0.12)";
-  for (let x = gridSpacing; x < ARENA_W; x += gridSpacing) {
-    for (let y = gridSpacing; y < ARENA_H; y += gridSpacing) {
-      ctx.fillRect(x - 1, y - 1, 2, 2);
-    }
-  }
-  ctx.restore();
-
-  // 5. Cosmic Wall Borders
+  // 3. Cosmic Wall Borders (layered crisp strokes without heavy GPU shadowBlur)
   const hasWraparound = game && game.passives && game.passives.wraparound;
 
   if (hasWraparound) {
@@ -510,10 +519,11 @@ function drawArena(ctx, game) {
     ctx.restore();
   } else {
     ctx.save();
+    ctx.strokeStyle = "rgba(199, 146, 255, 0.35)";
+    ctx.lineWidth = 6;
+    ctx.strokeRect(2, 2, ARENA_W - 4, ARENA_H - 4);
     ctx.strokeStyle = COLOR_BORDER;
     ctx.lineWidth = 3;
-    ctx.shadowColor = COLOR_BORDER;
-    ctx.shadowBlur = 10;
     ctx.strokeRect(2, 2, ARENA_W - 4, ARENA_H - 4);
     ctx.restore();
     drawWallTeeth(ctx);
