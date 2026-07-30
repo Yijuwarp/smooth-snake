@@ -271,7 +271,7 @@ export function createGame() {
     currentSpeed: 0,
     level: 1,
     pelletsSinceLevel: 0,
-    pelletsSinceCard: 0,    // triggers card pick every 5 pellets
+    cardPicksGiven: 0,      // counts card picks granted (milestones: 4, 12, 24, 40...)
     starPending: false, // level 4 reached, surviving the countdown before the star appears
     survivalTimer: 0,
     banner: null, // { t, title, subtitle, duration } while a slow-mo banner runs
@@ -329,7 +329,7 @@ export function resetGame(game) {
   game.powerUpCooldown = POWER_UP_SPAWN_INTERVAL;
   game.level = 1;
   game.pelletsSinceLevel = 0;
-  game.pelletsSinceCard = 0;
+  game.cardPicksGiven = 0;
   game.starPending = false;
   game.survivalTimer = 0;
   game.banner = { t: 0, title: "GAME START", subtitle: "" };
@@ -501,7 +501,7 @@ export function update(game, dt) {
   // (200px → 600px = 1× → 3× width). Bigger snake = longer boost/slow.
   const SEG_MAX_DRAIN = BASE_SEGMENTS + 40 * SEGMENTS_PER_FOOD; // 126 — matches render.js cap
   const boostSizeFrac = Math.min(1, Math.max(0, (game.snake.segmentCount - BASE_SEGMENTS) / (SEG_MAX_DRAIN - BASE_SEGMENTS)));
-  const boostScale = 1 + 2 * boostSizeFrac; // 1× at start, 3× at max
+  const boostScale = 1 + 1 * boostSizeFrac; // 1× at start, 2× at max (200% capacity)
   const dynamicDrain = BOOST_DRAIN_PER_SEC / boostScale;
 
   let speedMult = 1;
@@ -832,16 +832,17 @@ export function update(game, dt) {
     game.food = spawnFood(game.spikes, snake.segments);
 
     game.pelletsSinceLevel++;
-    game.pelletsSinceCard++;
     if (game.level < FINAL_LEVEL && game.pelletsSinceLevel >= LEVEL_PELLETS_REQUIRED) {
       applyLevelUp(game, game.level + 1, "pellets");
     }
-    // Every 5 pellets (and not during level-up banner) → open card pick
-    if (game.pelletsSinceCard >= 5 && !game.banner && game.level < FINAL_LEVEL) {
-      game.pelletsSinceCard = 0;
+    // Card pick milestones: 4, 12, 24, 40, 60... (gap increasing by +4 each time)
+    const nextCardTarget = (game.cardPicksGiven + 1) * (game.cardPicksGiven + 2) * 2;
+    if (game.eaten >= nextCardTarget && !game.banner && game.level < FINAL_LEVEL) {
+      game.cardPicksGiven++;
       game.cardPick = { cards: drawCards(game), hoveredIdx: 2 }; // default hover on Heal
       game.state = "cardpick";
     }
+
   }
 
   if (game.level < FINAL_LEVEL) {
