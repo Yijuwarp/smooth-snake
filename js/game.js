@@ -246,13 +246,14 @@ export function selectCard(game, idx) {
     game.hearts = game.maxHearts || MAX_HEARTS;
   } else {
     game.passives[card.id] = true;
-    // Wraparound: immediately remove spikes within WALL_MARGIN of any edge.
+    // Wraparound: immediately remove spikes within WALL_MARGIN + 35 of any edge.
     if (card.id === "wraparound") {
       game.spikes = game.spikes.filter(s =>
-        s.x > WALL_MARGIN + 20 && s.x < ARENA_W - WALL_MARGIN - 20 &&
-        s.y > WALL_MARGIN + 20 && s.y < ARENA_H - WALL_MARGIN - 20
+        s.x > WALL_MARGIN + 35 && s.x < ARENA_W - WALL_MARGIN - 35 &&
+        s.y > WALL_MARGIN + 35 && s.y < ARENA_H - WALL_MARGIN - 35
       );
     }
+
     // Spikeguard: activate shield immediately.
     if (card.id === "spikeguard") {
       game.shieldActive = true;
@@ -681,17 +682,38 @@ export function update(game, dt) {
   const ghostPhasing = game.passives.ghost && game.boosting && game.boost > 0;
 
   const wallHit = hitsWall(snake);
-  // Wraparound: teleport instead of bounce
-  if (wallHit && game.passives.wraparound) {
-    wrapSnake(snake);
+  if (wallHit) {
+    if (game.passives.wraparound) {
+      wrapSnake(snake);
+    } else {
+      bounceOffWall(snake); // ALWAYS bounce head clear of wall
+      if (game.invulnTimer <= 0 && !invincible) {
+        game.hearts--;
+        if (game.multiplier > 1) {
+          game.multiplier = Math.max(1, Math.floor(game.multiplier * 0.7));
+          game.comboTimer = game.multiplier > 1 ? COMBO_WINDOW : 0;
+          game.comboDecaying = false;
+        }
+        game.invulnTimer = INVULN_TIME;
+        game.hitFlash = HIT_FLASH_DURATION;
+        game.screenShake = 0.35;
+        spawnParticles(game, snake.x, snake.y, 18, {
+          colors: ["#ff3050", "#ff7a4a", "#ffffff"], speed: 110, size: 3.5, decay: 1.8,
+        });
+        if (game.hearts <= 0) {
+          spawnParticles(game, snake.x, snake.y, 45, { colors: ["#7fe8ff", "#4fd1e8", "#ffffff"], speed: 150, size: 4.5, decay: 1.2 });
+          endGame(game, false); return;
+        }
+        playHit();
+      }
+    }
   } else {
-    const hitSpike = wallHit ? null : ghostPhasing ? null : findHitSpike(snake, game.spikes);
+    const hitSpike = ghostPhasing ? null : findHitSpike(snake, game.spikes);
     const skipSelf = game.passives.phantom || ghostPhasing;
-    const hitSelfSeg = (wallHit || hitSpike) ? null : skipSelf ? null : findHitSegment(snake);
+    const hitSelfSeg = hitSpike ? null : skipSelf ? null : findHitSegment(snake);
 
-    if ((wallHit || hitSpike || hitSelfSeg) && game.invulnTimer <= 0) {
-      if (wallHit) bounceOffWall(snake);
-      else if (hitSpike) {
+    if ((hitSpike || hitSelfSeg) && game.invulnTimer <= 0) {
+      if (hitSpike) {
         // Spikeguard: absorb the hit, bounce the snake, and push the spike away
         if (game.passives.spikeguard && game.shieldActive) {
           bounceOffSpike(snake, hitSpike);
@@ -763,31 +785,10 @@ export function update(game, dt) {
           }
           playHit();
         }
-      } else if (wallHit) {
-        // Wall hit (non-wraparound path)
-        bounceOffWall(snake);
-        if (!invincible) {
-          game.hearts--;
-          if (game.multiplier > 1) {
-            game.multiplier = Math.max(1, Math.floor(game.multiplier * 0.7));
-            game.comboTimer = game.multiplier > 1 ? COMBO_WINDOW : 0;
-            game.comboDecaying = false;
-          }
-          game.invulnTimer = INVULN_TIME;
-          game.hitFlash = HIT_FLASH_DURATION;
-          game.screenShake = 0.35;
-          spawnParticles(game, snake.x, snake.y, 18, {
-            colors: ["#ff3050", "#ff7a4a", "#ffffff"], speed: 110, size: 3.5, decay: 1.8,
-          });
-          if (game.hearts <= 0) {
-            spawnParticles(game, snake.x, snake.y, 45, { colors: ["#7fe8ff", "#4fd1e8", "#ffffff"], speed: 150, size: 4.5, decay: 1.2 });
-            endGame(game, false); return;
-          }
-          playHit();
-        }
       }
     }
   }
+
 
   if (hitsPowerUp(snake, game.powerUp)) {
     // Spawn electrical shockwave burst
