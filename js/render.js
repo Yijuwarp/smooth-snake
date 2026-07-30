@@ -1390,9 +1390,9 @@ function drawOverlay(ctx, title, subtitle, game) {
 
 // ---- Card pick overlay --------------------------------------------------
 const RARITY_COLORS = {
-  common:   { border: "#4ee08a", glow: "rgba(78,224,138,0.35)",  label: "#4ee08a" },
-  uncommon: { border: "#7fb8ff", glow: "rgba(127,184,255,0.35)", label: "#7fb8ff" },
-  rare:     { border: "#c792ff", glow: "rgba(199,146,255,0.40)", label: "#c792ff" },
+  common:    { border: "#4ee08a", glow: "rgba(78,224,138,0.35)",  label: "#4ee08a" },
+  rare:      { border: "#c792ff", glow: "rgba(199,146,255,0.40)", label: "#c792ff" },
+  legendary: { border: "#ffd257", glow: "rgba(255,210,87,0.45)",  label: "#ffd257" },
 };
 const CARD_ICONS = {
   dynamo:     "⚡",
