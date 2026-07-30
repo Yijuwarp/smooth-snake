@@ -154,17 +154,17 @@ function createPassives() {
 
 // Static card definitions — name, description, rarity weight (higher = more common)
 const CARD_DEFS = {
-  dynamo:     { name: "Dynamo",       rarity: "common",   weight: 3, desc: "Boost meter recharges at 4%/sec when idle for 4s after boosting." },
-  slim:       { name: "Slim Body",    rarity: "common",   weight: 3, desc: "Reduces snake width and collision size by 20%." },
-  agility:    { name: "Agility",      rarity: "common",   weight: 3, desc: "Increases steering turn rate by 20%." },
-  compressor: { name: "Compressor",   rarity: "common",   weight: 3, desc: "Compresses body length by 20% for tighter coiling." },
-  regen:      { name: "Regeneration", rarity: "common",   weight: 3, desc: "Restores 1 heart every 30 seconds." },
-  spikeguard: { name: "Spikeguard",   rarity: "uncommon", weight: 2, desc: "A shield that deflects the next spike hit. Regenerates every 60s. Shows as scales on your body." },
-  wraparound: { name: "Wraparound",   rarity: "rare",     weight: 1, desc: "Walls become portals — exit one side, enter the other. Wall-hugging spikes are cleared." },
-  magnet:     { name: "Magnet",       rarity: "uncommon", weight: 2, desc: "Pellets and boost pickups drift toward your head within a radius." },
-  phantom:    { name: "Phantom",      rarity: "rare",     weight: 1, desc: "Your body can no longer hurt you. Spikes and walls still do." },
-  ghost:      { name: "Ghost",        rarity: "rare",     weight: 1, desc: "While boosting, pass through spikes and your own body. Walls still hurt." },
-  freeze:     { name: "Freeze",       rarity: "uncommon", weight: 2, desc: "Holding slow locks all spikes in place. They turn blue while frozen." },
+  dynamo:     { name: "Dynamo",       rarity: "common",   weight: 3, desc: "Slowly recharges boost when idle." },
+  slim:       { name: "Slim Body",    rarity: "common",   weight: 3, desc: "Reduces snake width and size." },
+  agility:    { name: "Agility",      rarity: "common",   weight: 3, desc: "Sharper steering turn speed." },
+  compressor: { name: "Compressor",   rarity: "common",   weight: 3, desc: "Tightens body length coiling." },
+  regen:      { name: "Regeneration", rarity: "common",   weight: 3, desc: "Passively restores hearts over time." },
+  spikeguard: { name: "Spikeguard",   rarity: "uncommon", weight: 2, desc: "Shield deflects next spike hit." },
+  wraparound: { name: "Wraparound",   rarity: "rare",     weight: 1, desc: "Walls become portals. Clears wall spikes." },
+  magnet:     { name: "Magnet",       rarity: "uncommon", weight: 2, desc: "Pulls pellets and boost toward head." },
+  phantom:    { name: "Phantom",      rarity: "rare",     weight: 1, desc: "Immunity to self-collision." },
+  ghost:      { name: "Ghost",        rarity: "rare",     weight: 1, desc: "Phase through spikes and body while boosting." },
+  freeze:     { name: "Freeze",       rarity: "uncommon", weight: 2, desc: "Spikes freeze while holding slow." },
 };
 
 // Builds the 3-card pick array: 2 weighted-random passives + heal.
@@ -192,14 +192,15 @@ function drawCards(game) {
 
   // Pad with heal if fewer than 2 passives available.
   while (chosen.length < 2) {
-    chosen.push({ type: "heal", id: "heal", name: "Heal", rarity: "common", desc: "Restore health back to full." });
+    chosen.push({ type: "heal", id: "heal", name: "Heal", rarity: "common", desc: "Restores health back to full." });
   }
 
   // Slot 3 is always heal — restores health back to full HP.
-  chosen.push({ type: "heal", id: "heal", name: "Heal", rarity: "common", desc: "Restore health back to full." });
+  chosen.push({ type: "heal", id: "heal", name: "Heal", rarity: "common", desc: "Restores health back to full." });
 
   return chosen;
 }
+
 
 // Returns the arena-coordinate bounding boxes for the 3 cards.
 // Used by both render.js (drawing) and input (hit-testing).
