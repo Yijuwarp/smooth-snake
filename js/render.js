@@ -583,6 +583,7 @@ function drawSpikes(ctx, spikes, time, level, frozen = false) {
 
 function drawSnake(ctx, snake, expression, time, game) {
   const segCount = snake.segments.length;
+  const sr = snake.radius || SNAKE_RADIUS;
   const ghostPhasing = game && game.passives && game.passives.ghost && game.boosting && game.boost > 0;
   const shieldActive = game && game.passives && game.passives.spikeguard && game.shieldActive;
   const shieldRecharging = game && game.passives && game.passives.spikeguard && !game.shieldActive;
@@ -605,7 +606,7 @@ function drawSnake(ctx, snake, expression, time, game) {
     const seg = snake.segments[i];
     const sx = wrapCoord(seg.x, ARENA_W), sy = wrapCoord(seg.y, ARENA_H);
     const t = segCount > 1 ? i / (segCount - 1) : 0;
-    const r = SNAKE_RADIUS * (1.0 - t * 0.45); // Taper down to 55%
+    const r = sr * (1.0 - t * 0.45); // Taper down to 55%
     ctx.beginPath();
     ctx.arc(sx, sy, r * 1.35, 0, Math.PI * 2);
     ctx.fill();
@@ -617,7 +618,7 @@ function drawSnake(ctx, snake, expression, time, game) {
     const seg = snake.segments[i];
     const sx = wrapCoord(seg.x, ARENA_W), sy = wrapCoord(seg.y, ARENA_H);
     const t = segCount > 1 ? i / (segCount - 1) : 0;
-    const r = SNAKE_RADIUS * (1.0 - t * 0.45);
+    const r = sr * (1.0 - t * 0.45);
     ctx.beginPath();
     ctx.arc(sx, sy, r, 0, Math.PI * 2);
     ctx.fill();
@@ -631,7 +632,7 @@ function drawSnake(ctx, snake, expression, time, game) {
       const seg = snake.segments[i];
       const sx = wrapCoord(seg.x, ARENA_W), sy = wrapCoord(seg.y, ARENA_H);
       const t = segCount > 1 ? i / (segCount - 1) : 0;
-      const r = SNAKE_RADIUS * (1.0 - t * 0.45);
+      const r = sr * (1.0 - t * 0.45);
       const fadeT = i / Math.min(segCount - 1, 20); // fade toward tail
       const alpha = scaleAlpha * (1 - fadeT * 0.7);
       ctx.globalAlpha = alpha;
@@ -659,14 +660,15 @@ function drawSnake(ctx, snake, expression, time, game) {
   // 3. Draw head glow
   ctx.fillStyle = "rgba(127, 232, 255, 0.35)";
   ctx.beginPath();
-  ctx.arc(snake.x, snake.y, SNAKE_RADIUS * 1.2 * 1.45, 0, Math.PI * 2);
+  ctx.arc(snake.x, snake.y, sr * 1.2 * 1.45, 0, Math.PI * 2);
   ctx.fill();
 
   // 4. Draw head solid
   ctx.fillStyle = COLOR_SNAKE_HEAD;
   ctx.beginPath();
-  ctx.arc(snake.x, snake.y, SNAKE_RADIUS * 1.2, 0, Math.PI * 2);
+  ctx.arc(snake.x, snake.y, sr * 1.2, 0, Math.PI * 2);
   ctx.fill();
+
 
   // 5. Draw animated tongue occasionally (repeats every 2.4s, darts for 0.35s)
   const tongueCycle = time % 2.4;
@@ -1103,6 +1105,10 @@ const RARITY_COLORS = {
 };
 const CARD_ICONS = {
   dynamo:     "⚡",
+  slim:       "📏",
+  agility:    "🔄",
+  compressor: "🗜",
+  regen:      "💚",
   spikeguard: "🛡",
   wraparound: "🌀",
   magnet:     "🧲",
@@ -1111,6 +1117,7 @@ const CARD_ICONS = {
   freeze:     "❄",
   heal:       "❤",
 };
+
 
 function drawCardPick(ctx, game) {
   const layout = getCardLayout();
