@@ -21,7 +21,9 @@ function toArena(canvas, clientX, clientY) {
 // fullscreenchange listener).
 export function setupInput(game, canvas, { onActivate, onPause, onToggleFullscreen }) {
   canvas.addEventListener("mousemove", (e) => {
+    game.lastInputType = "mouse";
     const p = toArena(canvas, e.clientX, e.clientY);
+
     game.mouse.x = p.x;
     game.mouse.y = p.y;
     // Update card hover during pick screen
@@ -46,7 +48,9 @@ export function setupInput(game, canvas, { onActivate, onPause, onToggleFullscre
   // Left click: boost. Right click: the "precision" slow. Both share the
   // boost meter, so button-aware handling is needed on the way down and up.
   canvas.addEventListener("mousedown", (e) => {
+    game.lastInputType = "mouse";
     if (e.button === 0) game.boosting = true;
+
     if (e.button === 2) game.slowing = true;
   });
   window.addEventListener("mouseup", (e) => {
@@ -65,7 +69,9 @@ export function setupInput(game, canvas, { onActivate, onPause, onToggleFullscre
   canvas.addEventListener(
     "touchstart",
     (e) => {
+      game.lastInputType = "touch";
       e.preventDefault(); // no synthetic mouse events, no scroll/zoom
+
       if (game.state === "cardpick" && game.cardPick) {
         // Tap on a card to select it
         for (const t of e.changedTouches) {
@@ -166,7 +172,9 @@ export function setupInput(game, canvas, { onActivate, onPause, onToggleFullscre
   const SCROLL_PREVENT_CODES = new Set(["ArrowUp","ArrowDown","ArrowLeft","ArrowRight","Space"]);
 
   window.addEventListener("keydown", (e) => {
+    game.lastInputType = "keyboard";
     // Typing a nickname into the highscore text input shouldn't also
+
     // restart the game, mute audio, or toggle fullscreen.
     if (e.target.tagName === "INPUT" && e.target.type === "text") return;
 
