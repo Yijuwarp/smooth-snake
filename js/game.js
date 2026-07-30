@@ -28,6 +28,7 @@ import {
   WAYPOINT_REACH_RADIUS,
   BASE_SEGMENTS,
   SEGMENTS_PER_FOOD,
+  SNAKE_RADIUS,
   SHIELD_REGEN_TIME,
   MAGNET_RADIUS,
   DYNAMO_REGEN_RATE,
@@ -35,6 +36,8 @@ import {
   MAGNET_SPEED,
   WALL_MARGIN,
 } from "./config.js";
+
+
 import { createSnake, steer, moveSnake, updateGrowthAndSpeed, bounceOffWall, wrapSnake, bounceOffSpike, bounceOffSegment } from "./snake.js";
 import { generateSpikes, updateSpikes } from "./spikes.js";
 import { spawnFood } from "./food.js";
