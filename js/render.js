@@ -272,6 +272,38 @@ function drawMenuBackground(ctx, canvas) {
   ctx.restore();
 }
 
+const COLOR_BG = "#0f1520";
+const COLOR_BORDER = "#3a4a63";
+const COLOR_FOOD = "#4ee08a";
+const COLOR_SPIKE_BASE = "#b0472f";
+const COLOR_SPIKE_TIP = "#ff8c4a";
+const COLOR_SNAKE_BODY = "#4fd1e8";
+const COLOR_SNAKE_HEAD = "#7fe8ff";
+const COLOR_EYE = "#0f1520";
+const COLOR_POWER_UP = "#fff44d";
+
+// Computes the scale/offset that letterboxes the logical arena, centered,
+// inside the current canvas backing-store size.
+export function computeViewport(canvas) {
+  const scale = Math.min(canvas.width / ARENA_W, canvas.height / ARENA_H);
+  const offsetX = (canvas.width - ARENA_W * scale) / 2;
+  const offsetY = (canvas.height - ARENA_H * scale) / 2;
+  return { scale, offsetX, offsetY };
+}
+
+// Setting width/height clears the canvas, so only touch them when the CSS
+// size actually changed; cheap enough to call every frame.
+export function resizeCanvas(canvas) {
+  const dpr = window.devicePixelRatio || 1;
+  const rect = canvas.getBoundingClientRect();
+  const w = Math.round(rect.width * dpr);
+  const h = Math.round(rect.height * dpr);
+  if (canvas.width !== w || canvas.height !== h) {
+    canvas.width = w;
+    canvas.height = h;
+  }
+}
+
 export function render(game, ctx, canvas) {
   // Menu state (desktop & touch): draw figure-8 snake background.
   if (game.state === "menu") {
