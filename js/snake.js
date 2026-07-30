@@ -110,6 +110,32 @@ function placeSegments(snake) {
   snake.segments = segments;
 }
 
+// Teleports the snake head to the opposite wall and shifts all path-history
+// points by the same offset so body segments follow through the wall
+// one-by-one (the path continuity is preserved; render.js draws segments with
+// modular clamping so they appear on the correct visual side).
+export function wrapSnake(snake) {
+  let dx = 0, dy = 0;
+  if (snake.x - SNAKE_RADIUS < 0)          { dx =  ARENA_W; }
+  else if (snake.x + SNAKE_RADIUS > ARENA_W) { dx = -ARENA_W; }
+  if (snake.y - SNAKE_RADIUS < 0)          { dy =  ARENA_H; }
+  else if (snake.y + SNAKE_RADIUS > ARENA_H) { dy = -ARENA_H; }
+
+  if (dx === 0 && dy === 0) return;
+
+  snake.x += dx;
+  snake.y += dy;
+  // path[0] was just pushed by moveSnake at the pre-wrap position; fix it.
+  if (snake.path.length > 0) snake.path[0] = { x: snake.x, y: snake.y };
+  // Shift all older path points so they are in the same coordinate frame as
+  // the new head position. They will have large (out-of-arena) coordinates
+  // which render.js wraps back with modular arithmetic when drawing.
+  for (let i = 1; i < snake.path.length; i++) {
+    snake.path[i].x += dx;
+    snake.path[i].y += dy;
+  }
+}
+
 // Reflects heading off whichever wall(s) were crossed and clamps the head
 // back inside, so the same wall doesn't re-trigger the collision next frame.
 export function bounceOffWall(snake) {

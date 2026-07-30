@@ -2,6 +2,7 @@ import { computeViewport } from "./render.js";
 import { toggleMute, isMuted } from "./audio.js";
 import { setMusicMuted } from "./music.js";
 import { TOUCH_MODE, getTouchButtons, GESTURE_MIN_DIST, MAX_GESTURE_PATH_LENGTH } from "./config.js";
+import { selectCard, getCardLayout } from "./game.js";
 
 // Converts a client-space point (mouse or touch) into logical arena coords,
 // accounting for DPR and the letterboxed viewport.
@@ -23,9 +24,23 @@ export function setupInput(game, canvas, { onActivate, onPause, onToggleFullscre
     const p = toArena(canvas, e.clientX, e.clientY);
     game.mouse.x = p.x;
     game.mouse.y = p.y;
+    // Update card hover during pick screen
+    if (game.state === "cardpick" && game.cardPick) {
+      const layout = getCardLayout();
+      const hit = layout.findIndex(r => p.x >= r.x && p.x <= r.x + r.w && p.y >= r.y && p.y <= r.y + r.h);
+      if (hit >= 0) game.cardPick.hoveredIdx = hit;
+    }
   });
 
-  canvas.addEventListener("click", () => onActivate());
+  canvas.addEventListener("click", (e) => {
+    if (game.state === "cardpick" && game.cardPick) {
+      const p = toArena(canvas, e.clientX, e.clientY);
+      const layout = getCardLayout();
+      const hit = layout.findIndex(r => p.x >= r.x && p.x <= r.x + r.w && p.y >= r.y && p.y <= r.y + r.h);
+      if (hit >= 0) { selectCard(game, hit); return; }
+    }
+    onActivate();
+  });
 
   // Left click: boost. Right click: the "precision" slow. Both share the
   // boost meter, so button-aware handling is needed on the way down and up.
@@ -50,6 +65,16 @@ export function setupInput(game, canvas, { onActivate, onPause, onToggleFullscre
     "touchstart",
     (e) => {
       e.preventDefault(); // no synthetic mouse events, no scroll/zoom
+      if (game.state === "cardpick" && game.cardPick) {
+        // Tap on a card to select it
+        for (const t of e.changedTouches) {
+          const p = toArena(canvas, t.clientX, t.clientY);
+          const layout = getCardLayout();
+          const hit = layout.findIndex(r => p.x >= r.x && p.x <= r.x + r.w && p.y >= r.y && p.y <= r.y + r.h);
+          if (hit >= 0) { selectCard(game, hit); return; }
+        }
+        return;
+      }
       const buttons = TOUCH_MODE && game.state === "playing" ? getTouchButtons() : null;
       for (const t of e.changedTouches) {
         const p = toArena(canvas, t.clientX, t.clientY);
@@ -143,6 +168,27 @@ export function setupInput(game, canvas, { onActivate, onPause, onToggleFullscre
     // Typing a nickname into the highscore text input shouldn't also
     // restart the game, mute audio, or toggle fullscreen.
     if (e.target.tagName === "INPUT" && e.target.type === "text") return;
+
+    // Card pick screen: 1/2/3 keys or arrow navigation + Enter
+    if (game.state === "cardpick" && game.cardPick) {
+      if (e.key === "1") { selectCard(game, 0); return; }
+      if (e.key === "2") { selectCard(game, 1); return; }
+      if (e.key === "3") { selectCard(game, 2); return; }
+      if (e.key === "ArrowLeft"  || e.key === "a" || e.key === "A") {
+        game.cardPick.hoveredIdx = Math.max(0, game.cardPick.hoveredIdx - 1);
+        e.preventDefault(); return;
+      }
+      if (e.key === "ArrowRight" || e.key === "d" || e.key === "D") {
+        game.cardPick.hoveredIdx = Math.min(2, game.cardPick.hoveredIdx + 1);
+        e.preventDefault(); return;
+      }
+      if (e.key === "Enter" || e.key === " ") {
+        selectCard(game, game.cardPick.hoveredIdx);
+        e.preventDefault(); return;
+      }
+      e.preventDefault(); // block all other keys during pick
+      return;
+    }
 
     if (e.key === "Enter") onActivate();
     if (e.key === "Escape") onPause();

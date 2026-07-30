@@ -17,6 +17,7 @@ import {
   BASE_SEGMENTS,
   SEGMENTS_PER_FOOD,
 } from "./config.js";
+import { getCardLayout } from "./game.js";
 import { drawParticles } from "./particles.js";
 // On-screen touch button sprites (assets/btn-{kind}-{state}.png): state 0 is
 // disabled (meter empty), 1 ready, 2 held. Each file is a 360px cell whose
@@ -191,9 +192,10 @@ export function render(game, ctx, canvas) {
     else drawFood(ctx, game.food, game.time);
   }
   if (game.powerUp) drawPowerUp(ctx, game.powerUp, game.time);
-  drawSpikes(ctx, game.spikes, game.time, game.level);
+  drawSpikes(ctx, game.spikes, game.time, game.level,
+    game.passives && game.passives.freeze && game.slowing && game.boost > 0);
 
-  if (TOUCH_MODE && (game.state === "playing" || game.state === "paused")) {
+  if (TOUCH_MODE && (game.state === "playing" || game.state === "paused" || game.state === "cardpick")) {
     drawGestureLine(ctx, game);
   }
 
@@ -213,7 +215,7 @@ export function render(game, ctx, canvas) {
     ctx.save();
     ctx.globalAlpha = 0.4 + 0.5 * Math.abs(Math.sin(game.time * 18));
   }
-  drawSnake(ctx, game.snake, expression, game.time);
+  drawSnake(ctx, game.snake, expression, game.time, game);
   if (blinking) ctx.restore();
 
   drawHud(ctx, game);
@@ -240,6 +242,10 @@ export function render(game, ctx, canvas) {
     // The DOM pause panel floats on top; just dim the frozen arena behind it.
     ctx.fillStyle = "rgba(10, 14, 20, 0.55)";
     ctx.fillRect(0, 0, ARENA_W, ARENA_H);
+  }
+
+  if (game.state === "cardpick" && game.cardPick) {
+    drawCardPick(ctx, game);
   }
 
   ctx.restore();
@@ -489,7 +495,7 @@ function drawPowerUp(ctx, powerUp, time) {
   ctx.restore();
 }
 
-function drawSpikes(ctx, spikes, time, level) {
+function drawSpikes(ctx, spikes, time, level, frozen = false) {
   const spikeCount = 8;
   for (const s of spikes) {
     // Shaking spikes jitter in place as a warning (visual only — the kill
@@ -536,6 +542,11 @@ function drawSpikes(ctx, spikes, time, level) {
       ctx.restore();
     }
 
+    // Freeze tint overlay when Freeze passive is active
+    const frozenBase = frozen ? "#38a8e8" : (moving || growing ? "#ffa257" : "#ff5030");
+    const frozenTip  = frozen ? "#7dd8ff" : (moving || growing ? "#ffb066" : COLOR_SPIKE_TIP);
+    const frozenBg   = frozen ? "#0a1822" : "#180a0d";
+
     // Central core with radial gradient
     const spikeGrad = ctx.createRadialGradient(sx, sy, r * 0.1, sx, sy, r * 0.6);
     if (s.isDrone) {
@@ -543,8 +554,8 @@ function drawSpikes(ctx, spikes, time, level) {
       spikeGrad.addColorStop(0, isCooldown ? "#38bdf8" : "#ff3050");
       spikeGrad.addColorStop(1, "#180a0d");
     } else {
-      spikeGrad.addColorStop(0, moving || growing ? "#ffa257" : "#ff5030");
-      spikeGrad.addColorStop(1, COLOR_SPIKE_BASE);
+      spikeGrad.addColorStop(0, frozenBase);
+      spikeGrad.addColorStop(1, frozen ? frozenBg : COLOR_SPIKE_BASE);
     }
     ctx.fillStyle = spikeGrad;
     ctx.beginPath();
@@ -554,7 +565,7 @@ function drawSpikes(ctx, spikes, time, level) {
     if (s.isDrone) {
       ctx.fillStyle = (s.bounceTimer > 0 || s.hitPlayerTimer > 0) ? "#7dd3fc" : "#ff6b8b";
     } else {
-      ctx.fillStyle = moving || growing ? "#ffb066" : COLOR_SPIKE_TIP;
+      ctx.fillStyle = frozenTip;
     }
     for (let i = 0; i < spikeCount; i++) {
       const angle = (i / spikeCount) * Math.PI * 2 + rotation;
@@ -570,29 +581,79 @@ function drawSpikes(ctx, spikes, time, level) {
   }
 }
 
-function drawSnake(ctx, snake, expression, time) {
+function drawSnake(ctx, snake, expression, time, game) {
   const segCount = snake.segments.length;
+  const ghostPhasing = game && game.passives && game.passives.ghost && game.boosting && game.boost > 0;
+  const shieldActive = game && game.passives && game.passives.spikeguard && game.shieldActive;
+  const shieldRecharging = game && game.passives && game.passives.spikeguard && !game.shieldActive;
+
+  // When ghost-phasing, render snake at low alpha with a cyan tint
+  if (ghostPhasing) ctx.globalAlpha = 0.32;
+
+  // Helper: map a segment coordinate through modular arena wrapping
+  // (for the Wraparound passive — body segments trailing off-screen are
+  // reflected back onto the correct visual side)
+  function wrapCoord(v, max) {
+    if (v < 0) return v + max;
+    if (v > max) return v - max;
+    return v;
+  }
 
   // 1. Draw outer body glow (tail to head)
-  ctx.fillStyle = "rgba(79, 209, 232, 0.22)";
+  ctx.fillStyle = ghostPhasing ? "rgba(127, 232, 255, 0.15)" : "rgba(79, 209, 232, 0.22)";
   for (let i = segCount - 1; i >= 0; i--) {
     const seg = snake.segments[i];
+    const sx = wrapCoord(seg.x, ARENA_W), sy = wrapCoord(seg.y, ARENA_H);
     const t = segCount > 1 ? i / (segCount - 1) : 0;
     const r = SNAKE_RADIUS * (1.0 - t * 0.45); // Taper down to 55%
     ctx.beginPath();
-    ctx.arc(seg.x, seg.y, r * 1.35, 0, Math.PI * 2);
+    ctx.arc(sx, sy, r * 1.35, 0, Math.PI * 2);
     ctx.fill();
   }
 
   // 2. Draw inner body (tail to head)
-  ctx.fillStyle = COLOR_SNAKE_BODY;
+  ctx.fillStyle = ghostPhasing ? "rgba(79, 209, 232, 0.5)" : COLOR_SNAKE_BODY;
   for (let i = segCount - 1; i >= 0; i--) {
     const seg = snake.segments[i];
+    const sx = wrapCoord(seg.x, ARENA_W), sy = wrapCoord(seg.y, ARENA_H);
     const t = segCount > 1 ? i / (segCount - 1) : 0;
     const r = SNAKE_RADIUS * (1.0 - t * 0.45);
     ctx.beginPath();
-    ctx.arc(seg.x, seg.y, r, 0, Math.PI * 2);
+    ctx.arc(sx, sy, r, 0, Math.PI * 2);
     ctx.fill();
+  }
+
+  // 2b. Spikeguard scales — drawn over the body segments
+  if (shieldActive || shieldRecharging) {
+    const scaleAlpha = shieldActive ? 1.0 : 0.25; // ghost scales while recharging
+    ctx.save();
+    for (let i = Math.min(segCount - 1, 20); i >= 0; i--) {
+      const seg = snake.segments[i];
+      const sx = wrapCoord(seg.x, ARENA_W), sy = wrapCoord(seg.y, ARENA_H);
+      const t = segCount > 1 ? i / (segCount - 1) : 0;
+      const r = SNAKE_RADIUS * (1.0 - t * 0.45);
+      const fadeT = i / Math.min(segCount - 1, 20); // fade toward tail
+      const alpha = scaleAlpha * (1 - fadeT * 0.7);
+      ctx.globalAlpha = alpha;
+      ctx.fillStyle = shieldActive ? "#c8e8ff" : "rgba(150,200,255,0.6)";
+      ctx.shadowColor = shieldActive ? "#7fb8ff" : "transparent";
+      ctx.shadowBlur = shieldActive ? 6 : 0;
+      // Draw 4 small diamond scales around the segment
+      for (let k = 0; k < 4; k++) {
+        const angle = (k / 4) * Math.PI * 2 + time * 0.5;
+        const scaleR = r * 0.45;
+        const cx2 = sx + Math.cos(angle) * (r * 0.82);
+        const cy2 = sy + Math.sin(angle) * (r * 0.82);
+        ctx.beginPath();
+        ctx.moveTo(cx2, cy2 - scaleR);
+        ctx.lineTo(cx2 + scaleR * 0.55, cy2);
+        ctx.lineTo(cx2, cy2 + scaleR);
+        ctx.lineTo(cx2 - scaleR * 0.55, cy2);
+        ctx.closePath();
+        ctx.fill();
+      }
+    }
+    ctx.restore();
   }
 
   // 3. Draw head glow
@@ -642,6 +703,8 @@ function drawSnake(ctx, snake, expression, time) {
     ctx.stroke();
     ctx.restore();
   }
+
+  if (ghostPhasing) ctx.globalAlpha = 1.0; // restore alpha before eyes/tongue
 
   const eyeOffset = SNAKE_RADIUS * 0.6;
   const eyeForward = SNAKE_RADIUS * 0.7;
@@ -715,19 +778,31 @@ function drawHud(ctx, game) {
   ctx.font = "bold 22px 'Outfit', sans-serif";
   ctx.textBaseline = "top";
 
-  // Combo multiplier + countdown bar, only while a chain is running.
-  // Right-aligned under the score, mirroring the old left-side layout.
-  if (game.comboTimer > 0) {
+  // Combo multiplier + countdown bar, only while a chain is running or decaying.
+  const showCombo = game.comboTimer > 0 || (game.comboDecaying && game.multiplier > 1);
+  if (showCombo) {
     ctx.textAlign = "right";
-    ctx.fillStyle = "#ffd257";
+    const decaying = game.comboDecaying && game.comboTimer <= 0;
+    // Pulsing red tint while decaying
+    const pulse = decaying ? 0.5 + 0.5 * Math.abs(Math.sin(game.time * 6)) : 1;
+    ctx.fillStyle = decaying
+      ? `rgba(255, ${Math.round(80 + 130 * pulse)}, 50, 1)`
+      : "#ffd257";
     ctx.font = "bold 20px 'Outfit', sans-serif";
     ctx.fillText(`×${game.multiplier}`, ARENA_W - 16, 42);
-    const frac = game.comboTimer / COMBO_WINDOW;
-    const barW = 90, barX = ARENA_W - 150;
-    ctx.fillStyle = "rgba(255, 210, 87, 0.25)";
-    ctx.fillRect(barX, 48, barW, 8);
-    ctx.fillStyle = "#ffd257";
-    ctx.fillRect(barX, 48, barW * frac, 8);
+    if (game.comboTimer > 0) {
+      const frac = game.comboTimer / COMBO_WINDOW;
+      const barW = 90, barX = ARENA_W - 150;
+      ctx.fillStyle = "rgba(255, 210, 87, 0.25)";
+      ctx.fillRect(barX, 48, barW, 8);
+      ctx.fillStyle = "#ffd257";
+      ctx.fillRect(barX, 48, barW * frac, 8);
+    } else if (decaying) {
+      // Show ticking countdown number below the multiplier
+      ctx.font = `bold 13px 'Outfit', sans-serif`;
+      ctx.fillStyle = `rgba(255, ${Math.round(80 + 130 * pulse)}, 50, 0.85)`;
+      ctx.fillText(`${game.multiplier - 1 > 0 ? game.multiplier - 1 : 1}→${game.multiplier}`, ARENA_W - 16, 66);
+    }
   }
 
   // Shared boost/precision meter, bottom-center — pill bar with glow.
@@ -1017,5 +1092,145 @@ function drawOverlay(ctx, title, subtitle, game) {
     ctx.textAlign = "left";
     ctx.textBaseline = "bottom";
     ctx.fillText("v2.1", 18, ARENA_H - 16);
+  }
+}
+
+// ---- Card pick overlay --------------------------------------------------
+const RARITY_COLORS = {
+  common:   { border: "#4ee08a", glow: "rgba(78,224,138,0.35)",  label: "#4ee08a" },
+  uncommon: { border: "#7fb8ff", glow: "rgba(127,184,255,0.35)", label: "#7fb8ff" },
+  rare:     { border: "#c792ff", glow: "rgba(199,146,255,0.40)", label: "#c792ff" },
+};
+const CARD_ICONS = {
+  dynamo:     "⚡",
+  spikeguard: "🛡",
+  wraparound: "🌀",
+  magnet:     "🧲",
+  phantom:    "👻",
+  ghost:      "💨",
+  freeze:     "❄",
+  heal:       "❤",
+};
+
+function drawCardPick(ctx, game) {
+  const layout = getCardLayout();
+  const { cards, hoveredIdx } = game.cardPick;
+  const t = game.time;
+
+  // Dim the frozen arena
+  ctx.fillStyle = "rgba(5, 8, 14, 0.72)";
+  ctx.fillRect(0, 0, ARENA_W, ARENA_H);
+
+  // Header
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+  ctx.font = "bold 26px 'Outfit', sans-serif";
+  ctx.fillStyle = "#e8f0f8";
+  ctx.fillText("CHOOSE YOUR UPGRADE", ARENA_W / 2, layout[0].y - 38);
+
+  ctx.font = "13px 'Outfit', sans-serif";
+  ctx.fillStyle = "rgba(159,179,200,0.7)";
+  const hint = TOUCH_MODE ? "Tap a card" : "Click · ← → · 1 2 3 · Enter";
+  ctx.fillText(hint, ARENA_W / 2, layout[0].y - 14);
+
+  for (let i = 0; i < 3; i++) {
+    const card = cards[i];
+    if (!card) continue;
+    const r = layout[i];
+    const hovered = i === hoveredIdx;
+    const rc = RARITY_COLORS[card.rarity] || RARITY_COLORS.common;
+
+    // Hover scale: slightly enlarge hovered card
+    const scale = hovered ? 1.04 : 1.0;
+    const cx = r.x + r.w / 2;
+    const cy = r.y + r.h / 2;
+
+    ctx.save();
+    ctx.translate(cx, cy);
+    ctx.scale(scale, scale);
+    ctx.translate(-cx, -cy);
+
+    // Card shadow / glow
+    if (hovered) {
+      ctx.shadowColor = rc.glow.replace("0.35", "0.7").replace("0.40", "0.7");
+      ctx.shadowBlur = 28;
+    }
+
+    // Card background
+    const bgGrad = ctx.createLinearGradient(r.x, r.y, r.x, r.y + r.h);
+    bgGrad.addColorStop(0, "rgba(20, 28, 44, 0.96)");
+    bgGrad.addColorStop(1, "rgba(12, 18, 30, 0.98)");
+    ctx.fillStyle = bgGrad;
+    ctx.beginPath();
+    ctx.roundRect(r.x, r.y, r.w, r.h, 14);
+    ctx.fill();
+
+    // Rarity border
+    ctx.shadowBlur = 0;
+    ctx.strokeStyle = hovered ? rc.border : rc.border + "99";
+    ctx.lineWidth = hovered ? 2.5 : 1.5;
+    ctx.beginPath();
+    ctx.roundRect(r.x, r.y, r.w, r.h, 14);
+    ctx.stroke();
+
+    // Top rarity stripe
+    const stripeGrad = ctx.createLinearGradient(r.x, r.y, r.x + r.w, r.y);
+    stripeGrad.addColorStop(0, rc.glow);
+    stripeGrad.addColorStop(1, "transparent");
+    ctx.fillStyle = stripeGrad;
+    ctx.beginPath();
+    ctx.roundRect(r.x, r.y, r.w, 38, { upperLeft: 14, upperRight: 14, lowerLeft: 0, lowerRight: 0 });
+    ctx.fill();
+
+    // Icon
+    const iconY = r.y + 58;
+    ctx.font = "42px serif";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.fillText(CARD_ICONS[card.id] || "✦", cx, iconY);
+
+    // Name
+    ctx.font = "bold 17px 'Outfit', sans-serif";
+    ctx.fillStyle = "#e8f0f8";
+    ctx.fillText(card.name, cx, r.y + 104);
+
+    // Rarity label
+    ctx.font = "11px 'Outfit', sans-serif";
+    ctx.fillStyle = rc.label;
+    ctx.fillText(card.rarity.toUpperCase(), cx, r.y + 122);
+
+    // Description — word-wrap at ~24 chars
+    ctx.font = "12px 'Outfit', sans-serif";
+    ctx.fillStyle = "rgba(159,179,200,0.88)";
+    ctx.textBaseline = "top";
+    const words = card.desc.split(" ");
+    const maxW = r.w - 24;
+    let line = "", lineY = r.y + 142;
+    for (const word of words) {
+      const test = line ? line + " " + word : word;
+      if (ctx.measureText(test).width > maxW && line) {
+        ctx.fillText(line, cx, lineY);
+        line = word;
+        lineY += 17;
+      } else {
+        line = test;
+      }
+    }
+    if (line) ctx.fillText(line, cx, lineY);
+
+    // Keyboard hint at bottom
+    ctx.font = "bold 14px 'Outfit', sans-serif";
+    ctx.textBaseline = "middle";
+    ctx.fillStyle = hovered ? rc.border : "rgba(100,120,150,0.5)";
+    ctx.strokeStyle = hovered ? rc.border : "rgba(100,120,150,0.3)";
+    ctx.lineWidth = 1.5;
+    const kbY = r.y + r.h - 22;
+    const kbW = 26, kbH = 20;
+    ctx.beginPath();
+    ctx.roundRect(cx - kbW / 2, kbY - kbH / 2, kbW, kbH, 4);
+    ctx.stroke();
+    ctx.fillText(`${i + 1}`, cx, kbY);
+
+    ctx.restore();
   }
 }
