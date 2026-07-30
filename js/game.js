@@ -157,27 +157,27 @@ function createPassives() {
 
 // Static card definitions — name, description, rarity weight (higher = more common)
 const CARD_DEFS = {
-  dynamo:     { name: "Dynamo",       rarity: "common",   weight: 3, desc: "Slowly recharges boost when idle." },
-  slim:       { name: "Slim Body",    rarity: "common",   weight: 3, desc: "Reduces snake width and size." },
-  agility:    { name: "Agility",      rarity: "common",   weight: 3, desc: "Sharper steering turn speed." },
-  compressor: { name: "Compressor",   rarity: "common",   weight: 3, desc: "Tightens body length coiling." },
-  regen:      { name: "Regeneration", rarity: "common",   weight: 3, desc: "Passively restores hearts over time." },
-  spikeguard: { name: "Spikeguard",   rarity: "uncommon", weight: 2, desc: "Shield deflects next spike hit." },
-  wraparound: { name: "Wraparound",   rarity: "rare",     weight: 1, desc: "Walls become portals. Clears wall spikes." },
-  magnet:     { name: "Magnet",       rarity: "uncommon", weight: 2, desc: "Pulls pellets and boost toward head." },
-  phantom:    { name: "Phantom",      rarity: "rare",     weight: 1, desc: "Immunity to self-collision." },
-  ghost:      { name: "Ghost",        rarity: "rare",     weight: 1, desc: "Phase through spikes and body while boosting." },
-  freeze:     { name: "Freeze",       rarity: "uncommon", weight: 2, desc: "Spikes freeze while holding slow." },
+  dynamo:     { name: "Dynamo",       rarity: "common",    weight: 3, desc: "Slowly recharges boost when idle." },
+  slim:       { name: "Slim Body",    rarity: "common",    weight: 3, desc: "Reduces snake width and size." },
+  agility:    { name: "Agility",      rarity: "common",    weight: 3, desc: "Sharper steering turn speed." },
+  compressor: { name: "Compressor",   rarity: "common",    weight: 3, desc: "Tightens body length coiling." },
+  regen:      { name: "Regeneration", rarity: "common",    weight: 3, desc: "Passively restores hearts over time." },
+  spikeguard: { name: "Spikeguard",   rarity: "rare",      weight: 2, desc: "Shield deflects next spike hit." },
+  magnet:     { name: "Magnet",       rarity: "rare",      weight: 2, desc: "Pulls pellets and boost toward head." },
+  freeze:     { name: "Freeze",       rarity: "rare",      weight: 2, desc: "Spikes freeze while holding slow." },
+  wraparound: { name: "Wraparound",   rarity: "legendary", weight: 1, desc: "Walls become portals. Clears wall spikes." },
+  phantom:    { name: "Phantom",      rarity: "legendary", weight: 1, desc: "Immunity to self-collision." },
+  ghost:      { name: "Ghost",        rarity: "legendary", weight: 1, desc: "Phase through spikes and body while boosting." },
 };
 
 // Computes dynamic card rarity weight based on progression (cardPicksGiven).
-// As the run progresses, Rare & Uncommon weights scale up while Common scales down.
-// Pick 1 (k=0): ~75.0% Common, ~22.5% Uncommon, ~2.5% Rare
-// Pick 4 (k=3): ~25.0% Common, ~38.0% Uncommon, ~37.0% Rare
+// As the run progresses, Legendary & Rare weights scale up while Common scales down.
+// Pick 1 (k=0): ~75.0% Common, ~22.5% Rare, ~2.5% Legendary
+// Pick 4 (k=3): ~25.0% Common, ~38.0% Rare, ~37.0% Legendary
 function getCardWeight(cardDef, cardPicksGiven) {
   const k = cardPicksGiven || 0;
-  if (cardDef.rarity === "rare")     return 0.2 + k * 0.95;
-  if (cardDef.rarity === "uncommon") return 1.8 + k * 0.35;
+  if (cardDef.rarity === "legendary") return 0.2 + k * 0.95;
+  if (cardDef.rarity === "rare")      return 1.8 + k * 0.35;
   return Math.max(0.5, 3.6 - k * 0.7);
 }
 
@@ -185,10 +185,13 @@ function getCardWeight(cardDef, cardPicksGiven) {
 function drawCards(game) {
   const p = game.passives;
   const cardPicksGiven = game.cardPicksGiven || 0;
-  // Filter out already-owned and mutually exclusive cards.
+  const hasLegendary = Object.keys(CARD_DEFS).some(id => CARD_DEFS[id].rarity === "legendary" && p[id]);
+
+  // Filter out already-owned cards, max 1 Legendary per run, and mutually exclusive cards.
   const available = Object.keys(CARD_DEFS).filter(id => {
-    if (p[id]) return false;                            // already owned
-    if (id === "phantom"    && p.spikeguard) return false; // mutual exclusion
+    if (p[id]) return false;                                                  // already owned
+    if (hasLegendary && CARD_DEFS[id].rarity === "legendary") return false; // max 1 legendary rule
+    if (id === "phantom"    && p.spikeguard) return false;                   // mutual exclusion
     if (id === "spikeguard" && p.phantom)   return false;
     return true;
   });
