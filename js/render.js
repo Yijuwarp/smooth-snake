@@ -284,10 +284,11 @@ function drawArena(ctx, game) {
   if (hasWraparound) {
     // Portal border glow when Wraparound passive is active (wall teeth hidden)
     ctx.save();
+    ctx.strokeStyle = "rgba(199, 146, 255, 0.35)";
+    ctx.lineWidth = 8;
+    ctx.strokeRect(2, 2, ARENA_W - 4, ARENA_H - 4);
     ctx.strokeStyle = "#c792ff";
-    ctx.shadowColor = "#c792ff";
-    ctx.shadowBlur = 12;
-    ctx.lineWidth = 3;
+    ctx.lineWidth = 2.5;
     ctx.strokeRect(2, 2, ARENA_W - 4, ARENA_H - 4);
     ctx.restore();
   } else {
@@ -417,13 +418,19 @@ function drawTetherRotators(ctx, game) {
       ctx.stroke();
     }
 
-    // Core orb
-    ctx.fillStyle = isLeft ? "#c792ff" : "#4fd1e8";
-    ctx.shadowColor = isLeft ? "#c792ff" : "#4fd1e8";
-    ctx.shadowBlur = 12;
+    // Core orb with layered glow halo (no shadowBlur)
+    const color = isLeft ? "#c792ff" : "#4fd1e8";
+    const haloColor = isLeft ? "rgba(199, 146, 255, 0.3)" : "rgba(79, 209, 232, 0.3)";
+    ctx.fillStyle = haloColor;
+    ctx.beginPath();
+    ctx.arc(0, 0, 16, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.fillStyle = color;
     ctx.beginPath();
     ctx.arc(0, 0, 12, 0, Math.PI * 2);
     ctx.fill();
+
 
     // Center reflection
     ctx.fillStyle = "#ffffff";
@@ -472,16 +479,27 @@ function drawStar(ctx, star, time) {
   ctx.translate(star.x, star.y);
   ctx.rotate(time * 1.2);
   ctx.scale(pulse, pulse);
+
+  // Outer glow halo
+  ctx.fillStyle = "rgba(255, 210, 87, 0.28)";
+  ctx.beginPath();
+  for (let i = 0; i < points * 2; i++) {
+    const r = (i % 2 === 0 ? outer : inner) * 1.35;
+    const a = (i / (points * 2)) * Math.PI * 2 - Math.PI / 2;
+    if (i === 0) ctx.moveTo(Math.cos(a) * r, Math.sin(a) * r);
+    else ctx.lineTo(Math.cos(a) * r, Math.sin(a) * r);
+  }
+  ctx.closePath();
+  ctx.fill();
+
+  // Solid star
   ctx.fillStyle = "#ffd257";
-  ctx.shadowColor = "#ffd257";
-  ctx.shadowBlur = 14;
   ctx.beginPath();
   for (let i = 0; i < points * 2; i++) {
     const r = i % 2 === 0 ? outer : inner;
     const a = (i / (points * 2)) * Math.PI * 2 - Math.PI / 2;
-    const x = Math.cos(a) * r, y = Math.sin(a) * r;
-    if (i === 0) ctx.moveTo(x, y);
-    else ctx.lineTo(x, y);
+    if (i === 0) ctx.moveTo(Math.cos(a) * r, Math.sin(a) * r);
+    else ctx.lineTo(Math.cos(a) * r, Math.sin(a) * r);
   }
   ctx.closePath();
   ctx.fill();
@@ -495,9 +513,22 @@ function drawPowerUp(ctx, powerUp, time) {
   ctx.save();
   ctx.translate(powerUp.x, powerUp.y);
   ctx.scale(pulse, pulse);
+
+  // Outer glow bolt
+  ctx.fillStyle = "rgba(255, 244, 77, 0.28)";
+  const gs = s * 1.35;
+  ctx.beginPath();
+  ctx.moveTo(2 * gs, -10 * gs);
+  ctx.lineTo(-6 * gs, 1 * gs);
+  ctx.lineTo(-1 * gs, 1 * gs);
+  ctx.lineTo(-3 * gs, 10 * gs);
+  ctx.lineTo(6 * gs, -2 * gs);
+  ctx.lineTo(1 * gs, -2 * gs);
+  ctx.closePath();
+  ctx.fill();
+
+  // Core bolt
   ctx.fillStyle = COLOR_POWER_UP;
-  ctx.shadowColor = COLOR_POWER_UP;
-  ctx.shadowBlur = 12;
   ctx.beginPath();
   ctx.moveTo(2 * s, -10 * s);
   ctx.lineTo(-6 * s, 1 * s);
@@ -547,12 +578,13 @@ function drawSpikes(ctx, spikes, time, level, frozen = false) {
     if (s.isDrone) {
       ctx.save();
       const isCooldown = s.bounceTimer > 0 || s.hitPlayerTimer > 0;
-      ctx.shadowBlur = isCooldown ? 10 : 20;
-      ctx.shadowColor = isCooldown ? "#38bdf8" : "#ff3050";
-      ctx.strokeStyle = isCooldown ? "rgba(56, 189, 248, 0.6)" : "rgba(255, 48, 80, 0.8)";
-      ctx.lineWidth = 3;
+      ctx.strokeStyle = isCooldown ? "rgba(56, 189, 248, 0.25)" : "rgba(255, 48, 80, 0.3)";
+      ctx.lineWidth = 7;
       ctx.beginPath();
       ctx.arc(sx, sy, r * 1.3, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.strokeStyle = isCooldown ? "#38bdf8" : "#ff3050";
+      ctx.lineWidth = 2.5;
       ctx.stroke();
       ctx.restore();
     }
@@ -562,19 +594,19 @@ function drawSpikes(ctx, spikes, time, level, frozen = false) {
     const frozenTip  = frozen ? "#7dd8ff" : (moving || growing ? "#ffb066" : COLOR_SPIKE_TIP);
     const frozenBg   = frozen ? "#0a1822" : "#180a0d";
 
-    // Central core with radial gradient
-    const spikeGrad = ctx.createRadialGradient(sx, sy, r * 0.1, sx, sy, r * 0.6);
-    if (s.isDrone) {
-      const isCooldown = s.bounceTimer > 0 || s.hitPlayerTimer > 0;
-      spikeGrad.addColorStop(0, isCooldown ? "#38bdf8" : "#ff3050");
-      spikeGrad.addColorStop(1, "#180a0d");
-    } else {
-      spikeGrad.addColorStop(0, frozenBase);
-      spikeGrad.addColorStop(1, frozen ? frozenBg : COLOR_SPIKE_BASE);
-    }
-    ctx.fillStyle = spikeGrad;
+    // Fast concentric core circles (replaces expensive per-frame radial gradient allocations)
+    const isCooldown = s.isDrone && (s.bounceTimer > 0 || s.hitPlayerTimer > 0);
+    const coreColor = s.isDrone ? (isCooldown ? "#38bdf8" : "#ff3050") : frozenBase;
+    const baseColor = s.isDrone ? "#180a0d" : (frozen ? frozenBg : COLOR_SPIKE_BASE);
+
+    ctx.fillStyle = baseColor;
     ctx.beginPath();
     ctx.arc(sx, sy, r * 0.6, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.fillStyle = coreColor;
+    ctx.beginPath();
+    ctx.arc(sx, sy, r * 0.3, 0, Math.PI * 2);
     ctx.fill();
 
     if (s.isDrone) {
@@ -652,9 +684,8 @@ function drawSnake(ctx, snake, expression, time, game) {
       const alpha = scaleAlpha * (1 - fadeT * 0.7);
       ctx.globalAlpha = alpha;
       ctx.fillStyle = shieldActive ? "#c8e8ff" : "rgba(150,200,255,0.6)";
-      ctx.shadowColor = shieldActive ? "#7fb8ff" : "transparent";
-      ctx.shadowBlur = shieldActive ? 6 : 0;
       // Draw 4 small diamond scales around the segment
+
       for (let k = 0; k < 4; k++) {
         const angle = (k / 4) * Math.PI * 2 + time * 0.5;
         const scaleR = r * 0.45;
@@ -850,14 +881,21 @@ function drawHud(ctx, game) {
     ctx.save();
     ctx.beginPath();
     ctx.rect(bx, by - 4, bw * game.boost, bh + 8);
-    ctx.clip();
+    // Outer glow halo (zero shadowBlur)
+    const glowColor = boostColor === "#7fe8ff" ? "rgba(127, 232, 255, 0.35)" :
+                      boostColor === "#c792ff" ? "rgba(199, 146, 255, 0.35)" :
+                      "rgba(255, 210, 87, 0.35)";
 
-    ctx.shadowColor = boostColor;
-    ctx.shadowBlur = 14;
+    ctx.fillStyle = glowColor;
+    ctx.beginPath();
+    ctx.roundRect(bx - 2, by - 2, bw + 4, bh + 4, br + 2);
+    ctx.fill();
+
     ctx.fillStyle = boostColor;
     ctx.beginPath();
     ctx.roundRect(bx, by, bw, bh, br);
     ctx.fill();
+
 
     // Inner glass highlight along the top third of the fill
     ctx.shadowBlur = 0;
@@ -951,15 +989,19 @@ function drawGestureLine(ctx, game) {
     ctx.fill();
   }
 
-  // 4. Endpoint pulsing target ring (shadowBlur isolated to single end point)
+  // 4. Endpoint pulsing target ring
   const lastPt = path[path.length - 1];
   const r = 4 + Math.sin(game.time * 8) * 1;
-  ctx.fillStyle = "rgba(127, 232, 255, 0.9)";
-  ctx.shadowColor = "#7fe8ff";
-  ctx.shadowBlur = 10;
+  ctx.fillStyle = "rgba(127, 232, 255, 0.3)";
   ctx.beginPath();
-  ctx.arc(lastPt.x, lastPt.y, r + 2, 0, Math.PI * 2);
+  ctx.arc(lastPt.x, lastPt.y, r + 4, 0, Math.PI * 2);
   ctx.fill();
+
+  ctx.fillStyle = "#7fe8ff";
+  ctx.beginPath();
+  ctx.arc(lastPt.x, lastPt.y, r + 1, 0, Math.PI * 2);
+  ctx.fill();
+
 
   ctx.restore();
 }
