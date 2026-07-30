@@ -639,19 +639,25 @@ export function update(game, dt) {
     if ((wallHit || hitSpike || hitSelfSeg) && game.invulnTimer <= 0) {
       if (wallHit) bounceOffWall(snake);
       else if (hitSpike) {
-        // Spikeguard: absorb the hit and bounce the spike instead
+        // Spikeguard: absorb the hit, bounce the snake, and push the spike away
         if (game.passives.spikeguard && game.shieldActive) {
+          bounceOffSpike(snake, hitSpike);
           const dx = hitSpike.x - snake.x, dy = hitSpike.y - snake.y;
           const d = Math.hypot(dx, dy) || 1;
-          hitSpike.vx =  (dx / d) * 120;
-          hitSpike.vy =  (dy / d) * 120;
+          hitSpike.vx = (dx / d) * 220;
+          hitSpike.vy = (dy / d) * 220;
           hitSpike.phase = "move";
           hitSpike.t = 0;
+          if (hitSpike.isDrone) {
+            hitSpike.bounceTimer = 0.8;
+          }
           game.shieldActive = false;
           game.shieldCooldown = SHIELD_REGEN_TIME;
-          spawnParticles(game, snake.x, snake.y, 14, {
+          game.invulnTimer = INVULN_TIME; // Invulnerability buffer prevents immediate re-hit
+          playHit();
+          spawnParticles(game, snake.x, snake.y, 24, {
             colors: ["#c8e8ff", "#ffffff", "#7fb8ff"],
-            speed: 90, size: 3.0, decay: 1.6,
+            speed: 130, size: 3.5, decay: 1.6,
           });
         } else {
           bounceOffSpike(snake, hitSpike);
