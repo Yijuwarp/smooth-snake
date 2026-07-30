@@ -26,8 +26,15 @@ import {
   LIFE_BONUS_PCT,
   SPEED_BONUS_PCT,
   WAYPOINT_REACH_RADIUS,
+  BASE_SEGMENTS,
+  SEGMENTS_PER_FOOD,
+  SHIELD_REGEN_TIME,
+  MAGNET_RADIUS,
+  DYNAMO_REGEN_RATE,
+  MAGNET_SPEED,
+  WALL_MARGIN,
 } from "./config.js";
-import { createSnake, steer, moveSnake, updateGrowthAndSpeed, bounceOffWall, bounceOffSpike, bounceOffSegment } from "./snake.js";
+import { createSnake, steer, moveSnake, updateGrowthAndSpeed, bounceOffWall, wrapSnake, bounceOffSpike, bounceOffSegment } from "./snake.js";
 import { generateSpikes, updateSpikes } from "./spikes.js";
 import { spawnFood } from "./food.js";
 import { spawnPowerUp } from "./powerup.js";
@@ -128,9 +135,112 @@ function loadTunables() {
   };
 }
 
+function createPassives() {
+  return {
+    dynamo: false,
+    spikeguard: false,
+    wraparound: false,
+    magnet: false,
+    phantom: false,
+    ghost: false,
+    freeze: false,
+  };
+}
+
+// Static card definitions — name, description, rarity weight (higher = more common)
+const CARD_DEFS = {
+  dynamo:     { name: "Dynamo",     rarity: "common",   weight: 3, desc: "Boost meter slowly recharges over time when idle." },
+  spikeguard: { name: "Spikeguard", rarity: "uncommon", weight: 2, desc: "A shield that deflects the next spike hit. Regenerates every 60s. Shows as scales on your body." },
+  wraparound: { name: "Wraparound", rarity: "rare",     weight: 1, desc: "Walls become portals — exit one side, enter the other. Wall-hugging spikes are cleared." },
+  magnet:     { name: "Magnet",     rarity: "uncommon", weight: 2, desc: "Pellets and boost pickups drift toward your head within a radius." },
+  phantom:    { name: "Phantom",    rarity: "rare",     weight: 1, desc: "Your body can no longer hurt you. Spikes and walls still do." },
+  ghost:      { name: "Ghost",      rarity: "rare",     weight: 1, desc: "While boosting, pass through spikes and your own body. Walls still hurt." },
+  freeze:     { name: "Freeze",     rarity: "uncommon", weight: 2, desc: "Holding slow locks all spikes in place. They turn blue while frozen." },
+};
+
+// Builds the 3-card pick array: 2 weighted-random passives + heal.
+function drawCards(game) {
+  const p = game.passives;
+  // Filter out already-owned and mutually exclusive cards.
+  const available = Object.keys(CARD_DEFS).filter(id => {
+    if (p[id]) return false;                            // already owned
+    if (id === "phantom"    && p.spikeguard) return false; // mutual exclusion
+    if (id === "spikeguard" && p.phantom)   return false;
+    return true;
+  });
+
+  const chosen = [];
+  let pool = [...available];
+  for (let slot = 0; slot < 2; slot++) {
+    if (pool.length === 0) break;
+    const totalW = pool.reduce((s, id) => s + CARD_DEFS[id].weight, 0);
+    let r = Math.random() * totalW;
+    let pick = pool[pool.length - 1];
+    for (const id of pool) { r -= CARD_DEFS[id].weight; if (r <= 0) { pick = id; break; } }
+    chosen.push({ type: "passive", id: pick, ...CARD_DEFS[pick] });
+    pool = pool.filter(id => id !== pick);
+  }
+
+  // Pad with heal if fewer than 2 passives available.
+  while (chosen.length < 2) {
+    chosen.push({ type: "heal", id: "heal", name: "Heal", rarity: "common", desc: "" });
+  }
+
+  // Slot 3 is always heal — amount scales with level.
+  const healAmt = game.level >= 5 ? 3 : game.level >= 3 ? 2 : 1;
+  chosen.push({ type: "heal", id: "heal", name: `Heal +${healAmt}❤`, rarity: "common", desc: `Restore ${healAmt} heart${healAmt > 1 ? "s" : ""}.` });
+
+  return chosen;
+}
+
+// Returns the arena-coordinate bounding boxes for the 3 cards.
+// Used by both render.js (drawing) and input (hit-testing).
+export function getCardLayout() {
+  const cardW = 190, cardH = 270, gap = 28;
+  const totalW = 3 * cardW + 2 * gap;
+  const startX = (ARENA_W - totalW) / 2;
+  const startY = (ARENA_H - cardH) / 2;
+  return [0, 1, 2].map(i => ({
+    x: startX + i * (cardW + gap),
+    y: startY,
+    w: cardW,
+    h: cardH,
+  }));
+}
+
+// Applies the chosen card's effect and resumes gameplay.
+export function selectCard(game, idx) {
+  if (!game.cardPick) return;
+  const card = game.cardPick.cards[idx];
+  if (!card) return;
+
+  if (card.type === "heal") {
+    const amt = game.level >= 5 ? 3 : game.level >= 3 ? 2 : 1;
+    game.hearts = Math.min(game.maxHearts || MAX_HEARTS, game.hearts + amt);
+  } else {
+    game.passives[card.id] = true;
+    // Wraparound: immediately remove spikes within WALL_MARGIN of any edge.
+    if (card.id === "wraparound") {
+      game.spikes = game.spikes.filter(s =>
+        s.x > WALL_MARGIN + 20 && s.x < ARENA_W - WALL_MARGIN - 20 &&
+        s.y > WALL_MARGIN + 20 && s.y < ARENA_H - WALL_MARGIN - 20
+      );
+    }
+    // Spikeguard: activate shield immediately.
+    if (card.id === "spikeguard") {
+      game.shieldActive = true;
+      game.shieldCooldown = 0;
+    }
+  }
+
+  game.cardPick = null;
+  game.state = "playing";
+}
+
+
 export function createGame() {
   return {
-    state: "menu", // 'menu' | 'playing' | 'paused' | 'gameover'
+    state: "menu", // 'menu' | 'playing' | 'paused' | 'cardpick' | 'gameover'
     snake: createSnake(),
     spikes: [],
     food: { x: ARENA_W / 2 + 150, y: ARENA_H / 2 },
@@ -141,12 +251,15 @@ export function createGame() {
     score: 0,
     multiplier: 1,
     comboTimer: 0,
+    comboDecaying: false,   // true when timer expired but multiplier is counting down
+    comboDecayTimer: 0,     // accumulates time for 1-per-sec multiplier decay
     boost: 0,
     boosting: false,
     slowing: false,
     currentSpeed: 0,
     level: 1,
     pelletsSinceLevel: 0,
+    pelletsSinceCard: 0,    // triggers card pick every 5 pellets
     starPending: false, // level 4 reached, surviving the countdown before the star appears
     survivalTimer: 0,
     banner: null, // { t, title, subtitle, duration } while a slow-mo banner runs
@@ -172,6 +285,11 @@ export function createGame() {
     onGameOver: null, // (score) => void, set by main.js to offer a highscore submission
     particles: [],
     screenShake: 0,
+    // --- Passive powerup system ---
+    passives: createPassives(),
+    shieldActive: false,
+    shieldCooldown: 0,
+    cardPick: null, // { cards: [...], hoveredIdx: 0 } while pick screen is open
   };
 }
 
@@ -187,6 +305,8 @@ export function resetGame(game) {
   game.score = 0;
   game.multiplier = 1;
   game.comboTimer = 0;
+  game.comboDecaying = false;
+  game.comboDecayTimer = 0;
   game.boost = 0;
   game.boosting = false;
   game.slowing = false;
@@ -195,6 +315,7 @@ export function resetGame(game) {
   game.powerUpCooldown = POWER_UP_SPAWN_INTERVAL;
   game.level = 1;
   game.pelletsSinceLevel = 0;
+  game.pelletsSinceCard = 0;
   game.starPending = false;
   game.survivalTimer = 0;
   game.banner = { t: 0, title: "GAME START", subtitle: "" };
@@ -211,6 +332,10 @@ export function resetGame(game) {
   game.finalBreakdown = null;
   game.particles = [];
   game.screenShake = 0;
+  game.passives = createPassives();
+  game.shieldActive = false;
+  game.shieldCooldown = 0;
+  game.cardPick = null;
   updateGrowthAndSpeed(game.snake, 0, getMaxSpeed(game));
   game.food = spawnFood([], game.snake.segments);
   game.spikes = generateSpikes({ x: game.snake.x, y: game.snake.y }, game.food);
@@ -326,10 +451,24 @@ export function update(game, dt) {
   if (game.eatFlash > 0) game.eatFlash = Math.max(0, game.eatFlash - dt);
 
   if (game.comboTimer > 0) {
-    game.comboTimer -= dt;
+    // Slow-down power also slows the combo countdown at the same ratio —
+    // precision mode gives you more time to navigate carefully.
+    const comboDecayRate = (game.slowing && game.boost > 0) ? SLOW_SPEED_MULT : 1;
+    game.comboTimer -= dt * comboDecayRate;
     if (game.comboTimer <= 0) {
       game.comboTimer = 0;
-      game.multiplier = 1;
+      // Don't snap to ×1 — start slow countdown (1 per second)
+      if (game.multiplier > 1) {
+        game.comboDecaying = true;
+        game.comboDecayTimer = 0;
+      }
+    }
+  } else if (game.comboDecaying) {
+    game.comboDecayTimer += dt;
+    if (game.comboDecayTimer >= 1) {
+      game.comboDecayTimer -= 1;
+      game.multiplier = Math.max(1, game.multiplier - 1);
+      if (game.multiplier <= 1) game.comboDecaying = false;
     }
   }
 
@@ -342,12 +481,30 @@ export function update(game, dt) {
 
   // Boost and the right-click "precision" slow share one meter; if both are
   // somehow held at once, boost wins.
+  // Drain rate scales down with snake size, matching the visual bar scaling
+  // (200px → 600px = 1× → 3× width). Bigger snake = longer boost/slow.
+  const SEG_MAX_DRAIN = BASE_SEGMENTS + 40 * SEGMENTS_PER_FOOD; // 126 — matches render.js cap
+  const boostSizeFrac = Math.min(1, Math.max(0, (game.snake.segmentCount - BASE_SEGMENTS) / (SEG_MAX_DRAIN - BASE_SEGMENTS)));
+  const boostScale = 1 + 2 * boostSizeFrac; // 1× at start, 3× at max
+  const dynamicDrain = BOOST_DRAIN_PER_SEC / boostScale;
+
+  // --- Passive: Dynamo — passive boost regen when not using boost ---
+  if (game.passives.dynamo && !game.boosting && !game.slowing && game.boost < 1) {
+    game.boost = Math.min(1, game.boost + DYNAMO_REGEN_RATE * dt);
+  }
+
+  // --- Passive: Spikeguard — shield cooldown recharge ---
+  if (game.passives.spikeguard && !game.shieldActive && game.shieldCooldown > 0) {
+    game.shieldCooldown -= dt;
+    if (game.shieldCooldown <= 0) game.shieldActive = true;
+  }
+
   let speedMult = 1;
   if (game.boosting && game.boost > 0) {
-    game.boost = Math.max(0, game.boost - BOOST_DRAIN_PER_SEC * dt);
+    game.boost = Math.max(0, game.boost - dynamicDrain * dt);
     speedMult = boostMult;
   } else if (game.slowing && game.boost > 0) {
-    game.boost = Math.max(0, game.boost - BOOST_DRAIN_PER_SEC * dt);
+    game.boost = Math.max(0, game.boost - dynamicDrain * dt);
     speedMult = slowMult;
   }
 
@@ -404,7 +561,26 @@ export function update(game, dt) {
   }
   moveSnake(snake, dt, speedMult);
   game.currentSpeed = snake.speed * speedMult;
-  updateSpikes(game, dt);
+
+  // --- Passive: Freeze — spikes locked while holding slow ---
+  const spikeFrozen = game.passives.freeze && game.slowing && game.boost > 0;
+  updateSpikes(game, dt, Math.random, spikeFrozen);
+
+  // --- Passive: Magnet — nudge food and powerup toward head ---
+  if (game.passives.magnet) {
+    const nudge = (obj) => {
+      if (!obj) return;
+      const dx = snake.x - obj.x, dy = snake.y - obj.y;
+      const d = Math.hypot(dx, dy);
+      if (d > 0 && d < MAGNET_RADIUS) {
+        const step = Math.min(MAGNET_SPEED * dt, d);
+        obj.x += (dx / d) * step;
+        obj.y += (dy / d) * step;
+      }
+    };
+    if (game.food && !game.food.isStar) nudge(game.food);
+    nudge(game.powerUp);
+  }
 
   // Emit trail particles from the tail
   if (snake.segments && snake.segments.length > 0) {
@@ -448,62 +624,109 @@ export function update(game, dt) {
 
   const invincible = game.devMode && game.tunables.immortal;
 
+  // Ghost passive: while boosting, pass through spikes and own body
+  const ghostPhasing = game.passives.ghost && game.boosting && game.boost > 0;
+
   const wallHit = hitsWall(snake);
-  const hitSpike = wallHit ? null : findHitSpike(snake, game.spikes);
-  const hitSelfSeg = (wallHit || hitSpike) ? null : findHitSegment(snake);
+  // Wraparound: teleport instead of bounce
+  if (wallHit && game.passives.wraparound) {
+    wrapSnake(snake);
+  } else {
+    const hitSpike = wallHit ? null : ghostPhasing ? null : findHitSpike(snake, game.spikes);
+    const skipSelf = game.passives.phantom || ghostPhasing;
+    const hitSelfSeg = (wallHit || hitSpike) ? null : skipSelf ? null : findHitSegment(snake);
 
-  if ((wallHit || hitSpike || hitSelfSeg) && game.invulnTimer <= 0) {
-    if (wallHit) bounceOffWall(snake);
-    else if (hitSpike) {
-      bounceOffSpike(snake, hitSpike);
-      if (hitSpike.isDrone) {
-        hitSpike.speedTimer = 0;    // Reset speed scaling to 180 px/s (minimum)
-        hitSpike.stopTimer = 0.8;   // Freeze in place for 0.8 seconds
-        hitSpike.hitPlayerTimer = 1.5; // Blue flash for 1.5 seconds
-        hitSpike.vx = 0;
-        hitSpike.vy = 0;
+    if ((wallHit || hitSpike || hitSelfSeg) && game.invulnTimer <= 0) {
+      if (wallHit) bounceOffWall(snake);
+      else if (hitSpike) {
+        // Spikeguard: absorb the hit and bounce the spike instead
+        if (game.passives.spikeguard && game.shieldActive) {
+          const dx = hitSpike.x - snake.x, dy = hitSpike.y - snake.y;
+          const d = Math.hypot(dx, dy) || 1;
+          hitSpike.vx =  (dx / d) * 120;
+          hitSpike.vy =  (dy / d) * 120;
+          hitSpike.phase = "move";
+          hitSpike.t = 0;
+          game.shieldActive = false;
+          game.shieldCooldown = SHIELD_REGEN_TIME;
+          spawnParticles(game, snake.x, snake.y, 14, {
+            colors: ["#c8e8ff", "#ffffff", "#7fb8ff"],
+            speed: 90, size: 3.0, decay: 1.6,
+          });
+        } else {
+          bounceOffSpike(snake, hitSpike);
+          if (hitSpike.isDrone) {
+            hitSpike.speedTimer = 0;
+            hitSpike.stopTimer = 0.8;
+            hitSpike.hitPlayerTimer = 1.5;
+            hitSpike.vx = 0;
+            hitSpike.vy = 0;
+          }
+          if (!invincible) {
+            game.hearts--;
+            // Combo penalty: reduce multiplier by 30% on damage
+            if (game.multiplier > 1) {
+              game.multiplier = Math.max(1, Math.floor(game.multiplier * 0.7));
+              game.comboTimer = game.multiplier > 1 ? COMBO_WINDOW : 0;
+              game.comboDecaying = false;
+            }
+            game.invulnTimer = INVULN_TIME;
+            game.hitFlash = HIT_FLASH_DURATION;
+            game.screenShake = 0.35;
+            spawnParticles(game, (hitSpike.x + snake.x) / 2, (hitSpike.y + snake.y) / 2, 18, {
+              colors: ["#ff3050", "#ff7a4a", "#ffffff"], speed: 110, size: 3.5, decay: 1.8,
+            });
+            if (game.hearts <= 0) {
+              spawnParticles(game, snake.x, snake.y, 45, { colors: ["#7fe8ff", "#4fd1e8", "#ffffff"], speed: 150, size: 4.5, decay: 1.2 });
+              endGame(game, false); return;
+            }
+            playHit();
+          }
+        }
+      } else if (hitSelfSeg) {
+        bounceOffSegment(snake, hitSelfSeg.segment, hitSelfSeg.radius);
+        if (!invincible) {
+          game.hearts--;
+          if (game.multiplier > 1) {
+            game.multiplier = Math.max(1, Math.floor(game.multiplier * 0.7));
+            game.comboTimer = game.multiplier > 1 ? COMBO_WINDOW : 0;
+            game.comboDecaying = false;
+          }
+          game.invulnTimer = INVULN_TIME;
+          game.hitFlash = HIT_FLASH_DURATION;
+          game.screenShake = 0.35;
+          spawnParticles(game, (hitSelfSeg.segment.x + snake.x) / 2, (hitSelfSeg.segment.y + snake.y) / 2, 18, {
+            colors: ["#ff3050", "#ff7a4a", "#ffffff"], speed: 110, size: 3.5, decay: 1.8,
+          });
+          if (game.hearts <= 0) {
+            spawnParticles(game, snake.x, snake.y, 45, { colors: ["#7fe8ff", "#4fd1e8", "#ffffff"], speed: 150, size: 4.5, decay: 1.2 });
+            endGame(game, false); return;
+          }
+          playHit();
+        }
+      } else if (wallHit) {
+        // Wall hit (non-wraparound path)
+        bounceOffWall(snake);
+        if (!invincible) {
+          game.hearts--;
+          if (game.multiplier > 1) {
+            game.multiplier = Math.max(1, Math.floor(game.multiplier * 0.7));
+            game.comboTimer = game.multiplier > 1 ? COMBO_WINDOW : 0;
+            game.comboDecaying = false;
+          }
+          game.invulnTimer = INVULN_TIME;
+          game.hitFlash = HIT_FLASH_DURATION;
+          game.screenShake = 0.35;
+          spawnParticles(game, snake.x, snake.y, 18, {
+            colors: ["#ff3050", "#ff7a4a", "#ffffff"], speed: 110, size: 3.5, decay: 1.8,
+          });
+          if (game.hearts <= 0) {
+            spawnParticles(game, snake.x, snake.y, 45, { colors: ["#7fe8ff", "#4fd1e8", "#ffffff"], speed: 150, size: 4.5, decay: 1.2 });
+            endGame(game, false); return;
+          }
+          playHit();
+        }
       }
-    }
-    else bounceOffSegment(snake, hitSelfSeg.segment, hitSelfSeg.radius);
-
-    if (!invincible) {
-      game.hearts--;
-      game.invulnTimer = INVULN_TIME;
-      game.hitFlash = HIT_FLASH_DURATION;
-      game.screenShake = 0.35; // Trigger screen shake!
-
-      // Spawn impact particles
-      let hitX, hitY;
-      if (wallHit) {
-        hitX = snake.x;
-        hitY = snake.y;
-      } else if (hitSpike) {
-        hitX = (hitSpike.x + snake.x) / 2;
-        hitY = (hitSpike.y + snake.y) / 2;
-      } else {
-        hitX = (hitSelfSeg.segment.x + snake.x) / 2;
-        hitY = (hitSelfSeg.segment.y + snake.y) / 2;
-      }
-
-      spawnParticles(game, hitX, hitY, 18, {
-        colors: ["#ff3050", "#ff7a4a", "#ffffff"],
-        speed: 110,
-        size: 3.5,
-        decay: 1.8,
-      });
-
-      if (game.hearts <= 0) {
-        // Spawn death disintegration explosion
-        spawnParticles(game, snake.x, snake.y, 45, {
-          colors: ["#7fe8ff", "#4fd1e8", "#ffffff"],
-          speed: 150,
-          size: 4.5,
-          decay: 1.2,
-        });
-        endGame(game, false);
-        return;
-      }
-      playHit();
     }
   }
 
@@ -550,9 +773,12 @@ export function update(game, dt) {
     });
 
     game.eaten++;
-    game.multiplier = game.comboTimer > 0 ? game.multiplier + 1 : 1;
+    // Reset combo decay if mid-decay, treat as normal combo hit
+    if (game.comboDecaying) { game.comboDecaying = false; game.comboDecayTimer = 0; }
+    game.multiplier = (game.comboTimer > 0 || game.comboDecaying) ? game.multiplier + 1 : 1;
     game.score += game.multiplier * foodValueForLevel(game.level);
     game.comboTimer = COMBO_WINDOW;
+    game.comboDecaying = false;
     // Sqrt scaling: sublinear ("slow") growth, and lands almost exactly on
     // "10x multiplier -> 3x longer happy" (sqrt(10) ~= 3.16) with no extra
     // tuning constant needed.
@@ -563,8 +789,15 @@ export function update(game, dt) {
     game.food = spawnFood(game.spikes, snake.segments);
 
     game.pelletsSinceLevel++;
+    game.pelletsSinceCard++;
     if (game.level < FINAL_LEVEL && game.pelletsSinceLevel >= LEVEL_PELLETS_REQUIRED) {
       applyLevelUp(game, game.level + 1, "pellets");
+    }
+    // Every 5 pellets (and not during level-up banner) → open card pick
+    if (game.pelletsSinceCard >= 5 && !game.banner && game.level < FINAL_LEVEL) {
+      game.pelletsSinceCard = 0;
+      game.cardPick = { cards: drawCards(game), hoveredIdx: 2 }; // default hover on Heal
+      game.state = "cardpick";
     }
   }
 

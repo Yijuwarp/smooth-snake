@@ -19,6 +19,12 @@ export function setArenaSize(canvasWidth, canvasHeight) {
 export const WALL_MARGIN = 30;
 export const MAX_DT = 1 / 30;
 
+// --- Passive powerup system ---
+export const SHIELD_REGEN_TIME = 60;    // seconds for Spikeguard to recharge
+export const MAGNET_RADIUS = 150;        // px — food/powerup attraction radius
+export const DYNAMO_REGEN_RATE = 0.12;  // boost fraction per second when idle
+export const MAGNET_SPEED = 90;          // px/sec food drift speed toward head
+
 // Touch mode: set once at startup by main.js (primary pointer is coarse).
 // Lives here so DOM-free modules (game/render/input) can read it without
 // touching window/matchMedia themselves.
@@ -61,8 +67,8 @@ export const TURN_RATE = 4.0;
 
 export const COMBO_WINDOW = 5; // seconds to reach the next food before the multiplier resets
 
-export const LEVEL_PELLETS_REQUIRED = 10; // pellets eaten since the last level-up forces a transition
-export const LEVEL_TIME_REQUIRED = 30; // seconds since the last level-up forces a transition, whichever comes first
+export const LEVEL_PELLETS_REQUIRED = 8; // pellets eaten since the last level-up forces a transition
+export const LEVEL_TIME_REQUIRED = 24; // seconds since the last level-up forces a transition, whichever comes first
 export const FINAL_LEVEL = 6;
 export const SURVIVAL_TIME = 10; // seconds to survive at the final level, after its banner clears, before the star appears
 export const LEVEL_BANNER_DURATION = 2.2; // seconds of slow-motion banner

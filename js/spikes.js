@@ -343,8 +343,9 @@ function updateTetherRotators(game, dt, rng) {
   }
 }
 
-export function updateSpikes(game, dt, rng = Math.random) {
+export function updateSpikes(game, dt, rng = Math.random, frozen = false) {
   if (game.level < 2) return;
+  if (frozen) return; // Freeze passive: spikes locked in place during slow mode
 
   if (game.level === 3) {
     updateGrowingSpikes(game, dt, rng);
