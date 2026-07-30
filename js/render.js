@@ -180,8 +180,9 @@ export function render(game, ctx, canvas) {
   ctx.translate(offsetX + shakeX, offsetY + shakeY);
   ctx.scale(scale, scale);
 
-  drawArena(ctx);
+  drawArena(ctx, game);
   drawParticles(ctx, game);
+
 
   if (game.level === 4 && game.rotators) {
     drawTetherRotators(ctx, game);
@@ -251,7 +252,7 @@ export function render(game, ctx, canvas) {
   ctx.restore();
 }
 
-function drawArena(ctx) {
+function drawArena(ctx, game) {
   ctx.fillStyle = COLOR_BG;
   ctx.fillRect(0, 0, ARENA_W, ARENA_H);
 
@@ -278,11 +279,25 @@ function drawArena(ctx) {
     }
   }
 
-  ctx.strokeStyle = COLOR_BORDER;
-  ctx.lineWidth = 4;
-  ctx.strokeRect(2, 2, ARENA_W - 4, ARENA_H - 4);
-  drawWallTeeth(ctx);
+  const hasWraparound = game && game.passives && game.passives.wraparound;
+
+  if (hasWraparound) {
+    // Portal border glow when Wraparound passive is active (wall teeth hidden)
+    ctx.save();
+    ctx.strokeStyle = "#c792ff";
+    ctx.shadowColor = "#c792ff";
+    ctx.shadowBlur = 12;
+    ctx.lineWidth = 3;
+    ctx.strokeRect(2, 2, ARENA_W - 4, ARENA_H - 4);
+    ctx.restore();
+  } else {
+    ctx.strokeStyle = COLOR_BORDER;
+    ctx.lineWidth = 4;
+    ctx.strokeRect(2, 2, ARENA_W - 4, ARENA_H - 4);
+    drawWallTeeth(ctx);
+  }
 }
+
 
 // Tiny inward-pointing teeth along every wall — the walls kill, and these say
 // so in the same warm color as the spikes without eating play space.
