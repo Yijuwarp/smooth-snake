@@ -582,17 +582,18 @@ function drawSpikes(ctx, spikes, time, level, frozen = false) {
     } else {
       ctx.fillStyle = frozenTip;
     }
+    // Batch spike teeth into a single path call per spike
+    ctx.beginPath();
     for (let i = 0; i < spikeCount; i++) {
       const angle = (i / spikeCount) * Math.PI * 2 + rotation;
       const baseAngle1 = angle - Math.PI / spikeCount;
       const baseAngle2 = angle + Math.PI / spikeCount;
-      ctx.beginPath();
       ctx.moveTo(sx + Math.cos(angle) * r, sy + Math.sin(angle) * r);
       ctx.lineTo(sx + Math.cos(baseAngle1) * r * 0.5, sy + Math.sin(baseAngle1) * r * 0.5);
       ctx.lineTo(sx + Math.cos(baseAngle2) * r * 0.5, sy + Math.sin(baseAngle2) * r * 0.5);
       ctx.closePath();
-      ctx.fill();
     }
+    ctx.fill();
   }
 }
 
@@ -607,37 +608,36 @@ function drawSnake(ctx, snake, expression, time, game) {
   if (ghostPhasing) ctx.globalAlpha = 0.32;
 
   // Helper: map a segment coordinate through modular arena wrapping
-  // (for the Wraparound passive — body segments trailing off-screen are
-  // reflected back onto the correct visual side)
   function wrapCoord(v, max) {
-    if (v < 0) return v + max;
-    if (v > max) return v - max;
-    return v;
+    return ((v % max) + max) % max;
   }
 
-  // 1. Draw outer body glow (tail to head)
+  // 1. Draw outer body glow (tail to head) — BATCHED into single path call
   ctx.fillStyle = ghostPhasing ? "rgba(127, 232, 255, 0.15)" : "rgba(79, 209, 232, 0.22)";
+  ctx.beginPath();
   for (let i = segCount - 1; i >= 0; i--) {
     const seg = snake.segments[i];
     const sx = wrapCoord(seg.x, ARENA_W), sy = wrapCoord(seg.y, ARENA_H);
     const t = segCount > 1 ? i / (segCount - 1) : 0;
-    const r = sr * (1.0 - t * 0.45); // Taper down to 55%
-    ctx.beginPath();
-    ctx.arc(sx, sy, r * 1.35, 0, Math.PI * 2);
-    ctx.fill();
+    const r = sr * (1.0 - t * 0.45) * 1.35; // Taper down to 55% * 1.35 glow
+    ctx.moveTo(sx + r, sy);
+    ctx.arc(sx, sy, r, 0, Math.PI * 2);
   }
+  ctx.fill();
 
-  // 2. Draw inner body (tail to head)
+  // 2. Draw inner body (tail to head) — BATCHED into single path call
   ctx.fillStyle = ghostPhasing ? "rgba(79, 209, 232, 0.5)" : COLOR_SNAKE_BODY;
+  ctx.beginPath();
   for (let i = segCount - 1; i >= 0; i--) {
     const seg = snake.segments[i];
     const sx = wrapCoord(seg.x, ARENA_W), sy = wrapCoord(seg.y, ARENA_H);
     const t = segCount > 1 ? i / (segCount - 1) : 0;
     const r = sr * (1.0 - t * 0.45);
-    ctx.beginPath();
+    ctx.moveTo(sx + r, sy);
     ctx.arc(sx, sy, r, 0, Math.PI * 2);
-    ctx.fill();
   }
+  ctx.fill();
+
 
   // 2b. Spikeguard scales — drawn over the body segments
   if (shieldActive || shieldRecharging) {

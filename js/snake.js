@@ -112,31 +112,45 @@ function placeSegments(snake, spacing = SEGMENT_SPACING) {
 }
 
 
-// Teleports the snake head to the opposite wall and shifts all path-history
-// points by the same offset so body segments follow through the wall
-// one-by-one (the path continuity is preserved; render.js draws segments with
-// modular clamping so they appear on the correct visual side).
+// Teleports the snake head to the opposite wall and shifts path-history
+// points by the same offset so body segments follow through the wall seamlessly.
+// Pushes head `sr + 4` px clear of the opposite boundary so it does not re-trigger
+// hitsWall on the very next frame.
 export function wrapSnake(snake) {
-  let dx = 0, dy = 0;
-  if (snake.x - SNAKE_RADIUS < 0)          { dx =  ARENA_W; }
-  else if (snake.x + SNAKE_RADIUS > ARENA_W) { dx = -ARENA_W; }
-  if (snake.y - SNAKE_RADIUS < 0)          { dy =  ARENA_H; }
-  else if (snake.y + SNAKE_RADIUS > ARENA_H) { dy = -ARENA_H; }
+  const sr = snake.radius || SNAKE_RADIUS;
+  const margin = sr + 4;
+  let targetX = snake.x;
+  let targetY = snake.y;
 
+  if (snake.x - sr < 0) {
+    targetX = ARENA_W - margin;
+  } else if (snake.x + sr > ARENA_W) {
+    targetX = margin;
+  }
+
+  if (snake.y - sr < 0) {
+    targetY = ARENA_H - margin;
+  } else if (snake.y + sr > ARENA_H) {
+    targetY = margin;
+  }
+
+  const dx = targetX - snake.x;
+  const dy = targetY - snake.y;
   if (dx === 0 && dy === 0) return;
 
-  snake.x += dx;
-  snake.y += dy;
-  // path[0] was just pushed by moveSnake at the pre-wrap position; fix it.
-  if (snake.path.length > 0) snake.path[0] = { x: snake.x, y: snake.y };
-  // Shift all older path points so they are in the same coordinate frame as
-  // the new head position. They will have large (out-of-arena) coordinates
-  // which render.js wraps back with modular arithmetic when drawing.
-  for (let i = 1; i < snake.path.length; i++) {
-    snake.path[i].x += dx;
-    snake.path[i].y += dy;
+  snake.x = targetX;
+  snake.y = targetY;
+
+  const path = snake.path;
+  if (path.length > 0) {
+    path[0] = { x: snake.x, y: snake.y };
+  }
+  for (let i = 1; i < path.length; i++) {
+    path[i].x += dx;
+    path[i].y += dy;
   }
 }
+
 
 // Reflects heading off whichever wall(s) were crossed and clamps the head
 // back inside, so the same wall doesn't re-trigger the collision next frame.
