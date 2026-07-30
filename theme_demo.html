@@ -1,0 +1,807 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SSNAKE — Cyberpunk & Space Biomes Explorer</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700;800&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #05070b;
+    --panel-bg: rgba(15, 21, 32, 0.88);
+    --panel-border: rgba(79, 209, 232, 0.25);
+    --text-main: #f0f4f8;
+    --text-muted: #8a9bb0;
+    --cyan: #4fd1e8;
+    --purple: #c792ff;
+    --pink: #ff71ce;
+    --gold: #ffd257;
+    --red: #ff4766;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text-main);
+    font-family: 'Outfit', sans-serif;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 20px;
+    overflow-x: hidden;
+  }
+
+  header {
+    text-align: center;
+    max-width: 900px;
+    margin-bottom: 16px;
+  }
+
+  h1 {
+    font-size: 30px;
+    font-weight: 800;
+    letter-spacing: 1px;
+    background: linear-gradient(135deg, #ffffff 0%, var(--cyan) 50%, var(--pink) 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    margin-bottom: 6px;
+  }
+
+  p.subtitle {
+    color: var(--text-muted);
+    font-size: 14px;
+    line-height: 1.4;
+  }
+
+  .badge {
+    display: inline-block;
+    background: rgba(79, 209, 232, 0.12);
+    border: 1px solid rgba(79, 209, 232, 0.3);
+    color: var(--cyan);
+    font-size: 11px;
+    font-weight: 700;
+    padding: 2px 10px;
+    border-radius: 12px;
+    margin-bottom: 8px;
+    letter-spacing: 0.5px;
+  }
+
+  .control-bar {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    justify-content: center;
+    align-items: center;
+    background: var(--panel-bg);
+    border: 1px solid var(--panel-border);
+    backdrop-filter: blur(12px);
+    border-radius: 16px;
+    padding: 14px 18px;
+    margin-bottom: 16px;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+    max-width: 1050px;
+    width: 100%;
+  }
+
+  .section-label {
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 4px;
+  }
+
+  .btn-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    justify-content: center;
+  }
+
+  .theme-btn-group {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    justify-content: center;
+    background: rgba(0, 0, 0, 0.35);
+    padding: 6px;
+    border-radius: 12px;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+  }
+
+  .btn {
+    background: transparent;
+    border: none;
+    color: var(--text-muted);
+    font-family: inherit;
+    font-size: 12px;
+    font-weight: 600;
+    padding: 7px 12px;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+  }
+
+  .btn:hover {
+    color: var(--text-main);
+    background: rgba(255, 255, 255, 0.06);
+  }
+
+  .btn.active {
+    background: linear-gradient(135deg, rgba(79, 209, 232, 0.3), rgba(255, 113, 206, 0.3));
+    border: 1px solid var(--cyan);
+    color: #ffffff;
+    box-shadow: 0 0 12px rgba(79, 209, 232, 0.3);
+  }
+
+  .options-row {
+    display: flex;
+    gap: 16px;
+    margin-top: 4px;
+  }
+
+  .toggle-option {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 12px;
+    color: var(--text-muted);
+    cursor: pointer;
+    user-select: none;
+    padding: 4px 10px;
+    background: rgba(0, 0, 0, 0.25);
+    border-radius: 6px;
+    border: 1px solid rgba(255, 255, 255, 0.05);
+  }
+
+  .toggle-option input {
+    accent-color: var(--cyan);
+    cursor: pointer;
+  }
+
+  .canvas-wrapper {
+    position: relative;
+    width: 1000px;
+    height: 600px;
+    border-radius: 16px;
+    overflow: hidden;
+    box-shadow: 0 16px 48px rgba(0, 0, 0, 0.6);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+  }
+
+  canvas {
+    display: block;
+    width: 100%;
+    height: 100%;
+    background: #000;
+  }
+
+  .info-overlay {
+    position: absolute;
+    bottom: 16px;
+    left: 16px;
+    right: 16px;
+    background: rgba(10, 14, 22, 0.88);
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 12px;
+    padding: 12px 18px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    pointer-events: none;
+  }
+
+  .theme-title {
+    font-weight: 700;
+    font-size: 15px;
+    color: var(--cyan);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .theme-desc {
+    font-size: 13px;
+    color: var(--text-muted);
+  }
+
+  .interaction-hint {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 12px;
+    color: var(--gold);
+    background: rgba(255, 210, 87, 0.1);
+    padding: 4px 8px;
+    border-radius: 6px;
+    border: 1px solid rgba(255, 210, 87, 0.3);
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="badge">CYBERPUNK & SPACE VARIATIONS EXPLORER</div>
+  <h1>8 Cyberpunk & Space Theme Variations</h1>
+  <p class="subtitle">Click any button below to test distinct procedural visual styles for Cyberpunk and Space themes in real time!</p>
+</header>
+
+<div class="control-bar">
+  <div class="theme-btn-group">
+    <button class="btn active" id="btn-cyber" onclick="setTheme('cyber')">⚡ Cyber Grid (Classic)</button>
+    <button class="btn" id="btn-synthwave" onclick="setTheme('synthwave')">🌇 Synthwave Sunset</button>
+    <button class="btn" id="btn-glitch" onclick="setTheme('glitch')">👾 Matrix Rain</button>
+    <button class="btn" id="btn-hex" onclick="setTheme('hex')">🔷 Hex Cyber Shield</button>
+    
+    <button class="btn" id="btn-space" onclick="setTheme('space')">🌌 Deep Space (Classic)</button>
+    <button class="btn" id="btn-blackhole" onclick="setTheme('blackhole')">🕳️ Black Hole Void</button>
+    <button class="btn" id="btn-celestial" onclick="setTheme('celestial')">✨ Radiant Starlight</button>
+    <button class="btn" id="btn-warp" onclick="setTheme('warp')">🚀 Hyperdrive Speed</button>
+  </div>
+
+  <div class="options-row">
+    <label class="toggle-option">
+      <input type="checkbox" id="toggle-elements" checked onchange="toggleElements(this.checked)">
+      Show Game Elements (Snake, Food, Spikes)
+    </label>
+
+    <label class="toggle-option">
+      <input type="checkbox" id="toggle-motion" checked onchange="toggleMotion(this.checked)">
+      Animate Background Physics
+    </label>
+  </div>
+</div>
+
+<div class="canvas-wrapper">
+  <canvas id="demoCanvas" width="1000" height="600"></canvas>
+
+  <div class="info-overlay" id="info-overlay">
+    <div>
+      <div class="theme-title" id="info-title">⚡ Cyber Grid (Classic)</div>
+      <div class="theme-desc" id="info-desc">Dynamic reactive grid lines with laser shockwaves on click, corner energy nodes, and pulsing border glow.</div>
+    </div>
+    <div class="interaction-hint">💡 Click arena to trigger shockwaves / energy ripples</div>
+  </div>
+</div>
+
+<script>
+const canvas = document.getElementById('demoCanvas');
+const ctx = canvas.getContext('2d');
+
+let currentTheme = 'cyber';
+let showElements = true;
+let animateMotion = true;
+let time = 0;
+
+const ripples = [];
+
+canvas.addEventListener('click', (e) => {
+  const rect = canvas.getBoundingClientRect();
+  const x = (e.clientX - rect.left) * (canvas.width / rect.width);
+  const y = (e.clientY - rect.top) * (canvas.height / rect.height);
+  
+  ripples.push({
+    x, y,
+    radius: 0,
+    maxRadius: 280,
+    speed: 350,
+    intensity: 1.0,
+    theme: currentTheme
+  });
+});
+
+// -------------------------------------------------------------
+// 1. NEON CYBER GRID (CLASSIC)
+// -------------------------------------------------------------
+const gridSpacing = 40;
+function drawCyberGrid(ctx, w, h, t) {
+  ctx.fillStyle = '#060911';
+  ctx.fillRect(0, 0, w, h);
+
+  const bgGrad = ctx.createRadialGradient(w/2, h/2, 50, w/2, h/2, Math.max(w, h));
+  bgGrad.addColorStop(0, 'rgba(79, 209, 232, 0.08)');
+  bgGrad.addColorStop(0.5, 'rgba(199, 146, 255, 0.04)');
+  bgGrad.addColorStop(1, 'rgba(5, 7, 11, 0.95)');
+  ctx.fillStyle = bgGrad;
+  ctx.fillRect(0, 0, w, h);
+
+  const activeRipples = ripples.filter(r => r.theme === 'cyber');
+
+  for (let x = 0; x <= w; x += gridSpacing) {
+    ctx.beginPath();
+    let isFirst = true;
+    for (let y = 0; y <= h; y += 10) {
+      let offset = 0;
+      for (const r of activeRipples) {
+        const dist = Math.hypot(x - r.x, y - r.y);
+        if (Math.abs(dist - r.radius) < 60) {
+          offset += Math.sin((dist - r.radius) * 0.08) * Math.exp(-Math.abs(dist - r.radius) * 0.02) * 8 * r.intensity;
+        }
+      }
+      if (isFirst) { ctx.moveTo(x + offset, y); isFirst = false; }
+      else { ctx.lineTo(x + offset, y); }
+    }
+    ctx.strokeStyle = `rgba(79, 209, 232, ${0.05 + Math.sin(t * 2 + x * 0.01) * 0.02})`;
+    ctx.stroke();
+  }
+
+  for (let y = 0; y <= h; y += gridSpacing) {
+    ctx.beginPath();
+    let isFirst = true;
+    for (let x = 0; x <= w; x += 10) {
+      let offset = 0;
+      for (const r of activeRipples) {
+        const dist = Math.hypot(x - r.x, y - r.y);
+        if (Math.abs(dist - r.radius) < 60) {
+          offset += Math.sin((dist - r.radius) * 0.08) * Math.exp(-Math.abs(dist - r.radius) * 0.02) * 8 * r.intensity;
+        }
+      }
+      if (isFirst) { ctx.moveTo(x, y + offset); isFirst = false; }
+      else { ctx.lineTo(x, y + offset); }
+    }
+    ctx.strokeStyle = `rgba(79, 209, 232, ${0.05 + Math.cos(t * 2 + y * 0.01) * 0.02})`;
+    ctx.stroke();
+  }
+
+  ctx.strokeStyle = '#4fd1e8';
+  ctx.lineWidth = 3;
+  ctx.shadowColor = '#4fd1e8';
+  ctx.shadowBlur = 12 + Math.sin(t * 6) * 4;
+  ctx.strokeRect(2, 2, w - 4, h - 4);
+  ctx.shadowBlur = 0;
+}
+
+// -------------------------------------------------------------
+// 2. SYNTHWAVE SUNSET (80s RETROWAVE)
+// -------------------------------------------------------------
+function drawSynthwaveTheme(ctx, w, h, t) {
+  // Retrowave Sunset Gradient
+  const grad = ctx.createLinearGradient(0, 0, 0, h);
+  grad.addColorStop(0, '#090514');
+  grad.addColorStop(0.5, '#260c38');
+  grad.addColorStop(0.85, '#5c1048');
+  grad.addColorStop(1, '#180720');
+  ctx.fillStyle = grad;
+  ctx.fillRect(0, 0, w, h);
+
+  // Retrowave Sun Horizon
+  const sunY = h * 0.45;
+  const sunGrad = ctx.createRadialGradient(w/2, sunY, 10, w/2, sunY, 110);
+  sunGrad.addColorStop(0, '#ffbe53');
+  sunGrad.addColorStop(0.6, '#ff71ce');
+  sunGrad.addColorStop(1, 'rgba(255, 113, 206, 0)');
+  ctx.fillStyle = sunGrad;
+  ctx.beginPath(); ctx.arc(w/2, sunY, 110, 0, Math.PI * 2); ctx.fill();
+
+  // Perspective Horizon Lines
+  ctx.strokeStyle = 'rgba(255, 113, 206, 0.18)';
+  ctx.lineWidth = 1.5;
+  for (let x = -w; x <= w * 2; x += 50) {
+    ctx.beginPath();
+    ctx.moveTo(x, h);
+    ctx.lineTo(w / 2 + (x - w / 2) * 0.2, sunY);
+    ctx.stroke();
+  }
+
+  for (let y = sunY + 10; y <= h; y += 25) {
+    ctx.beginPath();
+    ctx.moveTo(0, y);
+    ctx.lineTo(w, y);
+    ctx.stroke();
+  }
+
+  // Hot Pink / Cyan Synthwave Border
+  ctx.strokeStyle = '#ff71ce';
+  ctx.lineWidth = 3;
+  ctx.shadowColor = '#ff71ce';
+  ctx.shadowBlur = 14;
+  ctx.strokeRect(2, 2, w - 4, h - 4);
+  ctx.shadowBlur = 0;
+}
+
+// -------------------------------------------------------------
+// 3. MATRIX CODE RAIN (GLITCH)
+// -------------------------------------------------------------
+const matrixCode = Array.from({ length: 45 }, () => ({
+  x: Math.random() * 1000, y: Math.random() * 600,
+  speed: 40 + Math.random() * 60, char: String.fromCharCode(0x30A0 + Math.floor(Math.random() * 96))
+}));
+
+function drawGlitchTheme(ctx, w, h, t) {
+  ctx.fillStyle = '#080512';
+  ctx.fillRect(0, 0, w, h);
+
+  ctx.strokeStyle = 'rgba(199, 146, 255, 0.08)';
+  ctx.lineWidth = 1;
+  for (let x = 0; x < w; x += 30) {
+    ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, h); ctx.stroke();
+  }
+  for (let y = 0; y < h; y += 30) {
+    ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(w, y); ctx.stroke();
+  }
+
+  ctx.font = '12px "Share Tech Mono"';
+  ctx.fillStyle = 'rgba(79, 209, 232, 0.45)';
+  for (const m of matrixCode) {
+    const my = (m.y + (animateMotion ? t * m.speed : 0)) % h;
+    ctx.fillText(m.char, m.x, my);
+  }
+
+  if (Math.random() < 0.12) {
+    const gy = Math.random() * h;
+    ctx.fillStyle = 'rgba(255, 71, 102, 0.15)';
+    ctx.fillRect(0, gy, w, 4);
+  }
+
+  ctx.strokeStyle = '#e056fd';
+  ctx.lineWidth = 3;
+  ctx.shadowColor = '#e056fd';
+  ctx.shadowBlur = 12;
+  ctx.strokeRect(2, 2, w - 4, h - 4);
+  ctx.shadowBlur = 0;
+}
+
+// -------------------------------------------------------------
+// 4. HEXAGONAL CYBER CORE (TECH SHIELD)
+// -------------------------------------------------------------
+function drawHexTheme(ctx, w, h, t) {
+  ctx.fillStyle = '#040810';
+  ctx.fillRect(0, 0, w, h);
+
+  const hexSize = 24;
+  const hexWidth = Math.sqrt(3) * hexSize;
+  const hexHeight = 2 * hexSize;
+
+  ctx.strokeStyle = 'rgba(79, 209, 232, 0.12)';
+  ctx.lineWidth = 1;
+
+  for (let y = 0; y < h + hexHeight; y += hexHeight * 0.75) {
+    const row = Math.floor(y / (hexHeight * 0.75));
+    const offset = (row % 2) * (hexWidth / 2);
+
+    for (let x = offset; x < w + hexWidth; x += hexWidth) {
+      ctx.beginPath();
+      for (let i = 0; i < 6; i++) {
+        const angle = (Math.PI / 3) * i;
+        const hx = x + hexSize * Math.cos(angle);
+        const hy = y + hexSize * Math.sin(angle);
+        if (i === 0) ctx.moveTo(hx, hy);
+        else ctx.lineTo(hx, hy);
+      }
+      ctx.closePath();
+      ctx.stroke();
+
+      if (Math.sin(t * 3 + x * 0.05 + y * 0.05) > 0.85) {
+        ctx.fillStyle = 'rgba(79, 209, 232, 0.06)';
+        ctx.fill();
+      }
+    }
+  }
+
+  ctx.strokeStyle = '#00f0ff';
+  ctx.lineWidth = 3;
+  ctx.shadowColor = '#00f0ff';
+  ctx.shadowBlur = 12;
+  ctx.strokeRect(2, 2, w - 4, h - 4);
+  ctx.shadowBlur = 0;
+}
+
+// -------------------------------------------------------------
+// 5. DEEP SPACE NEBULA (CLASSIC)
+// -------------------------------------------------------------
+const stars = Array.from({ length: 120 }, () => ({
+  x: Math.random() * 1000, y: Math.random() * 600,
+  size: 0.5 + Math.random() * 2.2, layer: Math.floor(Math.random() * 3) + 1,
+  twinkleSpeed: 1 + Math.random() * 4, hue: Math.random() > 0.4 ? 200 : (Math.random() > 0.5 ? 270 : 45)
+}));
+
+function drawSpaceTheme(ctx, w, h, t) {
+  ctx.fillStyle = '#030408';
+  ctx.fillRect(0, 0, w, h);
+
+  const nebGrad = ctx.createRadialGradient(w * 0.3, h * 0.4, 30, w * 0.3, h * 0.4, 350);
+  nebGrad.addColorStop(0, 'rgba(199, 146, 255, 0.14)');
+  nebGrad.addColorStop(1, 'rgba(5, 7, 11, 0)');
+  ctx.fillStyle = nebGrad;
+  ctx.fillRect(0, 0, w, h);
+
+  for (const s of stars) {
+    const sx = (s.x + (animateMotion ? t * s.layer * 4 : 0)) % w;
+    const alpha = 0.3 + Math.sin(t * s.twinkleSpeed + s.x) * 0.45;
+    ctx.fillStyle = `hsla(${s.hue}, 90%, 80%, ${Math.max(0.1, alpha)})`;
+    ctx.beginPath(); ctx.arc(sx, s.y, s.size, 0, Math.PI * 2); ctx.fill();
+  }
+
+  ctx.strokeStyle = '#c792ff';
+  ctx.lineWidth = 2.5;
+  ctx.shadowColor = '#c792ff';
+  ctx.shadowBlur = 10;
+  ctx.strokeRect(2, 2, w - 4, h - 4);
+  ctx.shadowBlur = 0;
+}
+
+// -------------------------------------------------------------
+// 6. BLACK HOLE VOID (GRAVITY LENSING)
+// -------------------------------------------------------------
+const accretionDust = Array.from({ length: 80 }, () => ({
+  dist: 40 + Math.random() * 220,
+  angle: Math.random() * Math.PI * 2,
+  speed: 0.5 + Math.random() * 1.5,
+  size: 1 + Math.random() * 2.5,
+  color: Math.random() > 0.4 ? '#c792ff' : '#4fd1e8'
+}));
+
+function drawBlackHoleTheme(ctx, w, h, t) {
+  ctx.fillStyle = '#020205';
+  ctx.fillRect(0, 0, w, h);
+
+  const cx = w / 2, cy = h / 2;
+
+  // Accretion Disk Glow
+  const glowGrad = ctx.createRadialGradient(cx, cy, 30, cx, cy, 260);
+  glowGrad.addColorStop(0, 'rgba(199, 146, 255, 0.25)');
+  glowGrad.addColorStop(0.4, 'rgba(79, 209, 232, 0.12)');
+  glowGrad.addColorStop(1, 'rgba(2, 2, 5, 0)');
+  ctx.fillStyle = glowGrad;
+  ctx.beginPath(); ctx.arc(cx, cy, 260, 0, Math.PI * 2); ctx.fill();
+
+  // Orbiting Accretion Dust
+  for (const d of accretionDust) {
+    const a = d.angle + (animateMotion ? t * d.speed : 0);
+    const dx = cx + Math.cos(a) * d.dist;
+    const dy = cy + Math.sin(a) * (d.dist * 0.4); // elliptical tilt
+
+    ctx.fillStyle = d.color;
+    ctx.shadowColor = d.color;
+    ctx.shadowBlur = 6;
+    ctx.beginPath(); ctx.arc(dx, dy, d.size, 0, Math.PI * 2); ctx.fill();
+  }
+
+  // Black Hole Event Horizon Core
+  ctx.fillStyle = '#000000';
+  ctx.shadowColor = '#c792ff';
+  ctx.shadowBlur = 20;
+  ctx.beginPath(); ctx.arc(cx, cy, 35, 0, Math.PI * 2); ctx.fill();
+  ctx.shadowBlur = 0;
+
+  // Gravitational Energy Ring
+  ctx.strokeStyle = '#c792ff';
+  ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.arc(cx, cy, 38, 0, Math.PI * 2); ctx.stroke();
+
+  // Void Border
+  ctx.strokeStyle = '#7c5cff';
+  ctx.lineWidth = 3;
+  ctx.shadowColor = '#7c5cff';
+  ctx.shadowBlur = 12;
+  ctx.strokeRect(2, 2, w - 4, h - 4);
+  ctx.shadowBlur = 0;
+}
+
+// -------------------------------------------------------------
+// 7. RADIANT STARLIGHT (CELESTIAL)
+// -------------------------------------------------------------
+const starDust = Array.from({ length: 65 }, () => ({
+  x: Math.random() * 1000, y: Math.random() * 600,
+  size: 1 + Math.random() * 2, pulse: 1 + Math.random() * 3
+}));
+
+function drawCelestialTheme(ctx, w, h, t) {
+  ctx.fillStyle = '#080712';
+  ctx.fillRect(0, 0, w, h);
+
+  const solarGrad = ctx.createRadialGradient(w / 2, h / 2, 20, w / 2, h / 2, w * 0.55);
+  solarGrad.addColorStop(0, 'rgba(255, 210, 87, 0.16)');
+  solarGrad.addColorStop(0.5, 'rgba(199, 146, 255, 0.08)');
+  solarGrad.addColorStop(1, 'rgba(8, 7, 18, 0.95)');
+  ctx.fillStyle = solarGrad;
+  ctx.fillRect(0, 0, w, h);
+
+  ctx.strokeStyle = 'rgba(255, 210, 87, 0.09)';
+  ctx.lineWidth = 1;
+  for (let x = 0; x < w; x += 50) {
+    ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, h); ctx.stroke();
+  }
+  for (let y = 0; y < h; y += 50) {
+    ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(w, y); ctx.stroke();
+  }
+
+  for (const s of starDust) {
+    const alpha = 0.3 + Math.sin(t * s.pulse + s.x) * 0.4;
+    ctx.fillStyle = `rgba(255, 210, 87, ${Math.max(0.1, alpha)})`;
+    ctx.beginPath(); ctx.arc(s.x, s.y, s.size, 0, Math.PI * 2); ctx.fill();
+  }
+
+  ctx.strokeStyle = '#ffd257';
+  ctx.lineWidth = 3;
+  ctx.shadowColor = '#ffd257';
+  ctx.shadowBlur = 14;
+  ctx.strokeRect(2, 2, w - 4, h - 4);
+  ctx.shadowBlur = 0;
+}
+
+// -------------------------------------------------------------
+// 8. HYPERDRIVE WARP (SPEED STARS)
+// -------------------------------------------------------------
+const warpStars = Array.from({ length: 100 }, () => ({
+  angle: Math.random() * Math.PI * 2,
+  dist: Math.random() * 400,
+  speed: 120 + Math.random() * 200,
+  length: 10 + Math.random() * 25
+}));
+
+function drawWarpTheme(ctx, w, h, t) {
+  ctx.fillStyle = '#030308';
+  ctx.fillRect(0, 0, w, h);
+
+  const cx = w / 2, cy = h / 2;
+
+  ctx.strokeStyle = 'rgba(79, 209, 232, 0.6)';
+  ctx.lineWidth = 1.8;
+
+  for (const s of warpStars) {
+    const currentDist = (s.dist + (animateMotion ? t * s.speed : 0)) % 500;
+    const x1 = cx + Math.cos(s.angle) * currentDist;
+    const y1 = cy + Math.sin(s.angle) * currentDist;
+    const x2 = cx + Math.cos(s.angle) * (currentDist + s.length * (currentDist / 200));
+    const y2 = cy + Math.sin(s.angle) * (currentDist + s.length * (currentDist / 200));
+
+    const alpha = Math.min(1, currentDist / 150);
+    ctx.strokeStyle = `rgba(79, 209, 232, ${alpha * 0.7})`;
+    ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(x2, y2); ctx.stroke();
+  }
+
+  // Hyperdrive Ring Border
+  ctx.strokeStyle = '#00f0ff';
+  ctx.lineWidth = 3;
+  ctx.shadowColor = '#00f0ff';
+  ctx.shadowBlur = 14;
+  ctx.strokeRect(2, 2, w - 4, h - 4);
+  ctx.shadowBlur = 0;
+}
+
+// -------------------------------------------------------------
+// GAME ELEMENTS OVERLAY
+// -------------------------------------------------------------
+function drawGameElements(ctx, w, h, t) {
+  ctx.save();
+
+  // Food Orb
+  const foodX = w * 0.7, foodY = h * 0.4;
+  const foodPulse = Math.sin(t * 6) * 2;
+  const foodR = 10 + foodPulse;
+
+  ctx.fillStyle = '#4ee08a'; ctx.shadowColor = '#4ee08a'; ctx.shadowBlur = 10;
+  ctx.beginPath(); ctx.arc(foodX, foodY, foodR, 0, Math.PI * 2); ctx.fill();
+
+  // Star Pickup
+  const starX = w * 0.3, starY = h * 0.75;
+  ctx.save();
+  ctx.translate(starX, starY); ctx.rotate(t * 1.5);
+  ctx.fillStyle = '#ffd257'; ctx.shadowColor = '#ffd257'; ctx.shadowBlur = 12;
+  ctx.beginPath();
+  for (let i = 0; i < 10; i++) {
+    const r = i % 2 === 0 ? 12 : 5;
+    const a = (i / 10) * Math.PI * 2;
+    ctx.lineTo(Math.cos(a) * r, Math.sin(a) * r);
+  }
+  ctx.closePath(); ctx.fill();
+  ctx.restore();
+
+  // Spiky Mine Hazard
+  const spikeX = w * 0.5, spikeY = h * 0.3;
+  ctx.save();
+  ctx.translate(spikeX, spikeY); ctx.rotate(t * 0.8);
+  ctx.fillStyle = '#ff4766'; ctx.shadowColor = '#ff4766'; ctx.shadowBlur = 10;
+  ctx.beginPath(); ctx.arc(0, 0, 10, 0, Math.PI * 2); ctx.fill();
+  for (let i = 0; i < 8; i++) {
+    const a = (i / 8) * Math.PI * 2;
+    ctx.beginPath();
+    ctx.moveTo(Math.cos(a) * 10, Math.sin(a) * 10);
+    ctx.lineTo(Math.cos(a - 0.2) * 6, Math.sin(a - 0.2) * 6);
+    ctx.lineTo(Math.cos(a) * 18, Math.sin(a) * 18);
+    ctx.lineTo(Math.cos(a + 0.2) * 6, Math.sin(a + 0.2) * 6);
+    ctx.closePath(); ctx.fill();
+  }
+  ctx.restore();
+
+  // Smooth Animated Snake
+  const numSegs = 18;
+  const segments = [];
+  for (let i = 0; i < numSegs; i++) {
+    const lagT = t - i * 0.08;
+    segments.push({
+      x: w * 0.45 + Math.sin(lagT * 1.2) * 80,
+      y: h * 0.55 + Math.cos(lagT * 1.5) * 50,
+      r: 12 * (1 - (i / numSegs) * 0.45)
+    });
+  }
+
+  for (let i = numSegs - 1; i >= 0; i--) {
+    const seg = segments[i];
+    ctx.fillStyle = i === 0 ? '#7fe8ff' : '#4fd1e8';
+    ctx.shadowColor = '#4fd1e8'; ctx.shadowBlur = i === 0 ? 14 : 6;
+    ctx.beginPath(); ctx.arc(seg.x, seg.y, seg.r, 0, Math.PI * 2); ctx.fill();
+  }
+
+  // Snake Eyes
+  const head = segments[0], next = segments[1];
+  const angle = Math.atan2(head.y - next.y, head.x - next.x);
+  ctx.fillStyle = '#060911'; ctx.shadowBlur = 0;
+  ctx.beginPath();
+  ctx.arc(head.x + Math.cos(angle + Math.PI/3) * 5, head.y + Math.sin(angle + Math.PI/3) * 5, 2.5, 0, Math.PI * 2);
+  ctx.arc(head.x + Math.cos(angle - Math.PI/3) * 5, head.y + Math.sin(angle - Math.PI/3) * 5, 2.5, 0, Math.PI * 2);
+  ctx.fill();
+
+  ctx.restore();
+}
+
+// RENDER LOOP
+let lastFrameTime = performance.now();
+function renderLoop(now) {
+  const dt = (now - lastFrameTime) / 1000;
+  lastFrameTime = now;
+  if (animateMotion) time += dt;
+
+  for (let i = ripples.length - 1; i >= 0; i--) {
+    const r = ripples[i];
+    r.radius += r.speed * dt;
+    r.intensity = 1 - (r.radius / r.maxRadius);
+    if (r.radius >= r.maxRadius) ripples.splice(i, 1);
+  }
+
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  const W = canvas.width, H = canvas.height;
+
+  if (currentTheme === 'cyber') drawCyberGrid(ctx, W, H, time);
+  else if (currentTheme === 'synthwave') drawSynthwaveTheme(ctx, W, H, time);
+  else if (currentTheme === 'glitch') drawGlitchTheme(ctx, W, H, time);
+  else if (currentTheme === 'hex') drawHexTheme(ctx, W, H, time);
+  else if (currentTheme === 'space') drawSpaceTheme(ctx, W, H, time);
+  else if (currentTheme === 'blackhole') drawBlackHoleTheme(ctx, W, H, time);
+  else if (currentTheme === 'celestial') drawCelestialTheme(ctx, W, H, time);
+  else if (currentTheme === 'warp') drawWarpTheme(ctx, W, H, time);
+
+  if (showElements) drawGameElements(ctx, W, H, time);
+
+  requestAnimationFrame(renderLoop);
+}
+
+requestAnimationFrame(renderLoop);
+
+function setTheme(theme) {
+  currentTheme = theme;
+  document.querySelectorAll('.theme-btn-group .btn').forEach(b => b.classList.remove('active'));
+  document.getElementById(`btn-${theme}`).classList.add('active');
+
+  const titleEl = document.getElementById('info-title');
+  const descEl = document.getElementById('info-desc');
+
+  const infoMap = {
+    cyber: { title: '⚡ Cyber Grid (Classic)', color: 'var(--cyan)', desc: 'Dynamic reactive grid lines with laser shockwaves on click, corner energy nodes, and pulsing border glow.' },
+    synthwave: { title: '🌇 Synthwave Sunset', color: 'var(--pink)', desc: 'Retro 80s retrowave horizon with pink sunset glow, perspective vector grid floor, and hot magenta borders.' },
+    glitch: { title: '👾 Matrix Rain', color: 'var(--purple)', desc: 'Digital matrix code rain, circuit trace grid nodes, scanline glimmers, and vibrant magenta laser borders.' },
+    hex: { title: '🔷 Hex Cyber Shield', color: 'var(--cyan)', desc: 'Honeycomb hexagonal energy shield grid with glowing pulse nodes on interaction.' },
+    space: { title: '🌌 Deep Space (Classic)', color: 'var(--purple)', desc: '3-layer parallax starfield with procedure color nebulas, twinkling constellations, and cosmic barrier walls.' },
+    blackhole: { title: '🕳️ Black Hole Void', color: 'var(--purple)', desc: 'Gravitational accretion disk glow around a dark event horizon core with orbiting plasma dust particles.' },
+    celestial: { title: '✨ Radiant Starlight', color: 'var(--gold)', desc: 'Ethereal solar core flare, golden constellation grid networks, star-dust drift, and sun orb corner beacons.' },
+    warp: { title: '🚀 Hyperdrive Speed', color: 'var(--cyan)', desc: 'Speeding star trails radiating outward from the central void in hyperspace acceleration.' }
+  };
+
+  titleEl.innerHTML = infoMap[theme].title;
+  titleEl.style.color = infoMap[theme].color;
+  descEl.textContent = infoMap[theme].desc;
+}
+
+function toggleElements(val) { showElements = val; }
+function toggleMotion(val) { animateMotion = val; }
+</script>
+</body>
+</html>

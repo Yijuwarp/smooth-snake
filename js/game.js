@@ -434,7 +434,7 @@ function applyLevelUp(game, newLevel, trigger) {
     s.growT = 0;
     s.rotation = 0;
     s.sizeMult = 1;
-    s.isDrone = false;
+    if (newLevel < 5) s.isDrone = false;
     s.bounceTimer = 0;
     s.tetheredTo = null;
     s.tetherAngle = undefined;
@@ -489,10 +489,13 @@ export function update(game, dt) {
     game.comboTimer -= dt * comboDecayRate;
     if (game.comboTimer <= 0) {
       game.comboTimer = 0;
-      // Don't snap to ×1 — start slow countdown (1 per second)
+      // Immediately decrement multiplier by 1 when the combo timer expires
+      game.multiplier = Math.max(1, game.multiplier - 1);
       if (game.multiplier > 1) {
         game.comboDecaying = true;
         game.comboDecayTimer = 0;
+      } else {
+        game.comboDecaying = false;
       }
     }
   } else if (game.comboDecaying) {

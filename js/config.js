@@ -72,7 +72,7 @@ export const COMBO_WINDOW = 5; // seconds to reach the next food before the mult
 export const LEVEL_PELLETS_REQUIRED = 8; // pellets eaten since the last level-up forces a transition
 export const LEVEL_TIME_REQUIRED = 24; // seconds since the last level-up forces a transition, whichever comes first
 export const FINAL_LEVEL = 6;
-export const SURVIVAL_TIME = 10; // seconds to survive at the final level, after its banner clears, before the star appears
+export const SURVIVAL_TIME = 15; // seconds to survive at the final level, after its banner clears, before the star appears
 export const LEVEL_BANNER_DURATION = 2.2; // seconds of slow-motion banner
 export const TUTORIAL_BANNER_DURATION = 3; // longer banner for the one-time power-up explainer
 export const LEVEL_TIME_SCALE = 0.05; // gameplay speed during a banner
@@ -112,7 +112,7 @@ export const BOUNCE_CLEARANCE = 4; // extra px pushed clear of a hazard after a 
 
 // End-of-run bonuses, each a percentage of the base score, summed additively
 // at game end (see endGame in game.js).
-export const STAR_BONUS_PCT = 0.3; // +30% for winning (collecting the star)
+export const STAR_BONUS_PCT = 0.5; // +50% for winning (collecting the star)
 export const LIFE_BONUS_PCT = 0.1; // +10% per heart remaining at game end
 export const SPEED_BONUS_PCT = 0.1; // +10% per level transition reached via pellet count (not the 20s timer)
 
