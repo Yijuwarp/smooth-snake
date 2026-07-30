@@ -833,12 +833,14 @@ export function update(game, dt) {
     });
 
     game.eaten++;
-    // Reset combo decay if mid-decay, treat as normal combo hit
-    if (game.comboDecaying) { game.comboDecaying = false; game.comboDecayTimer = 0; }
-    game.multiplier = (game.comboTimer > 0 || game.comboDecaying) ? game.multiplier + 1 : 1;
-    game.score += game.multiplier * foodValueForLevel(game.level);
+    // If active combo window OR currently decaying from a higher multiplier:
+    // preserve current multiplier + 1, then restart full combo window.
+    const inCombo = game.comboTimer > 0 || game.comboDecaying || game.multiplier > 1;
+    game.multiplier = inCombo ? game.multiplier + 1 : 1;
     game.comboTimer = COMBO_WINDOW;
     game.comboDecaying = false;
+    game.comboDecayTimer = 0;
+    game.score += game.multiplier * foodValueForLevel(game.level);
     // Sqrt scaling: sublinear ("slow") growth, and lands almost exactly on
     // "10x multiplier -> 3x longer happy" (sqrt(10) ~= 3.16) with no extra
     // tuning constant needed.
