@@ -51,7 +51,7 @@ let activating = false; // guards double-activation while fullscreen entry is pe
 
 async function activate() {
   if (!highscoreModal.hidden) return;
-  if (activating || game.state === "playing" || game.state === "paused") return;
+  if (activating || game.state === "playing" || game.state === "paused" || game.state === "cardpick") return;
   activating = true;
 
   // Hide the HTML start menu (desktop only — it is already hidden on touch).

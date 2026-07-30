@@ -37,7 +37,8 @@ export function setupInput(game, canvas, { onActivate, onPause, onToggleFullscre
       const p = toArena(canvas, e.clientX, e.clientY);
       const layout = getCardLayout();
       const hit = layout.findIndex(r => p.x >= r.x && p.x <= r.x + r.w && p.y >= r.y && p.y <= r.y + r.h);
-      if (hit >= 0) { selectCard(game, hit); return; }
+      if (hit >= 0) selectCard(game, hit);
+      return; // Do NOT fall through to onActivate() during cardpick
     }
     onActivate();
   });
@@ -86,7 +87,7 @@ export function setupInput(game, canvas, { onActivate, onPause, onToggleFullscre
           game.slowing = true;
         } else {
           // A tap on the menu/gameover screen activates on release, not on touchstart
-          const activates = game.state !== "playing" && game.state !== "paused";
+          const activates = game.state !== "playing" && game.state !== "paused" && game.state !== "cardpick";
           touchRoles.set(t.identifier, activates ? "activate" : "steer");
           game.mouse.x = p.x;
           game.mouse.y = p.y;
@@ -184,6 +185,10 @@ export function setupInput(game, canvas, { onActivate, onPause, onToggleFullscre
       }
       if (e.key === "Enter" || e.key === " ") {
         selectCard(game, game.cardPick.hoveredIdx);
+        e.preventDefault(); return;
+      }
+      if (e.key === "Escape") {
+        selectCard(game, 2); // default to Heal on Escape
         e.preventDefault(); return;
       }
       e.preventDefault(); // block all other keys during pick
