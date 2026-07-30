@@ -184,12 +184,11 @@ function drawCards(game) {
 
   // Pad with heal if fewer than 2 passives available.
   while (chosen.length < 2) {
-    chosen.push({ type: "heal", id: "heal", name: "Heal", rarity: "common", desc: "" });
+    chosen.push({ type: "heal", id: "heal", name: "Heal", rarity: "common", desc: "Restore health back to full." });
   }
 
-  // Slot 3 is always heal — amount scales with level.
-  const healAmt = game.level >= 5 ? 3 : game.level >= 3 ? 2 : 1;
-  chosen.push({ type: "heal", id: "heal", name: `Heal +${healAmt}❤`, rarity: "common", desc: `Restore ${healAmt} heart${healAmt > 1 ? "s" : ""}.` });
+  // Slot 3 is always heal — restores health back to full HP.
+  chosen.push({ type: "heal", id: "heal", name: "Heal", rarity: "common", desc: "Restore health back to full." });
 
   return chosen;
 }
@@ -216,8 +215,7 @@ export function selectCard(game, idx) {
   if (!card) return;
 
   if (card.type === "heal") {
-    const amt = game.level >= 5 ? 3 : game.level >= 3 ? 2 : 1;
-    game.hearts = Math.min(game.maxHearts || MAX_HEARTS, game.hearts + amt);
+    game.hearts = game.maxHearts || MAX_HEARTS;
   } else {
     game.passives[card.id] = true;
     // Wraparound: immediately remove spikes within WALL_MARGIN of any edge.
