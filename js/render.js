@@ -1195,9 +1195,12 @@ function drawCardPick(ctx, game) {
   ctx.fillStyle = "#e8f0f8";
   ctx.fillText("CHOOSE YOUR UPGRADE", ARENA_W / 2, layout[0].y - 38);
 
+  const isKbd = game.lastInputType === "keyboard";
+  const isTouch = game.lastInputType === "touch" || TOUCH_MODE;
+
   ctx.font = "13px 'Outfit', sans-serif";
   ctx.fillStyle = "rgba(159,179,200,0.7)";
-  const hint = TOUCH_MODE ? "Tap a card" : "Click · ← → · 1 2 3 · Enter";
+  const hint = isKbd ? "Press 1, 2, 3 · ← → · Enter" : isTouch ? "Tap a card to select" : "Click a card to select";
   ctx.fillText(hint, ARENA_W / 2, layout[0].y - 14);
 
   for (let i = 0; i < 3; i++) {
@@ -1282,18 +1285,21 @@ function drawCardPick(ctx, game) {
     }
     if (line) ctx.fillText(line, cx, lineY);
 
-    // Keyboard hint at bottom
-    ctx.font = "bold 14px 'Outfit', sans-serif";
-    ctx.textBaseline = "middle";
-    ctx.fillStyle = hovered ? rc.border : "rgba(100,120,150,0.5)";
-    ctx.strokeStyle = hovered ? rc.border : "rgba(100,120,150,0.3)";
-    ctx.lineWidth = 1.5;
-    const kbY = r.y + r.h - 22;
-    const kbW = 26, kbH = 20;
-    ctx.beginPath();
-    ctx.roundRect(cx - kbW / 2, kbY - kbH / 2, kbW, kbH, 4);
-    ctx.stroke();
-    ctx.fillText(`${i + 1}`, cx, kbY);
+    // Keyboard shortcut hint badge (only rendered when playing on keyboard)
+    if (isKbd) {
+      ctx.font = "bold 14px 'Outfit', sans-serif";
+      ctx.textBaseline = "middle";
+      ctx.fillStyle = hovered ? rc.border : "rgba(100,120,150,0.5)";
+      ctx.strokeStyle = hovered ? rc.border : "rgba(100,120,150,0.3)";
+      ctx.lineWidth = 1.5;
+      const kbY = r.y + r.h - 22;
+      const kbW = 26, kbH = 20;
+      ctx.beginPath();
+      ctx.roundRect(cx - kbW / 2, kbY - kbH / 2, kbW, kbH, 4);
+      ctx.stroke();
+      ctx.fillText(`${i + 1}`, cx, kbY);
+    }
+
 
     ctx.restore();
   }
