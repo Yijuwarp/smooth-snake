@@ -22,7 +22,8 @@ export const MAX_DT = 1 / 30;
 // --- Passive powerup system ---
 export const SHIELD_REGEN_TIME = 60;    // seconds for Spikeguard to recharge
 export const MAGNET_RADIUS = 150;        // px — food/powerup attraction radius
-export const DYNAMO_REGEN_RATE = 0.12;  // boost fraction per second when idle
+export const DYNAMO_REGEN_RATE = 0.04;  // 4% boost fraction per second when idle
+export const DYNAMO_COOLDOWN = 4.0;     // 4s cooldown after boost/slow before regen starts
 export const MAGNET_SPEED = 90;          // px/sec food drift speed toward head
 
 // Touch mode: set once at startup by main.js (primary pointer is coarse).

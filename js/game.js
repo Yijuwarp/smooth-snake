@@ -31,6 +31,7 @@ import {
   SHIELD_REGEN_TIME,
   MAGNET_RADIUS,
   DYNAMO_REGEN_RATE,
+  DYNAMO_COOLDOWN,
   MAGNET_SPEED,
   WALL_MARGIN,
 } from "./config.js";
@@ -149,7 +150,7 @@ function createPassives() {
 
 // Static card definitions — name, description, rarity weight (higher = more common)
 const CARD_DEFS = {
-  dynamo:     { name: "Dynamo",     rarity: "common",   weight: 3, desc: "Boost meter slowly recharges over time when idle." },
+  dynamo:     { name: "Dynamo",     rarity: "common",   weight: 3, desc: "Boost meter recharges at 4%/sec when idle for 4s after boosting." },
   spikeguard: { name: "Spikeguard", rarity: "uncommon", weight: 2, desc: "A shield that deflects the next spike hit. Regenerates every 60s. Shows as scales on your body." },
   wraparound: { name: "Wraparound", rarity: "rare",     weight: 1, desc: "Walls become portals — exit one side, enter the other. Wall-hugging spikes are cleared." },
   magnet:     { name: "Magnet",     rarity: "uncommon", weight: 2, desc: "Pellets and boost pickups drift toward your head within a radius." },
@@ -256,6 +257,7 @@ export function createGame() {
     boost: 0,
     boosting: false,
     slowing: false,
+    boostUseTimer: 0,       // seconds remaining before Dynamo boost regen can start
     currentSpeed: 0,
     level: 1,
     pelletsSinceLevel: 0,
@@ -310,6 +312,7 @@ export function resetGame(game) {
   game.boost = 0;
   game.boosting = false;
   game.slowing = false;
+  game.boostUseTimer = 0;
   game.keysPressed.clear();
   game.powerUp = null;
   game.powerUpCooldown = POWER_UP_SPAWN_INTERVAL;
@@ -488,8 +491,21 @@ export function update(game, dt) {
   const boostScale = 1 + 2 * boostSizeFrac; // 1× at start, 3× at max
   const dynamicDrain = BOOST_DRAIN_PER_SEC / boostScale;
 
-  // --- Passive: Dynamo — passive boost regen when not using boost ---
-  if (game.passives.dynamo && !game.boosting && !game.slowing && game.boost < 1) {
+  let speedMult = 1;
+  if (game.boosting && game.boost > 0) {
+    game.boost = Math.max(0, game.boost - dynamicDrain * dt);
+    game.boostUseTimer = DYNAMO_COOLDOWN;
+    speedMult = boostMult;
+  } else if (game.slowing && game.boost > 0) {
+    game.boost = Math.max(0, game.boost - dynamicDrain * dt);
+    game.boostUseTimer = DYNAMO_COOLDOWN;
+    speedMult = slowMult;
+  } else if (game.boostUseTimer > 0) {
+    game.boostUseTimer = Math.max(0, game.boostUseTimer - dt);
+  }
+
+  // --- Passive: Dynamo — passive boost regen when not using boost and 4s cooldown elapsed ---
+  if (game.passives.dynamo && !game.boosting && !game.slowing && game.boostUseTimer <= 0 && game.boost < 1) {
     game.boost = Math.min(1, game.boost + DYNAMO_REGEN_RATE * dt);
   }
 
@@ -497,15 +513,6 @@ export function update(game, dt) {
   if (game.passives.spikeguard && !game.shieldActive && game.shieldCooldown > 0) {
     game.shieldCooldown -= dt;
     if (game.shieldCooldown <= 0) game.shieldActive = true;
-  }
-
-  let speedMult = 1;
-  if (game.boosting && game.boost > 0) {
-    game.boost = Math.max(0, game.boost - dynamicDrain * dt);
-    speedMult = boostMult;
-  } else if (game.slowing && game.boost > 0) {
-    game.boost = Math.max(0, game.boost - dynamicDrain * dt);
-    speedMult = slowMult;
   }
 
   const snake = game.snake;
