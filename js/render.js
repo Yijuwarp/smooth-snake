@@ -880,7 +880,9 @@ function drawHud(ctx, game) {
   if (game.boost > 0) {
     ctx.save();
     ctx.beginPath();
-    ctx.rect(bx, by - 4, bw * game.boost, bh + 8);
+    ctx.rect(bx, by - 4, bw * Math.min(1, game.boost), bh + 8);
+    ctx.clip();
+
     // Outer glow halo (zero shadowBlur)
     const glowColor = boostColor === "#7fe8ff" ? "rgba(127, 232, 255, 0.35)" :
                       boostColor === "#c792ff" ? "rgba(199, 146, 255, 0.35)" :
@@ -895,6 +897,7 @@ function drawHud(ctx, game) {
     ctx.beginPath();
     ctx.roundRect(bx, by, bw, bh, br);
     ctx.fill();
+
 
 
     // Inner glass highlight along the top third of the fill
