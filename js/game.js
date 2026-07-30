@@ -170,9 +170,21 @@ const CARD_DEFS = {
   freeze:     { name: "Freeze",       rarity: "uncommon", weight: 2, desc: "Spikes freeze while holding slow." },
 };
 
+// Computes dynamic card rarity weight based on progression (cardPicksGiven).
+// As the run progresses, Rare & Uncommon weights scale up while Common scales down.
+// Pick 1: Common 3.0, Uncommon 2.0, Rare 1.0 (Common favoured)
+// Pick 4: Common 1.2, Uncommon 2.9, Rare 3.55 (Rare favoured over Common)
+function getCardWeight(cardDef, cardPicksGiven) {
+  const k = cardPicksGiven || 0;
+  if (cardDef.rarity === "rare")     return 1.0 + k * 0.85;
+  if (cardDef.rarity === "uncommon") return 2.0 + k * 0.3;
+  return Math.max(0.5, 3.0 - k * 0.6);
+}
+
 // Builds the 3-card pick array: 2 weighted-random passives + heal.
 function drawCards(game) {
   const p = game.passives;
+  const cardPicksGiven = game.cardPicksGiven || 0;
   // Filter out already-owned and mutually exclusive cards.
   const available = Object.keys(CARD_DEFS).filter(id => {
     if (p[id]) return false;                            // already owned
@@ -185,10 +197,13 @@ function drawCards(game) {
   let pool = [...available];
   for (let slot = 0; slot < 2; slot++) {
     if (pool.length === 0) break;
-    const totalW = pool.reduce((s, id) => s + CARD_DEFS[id].weight, 0);
+    const totalW = pool.reduce((s, id) => s + getCardWeight(CARD_DEFS[id], cardPicksGiven), 0);
     let r = Math.random() * totalW;
     let pick = pool[pool.length - 1];
-    for (const id of pool) { r -= CARD_DEFS[id].weight; if (r <= 0) { pick = id; break; } }
+    for (const id of pool) {
+      r -= getCardWeight(CARD_DEFS[id], cardPicksGiven);
+      if (r <= 0) { pick = id; break; }
+    }
     chosen.push({ type: "passive", id: pick, ...CARD_DEFS[pick] });
     pool = pool.filter(id => id !== pick);
   }
@@ -203,6 +218,7 @@ function drawCards(game) {
 
   return chosen;
 }
+
 
 
 // Returns the arena-coordinate bounding boxes for the 3 cards.
