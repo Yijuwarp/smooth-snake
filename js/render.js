@@ -810,9 +810,9 @@ function drawHud(ctx, game) {
   // Shared boost/precision meter, bottom-center — pill bar with glow.
   // Golden at rest (matches the power-up pickup), cyan while boosting,
   // purple while in precision/slow mode.
-  // Bar width scales with snake size: 200px at spawn → 600px at max size
-  // (capped at 40 pellets eaten = 126 segments), always centred.
-  const BW_MIN = 200, BW_MAX = 600;
+  // Bar width scales with snake size: 200px at spawn → 400px at max size (200% capacity)
+  const BW_MIN = 200, BW_MAX = 400;
+
   const SEG_MAX = BASE_SEGMENTS + 40 * SEGMENTS_PER_FOOD; // 126 segments at cap
   const sizeFrac = Math.min(1, Math.max(0, (game.snake.segmentCount - BASE_SEGMENTS) / (SEG_MAX - BASE_SEGMENTS)));
   const bw = BW_MIN + (BW_MAX - BW_MIN) * sizeFrac;
