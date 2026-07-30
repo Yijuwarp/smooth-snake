@@ -323,6 +323,7 @@ export function createGame() {
     shieldCooldown: 0,
     regenTimer: 30,         // seconds remaining before Regeneration passive restores 1 heart
     cardPick: null, // { cards: [...], hoveredIdx: 0 } while pick screen is open
+    pendingCardPick: false, // true when a card pick was earned while boost/slow was held
   };
 }
 
@@ -371,6 +372,7 @@ export function resetGame(game) {
   game.shieldCooldown = 0;
   game.regenTimer = 30;
   game.cardPick = null;
+  game.pendingCardPick = false;
   updateGrowthAndSpeed(game.snake, 0, getMaxSpeed(game));
   game.food = spawnFood([], game.snake.segments);
   game.spikes = generateSpikes({ x: game.snake.x, y: game.snake.y }, game.food);
@@ -464,6 +466,14 @@ function applyLevelUp(game, newLevel, trigger) {
 
 export function update(game, dt) {
   game.time += dt;
+  // Flush a deferred card pick as soon as boost/slow is fully released.
+  if (game.pendingCardPick && !game.boosting && !game.slowing) {
+    game.pendingCardPick = false;
+    game.cardPick = { cards: drawCards(game), hoveredIdx: 2 };
+    game.state = "cardpick";
+    return;
+  }
+
   if (game.state !== "playing") return;
 
   if (game.screenShake > 0) {
@@ -864,8 +874,13 @@ export function update(game, dt) {
     const nextCardTarget = (game.cardPicksGiven + 1) * (game.cardPicksGiven + 2) * 2;
     if (game.eaten >= nextCardTarget && !game.banner && game.level < FINAL_LEVEL) {
       game.cardPicksGiven++;
-      game.cardPick = { cards: drawCards(game), hoveredIdx: 2 }; // default hover on Heal
-      game.state = "cardpick";
+      if (game.boosting || game.slowing) {
+        // Player is mid-boost/slow — defer the picker until they release.
+        game.pendingCardPick = true;
+      } else {
+        game.cardPick = { cards: drawCards(game), hoveredIdx: 2 }; // default hover on Heal
+        game.state = "cardpick";
+      }
     }
 
   }
