@@ -47,14 +47,15 @@ export function steer(snake, targetX, targetY, dt, turnRate = TURN_RATE) {
   snake.theta += clamp(d, -turnRate * dt, turnRate * dt);
 }
 
-export function moveSnake(snake, dt, speedMult = 1) {
+export function moveSnake(snake, dt, speedMult = 1, spacingMult = 1) {
   snake.x += Math.cos(snake.theta) * snake.speed * speedMult * dt;
   snake.y += Math.sin(snake.theta) * snake.speed * speedMult * dt;
   snake.path.unshift({ x: snake.x, y: snake.y });
 
-  const maxLen = snake.segmentCount * SEGMENT_SPACING + SEGMENT_SPACING * 4;
+  const spacing = SEGMENT_SPACING * spacingMult;
+  const maxLen = snake.segmentCount * spacing + spacing * 4;
   trimPath(snake, maxLen);
-  placeSegments(snake);
+  placeSegments(snake, spacing);
 }
 
 // Drop path points once the accumulated arc-length exceeds `maxLen`, so the
@@ -76,12 +77,12 @@ function distance(a, b) {
 }
 
 // Walk the path from the head, accumulating arc-length, and drop a segment
-// center every SEGMENT_SPACING units by interpolating between the two
+// center every `spacing` units by interpolating between the two
 // bracketing path points.
-function placeSegments(snake) {
+function placeSegments(snake, spacing = SEGMENT_SPACING) {
   const path = snake.path;
   const segments = [];
-  let targetDist = SEGMENT_SPACING;
+  let targetDist = spacing;
   let accum = 0;
   let pi = 0;
 
@@ -93,7 +94,7 @@ function placeSegments(snake) {
     if (accum + segLen >= targetDist) {
       const t = segLen === 0 ? 0 : (targetDist - accum) / segLen;
       segments.push({ x: a.x + (b.x - a.x) * t, y: a.y + (b.y - a.y) * t });
-      targetDist += SEGMENT_SPACING;
+      targetDist += spacing;
     } else {
       accum += segLen;
       pi++;
@@ -109,6 +110,7 @@ function placeSegments(snake) {
 
   snake.segments = segments;
 }
+
 
 // Teleports the snake head to the opposite wall and shifts all path-history
 // points by the same offset so body segments follow through the wall

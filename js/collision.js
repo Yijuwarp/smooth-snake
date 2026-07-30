@@ -5,13 +5,15 @@ function dist(x1, y1, x2, y2) {
 }
 
 export function hitsFood(snake, food) {
+  const sr = snake.radius || SNAKE_RADIUS;
   const r = food.isStar ? STAR_RADIUS : FOOD_RADIUS;
-  return dist(snake.x, snake.y, food.x, food.y) < SNAKE_RADIUS + r;
+  return dist(snake.x, snake.y, food.x, food.y) < sr + r;
 }
 
 export function hitsPowerUp(snake, powerUp) {
   if (!powerUp) return false;
-  return dist(snake.x, snake.y, powerUp.x, powerUp.y) < SNAKE_RADIUS + POWER_UP_RADIUS;
+  const sr = snake.radius || SNAKE_RADIUS;
+  return dist(snake.x, snake.y, powerUp.x, powerUp.y) < sr + POWER_UP_RADIUS;
 }
 
 // Returns the specific spike touching the head (or null), so the caller can
@@ -19,9 +21,10 @@ export function hitsPowerUp(snake, powerUp) {
 // checked against spikes — tail contact (even with an enlarged, level-3
 // growing spike) never damages the snake.
 export function findHitSpike(snake, spikes) {
+  const sr = snake.radius || SNAKE_RADIUS;
   for (const s of spikes) {
     const r = SPIKE_RADIUS * (s.sizeMult || 1);
-    if (dist(snake.x, snake.y, s.x, s.y) < SNAKE_RADIUS + r) return s;
+    if (dist(snake.x, snake.y, s.x, s.y) < sr + r) return s;
   }
   return null;
 }
@@ -38,29 +41,32 @@ export function clearOfUiZones(x, y, radius, zones) {
 }
 
 export function hitsWall(snake) {
+  const sr = snake.radius || SNAKE_RADIUS;
   return (
-    snake.x - SNAKE_RADIUS < 0 ||
-    snake.y - SNAKE_RADIUS < 0 ||
-    snake.x + SNAKE_RADIUS > ARENA_W ||
-    snake.y + SNAKE_RADIUS > ARENA_H
+    snake.x - sr < 0 ||
+    snake.y - sr < 0 ||
+    snake.x + sr > ARENA_W ||
+    snake.y + sr > ARENA_H
   );
 }
 
 export function findHitSegment(snake) {
+  const sr = snake.radius || SNAKE_RADIUS;
   const segments = snake.segments;
   const segCount = segments.length;
   for (let i = NECK_GRACE_SEGMENTS; i < segCount; i++) {
     const seg = segments[i];
     const t = segCount > 1 ? i / (segCount - 1) : 0;
-    // Segment radius matches the visual rendering in render.js: SNAKE_RADIUS * (1.0 - t * 0.45)
-    const segRadius = SNAKE_RADIUS * (1.0 - t * 0.45);
-    const threshold = SNAKE_RADIUS + segRadius;
+    // Segment radius matches the visual rendering in render.js: sr * (1.0 - t * 0.45)
+    const segRadius = sr * (1.0 - t * 0.45);
+    const threshold = sr + segRadius;
     if (dist(snake.x, snake.y, seg.x, seg.y) < threshold) {
       return { segment: seg, radius: segRadius };
     }
   }
   return null;
 }
+
 
 export function hitsSelf(snake) {
   return findHitSegment(snake) !== null;

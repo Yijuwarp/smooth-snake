@@ -139,6 +139,10 @@ function loadTunables() {
 function createPassives() {
   return {
     dynamo: false,
+    slim: false,
+    agility: false,
+    compressor: false,
+    regen: false,
     spikeguard: false,
     wraparound: false,
     magnet: false,
@@ -150,13 +154,17 @@ function createPassives() {
 
 // Static card definitions — name, description, rarity weight (higher = more common)
 const CARD_DEFS = {
-  dynamo:     { name: "Dynamo",     rarity: "common",   weight: 3, desc: "Boost meter recharges at 4%/sec when idle for 4s after boosting." },
-  spikeguard: { name: "Spikeguard", rarity: "uncommon", weight: 2, desc: "A shield that deflects the next spike hit. Regenerates every 60s. Shows as scales on your body." },
-  wraparound: { name: "Wraparound", rarity: "rare",     weight: 1, desc: "Walls become portals — exit one side, enter the other. Wall-hugging spikes are cleared." },
-  magnet:     { name: "Magnet",     rarity: "uncommon", weight: 2, desc: "Pellets and boost pickups drift toward your head within a radius." },
-  phantom:    { name: "Phantom",    rarity: "rare",     weight: 1, desc: "Your body can no longer hurt you. Spikes and walls still do." },
-  ghost:      { name: "Ghost",      rarity: "rare",     weight: 1, desc: "While boosting, pass through spikes and your own body. Walls still hurt." },
-  freeze:     { name: "Freeze",     rarity: "uncommon", weight: 2, desc: "Holding slow locks all spikes in place. They turn blue while frozen." },
+  dynamo:     { name: "Dynamo",       rarity: "common",   weight: 3, desc: "Boost meter recharges at 4%/sec when idle for 4s after boosting." },
+  slim:       { name: "Slim Body",    rarity: "common",   weight: 3, desc: "Reduces snake width and collision size by 20%." },
+  agility:    { name: "Agility",      rarity: "common",   weight: 3, desc: "Increases steering turn rate by 20%." },
+  compressor: { name: "Compressor",   rarity: "common",   weight: 3, desc: "Compresses body length by 20% for tighter coiling." },
+  regen:      { name: "Regeneration", rarity: "common",   weight: 3, desc: "Restores 1 heart every 30 seconds." },
+  spikeguard: { name: "Spikeguard",   rarity: "uncommon", weight: 2, desc: "A shield that deflects the next spike hit. Regenerates every 60s. Shows as scales on your body." },
+  wraparound: { name: "Wraparound",   rarity: "rare",     weight: 1, desc: "Walls become portals — exit one side, enter the other. Wall-hugging spikes are cleared." },
+  magnet:     { name: "Magnet",       rarity: "uncommon", weight: 2, desc: "Pellets and boost pickups drift toward your head within a radius." },
+  phantom:    { name: "Phantom",      rarity: "rare",     weight: 1, desc: "Your body can no longer hurt you. Spikes and walls still do." },
+  ghost:      { name: "Ghost",        rarity: "rare",     weight: 1, desc: "While boosting, pass through spikes and your own body. Walls still hurt." },
+  freeze:     { name: "Freeze",       rarity: "uncommon", weight: 2, desc: "Holding slow locks all spikes in place. They turn blue while frozen." },
 };
 
 // Builds the 3-card pick array: 2 weighted-random passives + heal.
@@ -289,6 +297,7 @@ export function createGame() {
     passives: createPassives(),
     shieldActive: false,
     shieldCooldown: 0,
+    regenTimer: 30,         // seconds remaining before Regeneration passive restores 1 heart
     cardPick: null, // { cards: [...], hoveredIdx: 0 } while pick screen is open
   };
 }
@@ -336,6 +345,7 @@ export function resetGame(game) {
   game.passives = createPassives();
   game.shieldActive = false;
   game.shieldCooldown = 0;
+  game.regenTimer = 30;
   game.cardPick = null;
   updateGrowthAndSpeed(game.snake, 0, getMaxSpeed(game));
   game.food = spawnFood([], game.snake.segments);
@@ -475,7 +485,8 @@ export function update(game, dt) {
 
   // While devMode is off these are byte-for-byte the normal config constants;
   // the dev-panel sliders only take effect once devMode is enabled.
-  const turnRate = game.devMode ? game.tunables.turnRate : TURN_RATE;
+  const baseTurnRate = game.devMode ? game.tunables.turnRate : TURN_RATE;
+  const turnRate = baseTurnRate * (game.passives.agility ? 1.20 : 1.0);
   const maxSpeed = getMaxSpeed(game);
   const boostMult = game.devMode ? game.tunables.boostMult : BOOST_SPEED_MULT;
   const slowMult = game.devMode ? game.tunables.slowMult : SLOW_SPEED_MULT;
@@ -513,7 +524,23 @@ export function update(game, dt) {
     if (game.shieldCooldown <= 0) game.shieldActive = true;
   }
 
+  // --- Passive: Regeneration — 1 heart every 30s ---
+  if (game.passives.regen && game.hearts < (game.maxHearts || MAX_HEARTS)) {
+    game.regenTimer -= dt;
+    if (game.regenTimer <= 0) {
+      game.regenTimer = 30;
+      game.hearts = Math.min(game.maxHearts || MAX_HEARTS, game.hearts + 1);
+      spawnParticles(game, game.snake.x, game.snake.y, 14, {
+        colors: ["#4ee08a", "#a2ffd0", "#ffffff"],
+        speed: 70, size: 3.0, decay: 1.5,
+      });
+    }
+  } else {
+    game.regenTimer = 30;
+  }
+
   const snake = game.snake;
+  snake.radius = (game.passives.slim ? 0.8 : 1.0) * SNAKE_RADIUS;
   // Steer: keyboard modes use key-pressed direction; touch mode follows drawn
   // gesture path; mouse mode steers toward the cursor.
   if (TOUCH_MODE) {
@@ -564,7 +591,8 @@ export function update(game, dt) {
   } else {
     steer(snake, game.mouse.x, game.mouse.y, dt, turnRate);
   }
-  moveSnake(snake, dt, speedMult);
+  const spacingMult = game.passives.compressor ? 0.8 : 1.0;
+  moveSnake(snake, dt, speedMult, spacingMult);
   game.currentSpeed = snake.speed * speedMult;
 
   // --- Passive: Freeze — spikes locked while holding slow ---
