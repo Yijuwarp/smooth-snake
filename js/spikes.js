@@ -359,7 +359,7 @@ export function updateSpikes(game, dt, rng = Math.random, frozen = false) {
 
   const final = game.level >= FINAL_LEVEL;
 
-  if (game.level === 5) {
+  if (game.level >= 5) {
     // Find or initialize the drone
     let drone = game.spikes.find((s) => s.isDrone);
     if (!drone && game.spikes.length > 0) {
@@ -449,16 +449,26 @@ export function updateSpikes(game, dt, rng = Math.random, frozen = false) {
       }
     }
 
-    // Select up to 4 wandering spikes (similar to level 2)
-    game.spikeTimer -= dt;
-    if (game.spikeTimer <= 0) {
-      game.spikeTimer = SPIKE_SELECT_INTERVAL;
-      const idle = game.spikes.filter((s) => !isAwake(s) && !s.isDrone);
-      const awakeCount = game.spikes.filter((s) => isAwake(s) && !s.isDrone).length;
-      if (awakeCount < 4 && idle.length > 0) {
-        const s = idle[Math.floor(rng() * idle.length)];
-        s.phase = "shake";
-        s.t = 0;
+    if (final) {
+      // Wake all non-drone spikes at once for Level 6
+      for (const s of game.spikes) {
+        if (!isAwake(s) && !s.isDrone) {
+          s.phase = "shake";
+          s.t = 0;
+        }
+      }
+    } else {
+      // Select up to 4 wandering spikes for Level 5
+      game.spikeTimer -= dt;
+      if (game.spikeTimer <= 0) {
+        game.spikeTimer = SPIKE_SELECT_INTERVAL;
+        const idle = game.spikes.filter((s) => !isAwake(s) && !s.isDrone);
+        const awakeCount = game.spikes.filter((s) => isAwake(s) && !s.isDrone).length;
+        if (awakeCount < 4 && idle.length > 0) {
+          const s = idle[Math.floor(rng() * idle.length)];
+          s.phase = "shake";
+          s.t = 0;
+        }
       }
     }
   } else {

@@ -36,4 +36,4 @@ This is a canvas game with Web Audio sound effects and music. If you're driving 
 
 ## Git workflow
 
-This repo uses feature branches + PRs (see `git log --oneline`, e.g. PR #1, #2), merged with a regular merge commit (not squash) via `gh pr merge --merge`. Keep unrelated tooling artifacts (see above) out of feature commits.
+This repo uses feature branches + PRs (see `git log --oneline`, e.g. PR #1, #2), merged with a regular merge commit (not squash) via `gh pr merge --merge`. Keep unrelated tooling artifacts (see above) out of feature commits. Always push changes to GitHub upon completing tasks via feature branch and PR (`git checkout -b feat/...`, `git push -u origin feat/...`, `gh pr create`).

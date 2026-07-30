@@ -272,8 +272,8 @@ function drawMenuBackground(ctx, canvas) {
   ctx.restore();
 }
 
-const COLOR_BG = "#0f1520";
-const COLOR_BORDER = "#3a4a63";
+const COLOR_BG = "#030408";
+const COLOR_BORDER = "#c792ff";
 const COLOR_FOOD = "#4ee08a";
 const COLOR_SPIKE_BASE = "#b0472f";
 const COLOR_SPIKE_TIP = "#ff8c4a";
@@ -281,6 +281,16 @@ const COLOR_SNAKE_BODY = "#4fd1e8";
 const COLOR_SNAKE_HEAD = "#7fe8ff";
 const COLOR_EYE = "#0f1520";
 const COLOR_POWER_UP = "#fff44d";
+
+// Deterministic starfield for Deep Space arena theme across all levels
+const SPACE_STARS = Array.from({ length: 140 }, (_, i) => ({
+  x: (Math.sin(i * 99 + 12) * 0.5 + 0.5) * ARENA_W,
+  y: (Math.cos(i * 33 + 7) * 0.5 + 0.5) * ARENA_H,
+  size: 0.5 + ((i % 5) / 5) * 2.2,
+  layer: (i % 3) + 1,
+  twinkleSpeed: 1 + (i % 4) * 0.8,
+  hue: i % 3 === 0 ? 200 : (i % 3 === 1 ? 270 : 45),
+}));
 
 // Computes the scale/offset that letterboxes the logical arena, centered,
 // inside the current canvas backing-store size.
@@ -407,11 +417,62 @@ export function render(game, ctx, canvas) {
 }
 
 function drawArena(ctx, game) {
+  const time = game ? game.time : 0;
+
+  // 1. Deep Space Void Background
   ctx.fillStyle = COLOR_BG;
   ctx.fillRect(0, 0, ARENA_W, ARENA_H);
 
-  // Subtle neon grid background
-  ctx.strokeStyle = "rgba(79, 209, 232, 0.04)";
+  // 2. Procedural Floating Nebulae Clouds
+  ctx.save();
+  // Purple Nebula (top-left / center drifting)
+  const nx1 = ARENA_W * 0.3 + Math.sin(time * 0.3) * 25;
+  const ny1 = ARENA_H * 0.35 + Math.cos(time * 0.2) * 20;
+  const neb1 = ctx.createRadialGradient(nx1, ny1, 20, nx1, ny1, 440);
+  neb1.addColorStop(0, "rgba(199, 146, 255, 0.15)");
+  neb1.addColorStop(0.6, "rgba(125, 80, 200, 0.05)");
+  neb1.addColorStop(1, "rgba(3, 4, 8, 0)");
+  ctx.fillStyle = neb1;
+  ctx.fillRect(0, 0, ARENA_W, ARENA_H);
+
+  // Cyan Nebula (bottom-right / center drifting)
+  const nx2 = ARENA_W * 0.75 + Math.cos(time * 0.25) * 30;
+  const ny2 = ARENA_H * 0.65 + Math.sin(time * 0.35) * 25;
+  const neb2 = ctx.createRadialGradient(nx2, ny2, 30, nx2, ny2, 480);
+  neb2.addColorStop(0, "rgba(79, 209, 232, 0.16)");
+  neb2.addColorStop(0.6, "rgba(40, 140, 180, 0.05)");
+  neb2.addColorStop(1, "rgba(3, 4, 8, 0)");
+  ctx.fillStyle = neb2;
+  ctx.fillRect(0, 0, ARENA_W, ARENA_H);
+  ctx.restore();
+
+  // 3. Multi-Layer Parallax Starfield
+  ctx.save();
+  for (const s of SPACE_STARS) {
+    const sx = (s.x + time * s.layer * 3) % ARENA_W;
+    const sy = s.y;
+    const alpha = 0.35 + Math.sin(time * s.twinkleSpeed + s.x) * 0.45;
+
+    ctx.fillStyle = `hsla(${s.hue}, 90%, 80%, ${Math.max(0.1, alpha)})`;
+    ctx.beginPath();
+    ctx.arc(sx, sy, s.size, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Cross flare for large twinkling near stars
+    if (s.size > 1.8 && alpha > 0.55) {
+      ctx.strokeStyle = `hsla(${s.hue}, 90%, 85%, ${alpha * 0.5})`;
+      ctx.lineWidth = 0.8;
+      ctx.beginPath();
+      ctx.moveTo(sx - 4, sy); ctx.lineTo(sx + 4, sy);
+      ctx.moveTo(sx, sy - 4); ctx.lineTo(sx, sy + 4);
+      ctx.stroke();
+    }
+  }
+  ctx.restore();
+
+  // 4. Subtle Constellation Positioning Grid
+  ctx.save();
+  ctx.strokeStyle = "rgba(199, 146, 255, 0.035)";
   ctx.lineWidth = 1;
   const gridSpacing = 40;
   ctx.beginPath();
@@ -425,14 +486,16 @@ function drawArena(ctx, game) {
   }
   ctx.stroke();
 
-  // Tiny neon dots at grid intersections
-  ctx.fillStyle = "rgba(79, 209, 232, 0.15)";
+  // Faint intersection dots
+  ctx.fillStyle = "rgba(199, 146, 255, 0.12)";
   for (let x = gridSpacing; x < ARENA_W; x += gridSpacing) {
     for (let y = gridSpacing; y < ARENA_H; y += gridSpacing) {
       ctx.fillRect(x - 1, y - 1, 2, 2);
     }
   }
+  ctx.restore();
 
+  // 5. Cosmic Wall Borders
   const hasWraparound = game && game.passives && game.passives.wraparound;
 
   if (hasWraparound) {
@@ -446,9 +509,13 @@ function drawArena(ctx, game) {
     ctx.strokeRect(2, 2, ARENA_W - 4, ARENA_H - 4);
     ctx.restore();
   } else {
+    ctx.save();
     ctx.strokeStyle = COLOR_BORDER;
-    ctx.lineWidth = 4;
+    ctx.lineWidth = 3;
+    ctx.shadowColor = COLOR_BORDER;
+    ctx.shadowBlur = 10;
     ctx.strokeRect(2, 2, ARENA_W - 4, ARENA_H - 4);
+    ctx.restore();
     drawWallTeeth(ctx);
   }
 }
@@ -1000,10 +1067,10 @@ function drawHud(ctx, game) {
       ctx.fillStyle = "#ffd257";
       ctx.fillRect(barX, 48, barW * frac, 8);
     } else if (decaying) {
-      // Show ticking countdown number below the multiplier
-      ctx.font = `bold 13px 'Outfit', sans-serif`;
+      // Show decaying label below the multiplier
+      ctx.font = `bold 12px 'Outfit', sans-serif`;
       ctx.fillStyle = `rgba(255, ${Math.round(80 + 130 * pulse)}, 50, 0.85)`;
-      ctx.fillText(`${game.multiplier - 1 > 0 ? game.multiplier - 1 : 1}→${game.multiplier}`, ARENA_W - 16, 66);
+      ctx.fillText(`↓ DECAYING`, ARENA_W - 16, 66);
     }
   }
 
