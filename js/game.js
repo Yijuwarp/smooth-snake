@@ -26,6 +26,8 @@ import {
   LIFE_BONUS_PCT,
   SPEED_BONUS_PCT,
   WAYPOINT_REACH_RADIUS,
+  BASE_SEGMENTS,
+  SEGMENTS_PER_FOOD,
 } from "./config.js";
 import { createSnake, steer, moveSnake, updateGrowthAndSpeed, bounceOffWall, bounceOffSpike, bounceOffSegment } from "./snake.js";
 import { generateSpikes, updateSpikes } from "./spikes.js";
@@ -326,7 +328,10 @@ export function update(game, dt) {
   if (game.eatFlash > 0) game.eatFlash = Math.max(0, game.eatFlash - dt);
 
   if (game.comboTimer > 0) {
-    game.comboTimer -= dt;
+    // Slow-down power also slows the combo countdown at the same ratio —
+    // precision mode gives you more time to navigate carefully.
+    const comboDecayRate = (game.slowing && game.boost > 0) ? SLOW_SPEED_MULT : 1;
+    game.comboTimer -= dt * comboDecayRate;
     if (game.comboTimer <= 0) {
       game.comboTimer = 0;
       game.multiplier = 1;
@@ -342,12 +347,19 @@ export function update(game, dt) {
 
   // Boost and the right-click "precision" slow share one meter; if both are
   // somehow held at once, boost wins.
+  // Drain rate scales down with snake size, matching the visual bar scaling
+  // (200px → 600px = 1× → 3× width). Bigger snake = longer boost/slow.
+  const SEG_MAX_DRAIN = BASE_SEGMENTS + 40 * SEGMENTS_PER_FOOD; // 126 — matches render.js cap
+  const boostSizeFrac = Math.min(1, Math.max(0, (game.snake.segmentCount - BASE_SEGMENTS) / (SEG_MAX_DRAIN - BASE_SEGMENTS)));
+  const boostScale = 1 + 2 * boostSizeFrac; // 1× at start, 3× at max
+  const dynamicDrain = BOOST_DRAIN_PER_SEC / boostScale;
+
   let speedMult = 1;
   if (game.boosting && game.boost > 0) {
-    game.boost = Math.max(0, game.boost - BOOST_DRAIN_PER_SEC * dt);
+    game.boost = Math.max(0, game.boost - dynamicDrain * dt);
     speedMult = boostMult;
   } else if (game.slowing && game.boost > 0) {
-    game.boost = Math.max(0, game.boost - BOOST_DRAIN_PER_SEC * dt);
+    game.boost = Math.max(0, game.boost - dynamicDrain * dt);
     speedMult = slowMult;
   }
 

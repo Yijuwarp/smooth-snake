@@ -61,8 +61,8 @@ export const TURN_RATE = 4.0;
 
 export const COMBO_WINDOW = 5; // seconds to reach the next food before the multiplier resets
 
-export const LEVEL_PELLETS_REQUIRED = 10; // pellets eaten since the last level-up forces a transition
-export const LEVEL_TIME_REQUIRED = 30; // seconds since the last level-up forces a transition, whichever comes first
+export const LEVEL_PELLETS_REQUIRED = 8; // pellets eaten since the last level-up forces a transition
+export const LEVEL_TIME_REQUIRED = 24; // seconds since the last level-up forces a transition, whichever comes first
 export const FINAL_LEVEL = 6;
 export const SURVIVAL_TIME = 10; // seconds to survive at the final level, after its banner clears, before the star appears
 export const LEVEL_BANNER_DURATION = 2.2; // seconds of slow-motion banner
