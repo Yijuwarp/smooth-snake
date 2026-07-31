@@ -1414,6 +1414,7 @@ function drawCardPick(ctx, game) {
   const layout = getCardLayout();
   const { cards, hoveredIdx } = game.cardPick;
   const t = game.time;
+  const cardScale = layout[0].scale || 1.0;
 
   // Dim the frozen arena
   ctx.fillStyle = "rgba(5, 8, 14, 0.72)";
@@ -1422,17 +1423,19 @@ function drawCardPick(ctx, game) {
   // Header
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
-  ctx.font = "bold 26px 'Outfit', sans-serif";
+  const headerSize = Math.max(16, Math.round(26 * cardScale));
+  ctx.font = `bold ${headerSize}px 'Outfit', sans-serif`;
   ctx.fillStyle = "#e8f0f8";
-  ctx.fillText("CHOOSE YOUR UPGRADE", ARENA_W / 2, layout[0].y - 38);
+  ctx.fillText("CHOOSE YOUR UPGRADE", ARENA_W / 2, layout[0].y - 38 * cardScale);
 
   const isKbd = game.lastInputType === "keyboard";
   const isTouch = game.lastInputType === "touch" || TOUCH_MODE;
 
-  ctx.font = "13px 'Outfit', sans-serif";
+  const hintSize = Math.max(10, Math.round(13 * cardScale));
+  ctx.font = `${hintSize}px 'Outfit', sans-serif`;
   ctx.fillStyle = "rgba(159,179,200,0.7)";
   const hint = isKbd ? "Press 1, 2, 3 · ← → · Enter" : isTouch ? "Tap a card to select" : "Click a card to select";
-  ctx.fillText(hint, ARENA_W / 2, layout[0].y - 14);
+  ctx.fillText(hint, ARENA_W / 2, layout[0].y - 14 * cardScale);
 
   for (let i = 0; i < 3; i++) {
     const card = cards[i];
@@ -1442,14 +1445,21 @@ function drawCardPick(ctx, game) {
     const rc = RARITY_COLORS[card.rarity] || RARITY_COLORS.common;
 
     // Hover scale: slightly enlarge hovered card
-    const scale = hovered ? 1.04 : 1.0;
+    const hoverScale = hovered ? 1.04 : 1.0;
+    const totalScale = cardScale * hoverScale;
+
     const cx = r.x + r.w / 2;
     const cy = r.y + r.h / 2;
 
     ctx.save();
     ctx.translate(cx, cy);
-    ctx.scale(scale, scale);
-    ctx.translate(-cx, -cy);
+    ctx.scale(totalScale, totalScale);
+
+    // Standard unscaled card dimensions (190 x 270) centered at (0, 0)
+    const bw = 190;
+    const bh = 270;
+    const bx = -bw / 2;
+    const by = -bh / 2;
 
     // Card shadow / glow
     if (hovered) {
@@ -1458,12 +1468,12 @@ function drawCardPick(ctx, game) {
     }
 
     // Card background
-    const bgGrad = ctx.createLinearGradient(r.x, r.y, r.x, r.y + r.h);
+    const bgGrad = ctx.createLinearGradient(bx, by, bx, by + bh);
     bgGrad.addColorStop(0, "rgba(20, 28, 44, 0.96)");
     bgGrad.addColorStop(1, "rgba(12, 18, 30, 0.98)");
     ctx.fillStyle = bgGrad;
     ctx.beginPath();
-    ctx.roundRect(r.x, r.y, r.w, r.h, 14);
+    ctx.roundRect(bx, by, bw, bh, 14);
     ctx.fill();
 
     // Rarity border
@@ -1471,50 +1481,50 @@ function drawCardPick(ctx, game) {
     ctx.strokeStyle = hovered ? rc.border : rc.border + "99";
     ctx.lineWidth = hovered ? 2.5 : 1.5;
     ctx.beginPath();
-    ctx.roundRect(r.x, r.y, r.w, r.h, 14);
+    ctx.roundRect(bx, by, bw, bh, 14);
     ctx.stroke();
 
     // Top rarity stripe
-    const stripeGrad = ctx.createLinearGradient(r.x, r.y, r.x + r.w, r.y);
+    const stripeGrad = ctx.createLinearGradient(bx, by, bx + bw, by);
     stripeGrad.addColorStop(0, rc.glow);
     stripeGrad.addColorStop(1, "transparent");
     ctx.fillStyle = stripeGrad;
     ctx.beginPath();
-    ctx.roundRect(r.x, r.y, r.w, 38, { upperLeft: 14, upperRight: 14, lowerLeft: 0, lowerRight: 0 });
+    ctx.roundRect(bx, by, bw, 38, { upperLeft: 14, upperRight: 14, lowerLeft: 0, lowerRight: 0 });
     ctx.fill();
 
     // Vector Icon
-    drawCardIcon(ctx, card.id, cx, r.y + 60, t, rc, hovered);
+    drawCardIcon(ctx, card.id, 0, by + 60, t, rc, hovered);
 
     // Name
     ctx.font = "bold 17px 'Outfit', sans-serif";
     ctx.fillStyle = "#e8f0f8";
-    ctx.fillText(card.name, cx, r.y + 110);
+    ctx.fillText(card.name, 0, by + 110);
 
     // Rarity label
     ctx.font = "11px 'Outfit', sans-serif";
     ctx.fillStyle = rc.label;
-    ctx.fillText(card.rarity.toUpperCase(), cx, r.y + 128);
+    ctx.fillText(card.rarity.toUpperCase(), 0, by + 128);
 
     // Description — word-wrap at ~24 chars
     ctx.font = "12px 'Outfit', sans-serif";
     ctx.fillStyle = "rgba(159,179,200,0.88)";
     ctx.textBaseline = "top";
     const words = card.desc.split(" ");
-    const maxW = r.w - 24;
-    let line = "", lineY = r.y + 148;
+    const maxW = bw - 24;
+    let line = "", lineY = by + 148;
 
     for (const word of words) {
       const test = line ? line + " " + word : word;
       if (ctx.measureText(test).width > maxW && line) {
-        ctx.fillText(line, cx, lineY);
+        ctx.fillText(line, 0, lineY);
         line = word;
         lineY += 17;
       } else {
         line = test;
       }
     }
-    if (line) ctx.fillText(line, cx, lineY);
+    if (line) ctx.fillText(line, 0, lineY);
 
     // Keyboard shortcut hint badge (only rendered when playing on keyboard)
     if (isKbd) {
@@ -1523,14 +1533,13 @@ function drawCardPick(ctx, game) {
       ctx.fillStyle = hovered ? rc.border : "rgba(100,120,150,0.5)";
       ctx.strokeStyle = hovered ? rc.border : "rgba(100,120,150,0.3)";
       ctx.lineWidth = 1.5;
-      const kbY = r.y + r.h - 22;
+      const kbY = by + bh - 22;
       const kbW = 26, kbH = 20;
       ctx.beginPath();
-      ctx.roundRect(cx - kbW / 2, kbY - kbH / 2, kbW, kbH, 4);
+      ctx.roundRect(-kbW / 2, kbY - kbH / 2, kbW, kbH, 4);
       ctx.stroke();
-      ctx.fillText(`${i + 1}`, cx, kbY);
+      ctx.fillText(`${i + 1}`, 0, kbY);
     }
-
 
     ctx.restore();
   }

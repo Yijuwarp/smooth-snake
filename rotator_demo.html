@@ -337,56 +337,52 @@
 
     // 3. Process Tether Physics for Spikes
     for (const s of spikes) {
-      // Find closest rotator within tetherRadius
-      let closestRotator = null;
-      let minDist = tetherRadius;
-
-      for (const r of rotators) {
-        const d = Math.hypot(s.x - r.x, s.y - r.y);
-        if (d < minDist) {
-          minDist = d;
-          closestRotator = r;
+      if (!s.tetheredTo) {
+        const candidates = [];
+        for (const r of rotators) {
+          if (Math.hypot(s.x - r.x, s.y - r.y) <= tetherRadius) {
+            candidates.push(r);
+          }
+        }
+        if (candidates.length > 0) {
+          const chosen = candidates.length === 1
+            ? candidates[0]
+            : candidates[Math.floor(Math.random() * candidates.length)];
+          s.tetheredTo = chosen;
+          s.tetherDist = Math.hypot(s.x - chosen.x, s.y - chosen.y);
+          s.tetherAngle = Math.atan2(s.y - chosen.y, s.x - chosen.x);
         }
       }
 
-      if (closestRotator) {
-        if (!s.tetheredTo) {
-          // Initialize tether attachment angle & distance
-          s.tetheredTo = closestRotator;
-          s.tetherDist = Math.hypot(s.x - closestRotator.x, s.y - closestRotator.y);
-          s.tetherAngle = Math.atan2(s.y - closestRotator.y, s.x - closestRotator.x);
-        }
-        // Orbit update around rotator core
-        s.tetherAngle += spinSpeed * closestRotator.dir * dt;
-        s.x = closestRotator.x + Math.cos(s.tetherAngle) * s.tetherDist;
-        s.y = closestRotator.y + Math.sin(s.tetherAngle) * s.tetherDist;
-      } else {
-        s.tetheredTo = null;
+      if (s.tetheredTo) {
+        s.tetherAngle += spinSpeed * s.tetheredTo.dir * dt;
+        s.x = s.tetheredTo.x + Math.cos(s.tetherAngle) * s.tetherDist;
+        s.y = s.tetheredTo.y + Math.sin(s.tetherAngle) * s.tetherDist;
       }
     }
 
     // 4. Process Tether Physics for Food Pickup
-    let foodRotator = null;
-    let minFoodDist = tetherRadius;
-    for (const r of rotators) {
-      const d = Math.hypot(food.x - r.x, food.y - r.y);
-      if (d < minFoodDist) {
-        minFoodDist = d;
-        foodRotator = r;
+    if (!food.linkedRotator) {
+      const candidates = [];
+      for (const r of rotators) {
+        if (Math.hypot(food.x - r.x, food.y - r.y) <= tetherRadius) {
+          candidates.push(r);
+        }
+      }
+      if (candidates.length > 0) {
+        const chosen = candidates.length === 1
+          ? candidates[0]
+          : candidates[Math.floor(Math.random() * candidates.length)];
+        food.linkedRotator = chosen;
+        food.tetherDist = Math.hypot(food.x - chosen.x, food.y - chosen.y);
+        food.tetherAngle = Math.atan2(food.y - chosen.y, food.x - chosen.x);
       }
     }
-    if (foodRotator) {
-      if (!food.tetherAngle) {
-        food.tetherDist = Math.hypot(food.x - foodRotator.x, food.y - foodRotator.y);
-        food.tetherAngle = Math.atan2(food.y - foodRotator.y, food.x - foodRotator.x);
-      }
-      food.tetherAngle += spinSpeed * foodRotator.dir * dt;
-      food.x = foodRotator.x + Math.cos(food.tetherAngle) * food.tetherDist;
-      food.y = foodRotator.y + Math.sin(food.tetherAngle) * food.tetherDist;
-      food.linkedRotator = foodRotator;
-    } else {
-      food.linkedRotator = null;
-      food.tetherAngle = undefined;
+
+    if (food.linkedRotator) {
+      food.tetherAngle += spinSpeed * food.linkedRotator.dir * dt;
+      food.x = food.linkedRotator.x + Math.cos(food.tetherAngle) * food.tetherDist;
+      food.y = food.linkedRotator.y + Math.sin(food.tetherAngle) * food.tetherDist;
     }
 
     // 5. Check Snake vs Food Collision

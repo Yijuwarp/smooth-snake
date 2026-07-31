@@ -227,15 +227,31 @@ function drawCards(game) {
 // Returns the arena-coordinate bounding boxes for the 3 cards.
 // Used by both render.js (drawing) and input (hit-testing).
 export function getCardLayout() {
-  const cardW = 190, cardH = 270, gap = 28;
+  const baseCardW = 190, baseCardH = 270, baseGap = 28;
+  const baseTotalW = 3 * baseCardW + 2 * baseGap;
+  const marginX = 32;
+  const marginY = 100;
+
+  const scale = Math.min(
+    1.0,
+    (ARENA_W - marginX) / baseTotalW,
+    (ARENA_H - marginY) / baseCardH
+  );
+
+  const cardW = baseCardW * scale;
+  const cardH = baseCardH * scale;
+  const gap = baseGap * scale;
   const totalW = 3 * cardW + 2 * gap;
+
   const startX = (ARENA_W - totalW) / 2;
-  const startY = (ARENA_H - cardH) / 2;
+  const startY = (ARENA_H - cardH) / 2 + 10 * scale;
+
   return [0, 1, 2].map(i => ({
     x: startX + i * (cardW + gap),
     y: startY,
     w: cardW,
     h: cardH,
+    scale: scale,
   }));
 }
 
