@@ -20,9 +20,10 @@ export function spawnParticles(game, x, y, count, options = {}) {
   const speedVar = options.speedVar || 0.7; // variation in speed
 
   for (let i = 0; i < count; i++) {
-    // Keep max particles under control to prevent performance degradation
+    // Keep max particles under control without O(N) array shifting
     if (game.particles.length >= 180) {
-      game.particles.shift();
+      game.particles[0] = game.particles[game.particles.length - 1];
+      game.particles.pop();
     }
 
     const angle = options.angle !== undefined ? options.angle + (Math.random() - 0.5) * (options.angleSpread || 0.4) : Math.random() * Math.PI * 2;
@@ -53,7 +54,9 @@ export function updateParticles(game, dt) {
     p.alpha -= p.decay * dt;
 
     if (p.alpha <= 0) {
-      game.particles.splice(i, 1);
+      // O(1) swap-and-pop instead of O(N) splice
+      game.particles[i] = game.particles[game.particles.length - 1];
+      game.particles.pop();
     }
   }
 }

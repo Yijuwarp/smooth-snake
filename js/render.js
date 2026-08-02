@@ -252,8 +252,10 @@ function drawMenuBackground(ctx, canvas) {
     const fr = Math.sin(t * 3 + i) * 1.5 + 4.5;
 
     ctx.save();
-    ctx.shadowColor = COLOR_FOOD;
-    ctx.shadowBlur = 10;
+    ctx.fillStyle = "rgba(255, 210, 87, 0.35)";
+    ctx.beginPath();
+    ctx.arc(fx, fy, Math.max(3, fr) + 4, 0, Math.PI * 2);
+    ctx.fill();
     ctx.fillStyle = COLOR_FOOD;
     ctx.beginPath();
     ctx.arc(fx, fy, Math.max(3, fr), 0, Math.PI * 2);
@@ -1463,8 +1465,10 @@ function drawCardPick(ctx, game) {
 
     // Card shadow / glow
     if (hovered) {
-      ctx.shadowColor = rc.glow.replace("0.35", "0.7").replace("0.40", "0.7");
-      ctx.shadowBlur = 28;
+      ctx.fillStyle = rc.glow.replace("0.35", "0.2").replace("0.40", "0.2");
+      ctx.beginPath();
+      ctx.roundRect(bx - 6, by - 6, bw + 12, bh + 12, 18);
+      ctx.fill();
     }
 
     // Card background
